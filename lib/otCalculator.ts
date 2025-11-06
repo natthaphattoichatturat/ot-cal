@@ -305,7 +305,7 @@ export function calculateOTFromScans(
 
       if (!checkOut) {
         // Handle incomplete scan - only check-in, no check-out
-        const checkInMinutes = timeToMinutes(checkIn.scanTime)
+        // checkInMinutes already declared above
         const checkInDate = checkIn.scanDate
 
         // Determine shift and default check-out time based on check-in time
@@ -359,7 +359,7 @@ export function calculateOTFromScans(
       // Calculate OT
       const checkInDate = checkIn.scanDate
       const checkOutDate = checkOut.scanDate
-      const checkInMinutes = timeToMinutes(checkIn.scanTime)
+      // checkInMinutes already declared above
       const checkOutMinutes = timeToMinutes(checkOut.scanTime)
 
       const shift = determineShift(checkInMinutes)
