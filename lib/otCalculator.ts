@@ -255,12 +255,24 @@ export function calculateOTFromScans(
       return timeToMinutes(a.scanTime) - timeToMinutes(b.scanTime)
     })
 
+    // Track which scans have been processed
+    const processedIndices = new Set<number>()
+
     // Match check-in and check-out pairs
     let i = 0
     while (i < records.length) {
       const checkIn = records[i]
 
       if (checkIn.scanType !== 1) {
+        i++
+        continue
+      }
+
+      // Skip check-in scans during 00:00-01:00 (misdata from break period)
+      const checkInMinutes = timeToMinutes(checkIn.scanTime)
+      if (checkInMinutes >= 0 && checkInMinutes <= 60) {
+        // This is a break scan after midnight, skip it
+        processedIndices.add(i)
         i++
         continue
       }
@@ -276,14 +288,11 @@ export function calculateOTFromScans(
           break
         } else if (records[j].scanType === 1) {
           // Found another check-in before check-out
-          // This could be the break scan for shift 2 (00:00-01:00)
-          const nextCheckIn = records[j]
-          const checkInMinutes = timeToMinutes(checkIn.scanTime)
-          const nextCheckInMinutes = timeToMinutes(nextCheckIn.scanTime)
+          // Skip if it's a break scan (00:00-01:00)
+          const nextCheckInMinutes = timeToMinutes(records[j].scanTime)
 
-          // Check if this is shift 2 break pattern (check-in around 20:00, next check-in around 00:00-01:00)
-          if (checkInMinutes >= 1050 && nextCheckInMinutes >= 0 && nextCheckInMinutes <= 60) {
-            // This is a break scan, skip it and look for check-out
+          if (nextCheckInMinutes >= 0 && nextCheckInMinutes <= 60) {
+            // This is a break scan after midnight, skip it and continue looking for check-out
             j++
             continue
           } else {
@@ -295,10 +304,57 @@ export function calculateOTFromScans(
       }
 
       if (!checkOut) {
-        // No check-out found, skip this check-in
+        // Handle incomplete scan - only check-in, no check-out
+        const checkInMinutes = timeToMinutes(checkIn.scanTime)
+        const checkInDate = checkIn.scanDate
+
+        // Determine shift and default check-out time based on check-in time
+        let defaultCheckOutMinutes: number
+        let checkOutDate: Date
+        let shift: 1 | 2
+
+        if (checkInMinutes > 720) { // > 12:00 (720 minutes)
+          // Assume Shift 1: default check-out = 17:00 same day
+          shift = 1
+          defaultCheckOutMinutes = 1020 // 17:00
+          checkOutDate = checkInDate
+        } else {
+          // Assume Shift 2: default check-out = 05:00 next day
+          shift = 2
+          defaultCheckOutMinutes = 300 // 05:00
+          checkOutDate = addDays(checkInDate, 1)
+        }
+
+        const isHoliday = isSpecialDay(checkInDate, holidays)
+
+        let result
+        if (shift === 1) {
+          result = calculateShift1OT(checkInMinutes, defaultCheckOutMinutes, checkOutDate, checkInDate, isHoliday)
+        } else {
+          result = calculateShift2OT(checkInMinutes, defaultCheckOutMinutes, checkOutDate, checkInDate, isHoliday)
+        }
+
+        workSessions.push({
+          workDate: format(checkInDate, 'yyyy-MM-dd'),
+          checkInTime: checkIn.scanTime,
+          checkOutTime: minutesToTime(defaultCheckOutMinutes),
+          actualHours: result.actualHours,
+          otHours: result.otHours,
+          isHoliday,
+          shift,
+          late: result.late,
+          lateHours: result.lateHours,
+          allowLateNextDay: result.allowLateNextDay
+        })
+
+        processedIndices.add(i)
         i++
         continue
       }
+
+      // Mark both check-in and check-out as processed
+      processedIndices.add(i)
+      processedIndices.add(j)
 
       // Calculate OT
       const checkInDate = checkIn.scanDate
@@ -330,6 +386,56 @@ export function calculateOTFromScans(
       })
 
       i = j + 1
+    }
+
+    // Handle orphan check-out scans (check-out without check-in)
+    for (let k = 0; k < records.length; k++) {
+      if (processedIndices.has(k)) continue
+
+      const scan = records[k]
+      if (scan.scanType !== 2) continue // Only process check-out scans
+
+      const checkOutMinutes = timeToMinutes(scan.scanTime)
+      const checkOutDate = scan.scanDate
+
+      // Determine shift and default check-in time based on check-out time
+      let defaultCheckInMinutes: number
+      let checkInDate: Date
+      let shift: 1 | 2
+
+      if (checkOutMinutes > 720) { // > 12:00 (720 minutes)
+        // Assume Shift 1: default check-in = 08:00 same day
+        shift = 1
+        defaultCheckInMinutes = 480 // 08:00
+        checkInDate = checkOutDate
+      } else {
+        // Assume Shift 2: default check-in = 20:00 previous day
+        shift = 2
+        defaultCheckInMinutes = 1200 // 20:00
+        checkInDate = addDays(checkOutDate, -1)
+      }
+
+      const isHoliday = isSpecialDay(checkInDate, holidays)
+
+      let result
+      if (shift === 1) {
+        result = calculateShift1OT(defaultCheckInMinutes, checkOutMinutes, checkOutDate, checkInDate, isHoliday)
+      } else {
+        result = calculateShift2OT(defaultCheckInMinutes, checkOutMinutes, checkOutDate, checkInDate, isHoliday)
+      }
+
+      workSessions.push({
+        workDate: format(checkInDate, 'yyyy-MM-dd'),
+        checkInTime: minutesToTime(defaultCheckInMinutes),
+        checkOutTime: scan.scanTime,
+        actualHours: result.actualHours,
+        otHours: result.otHours,
+        isHoliday,
+        shift,
+        late: result.late,
+        lateHours: result.lateHours,
+        allowLateNextDay: result.allowLateNextDay
+      })
     }
   })
 
