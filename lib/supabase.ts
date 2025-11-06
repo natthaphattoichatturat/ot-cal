@@ -15,7 +15,8 @@ export interface Employee {
   perhr_salary: number | null
   bank_id: number | null
   bank_account: number | null
-  identity_id: number | null
+  identity_id: string | null
+  line_id: string | null
   created_at: string
   updated_at: string
 }
@@ -65,6 +66,8 @@ export interface LeaveRecord {
   leave_date: string
   leave_type: string
   reason: string | null
+  leave_able: boolean
+  rejected_reason: string | null
   created_by: string | null
   created_at: string
 }

@@ -1,0 +1,243 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { format } from 'date-fns'
+
+declare global {
+  interface Window {
+    liff: any
+  }
+}
+
+export default function LeaveRequestPage() {
+  const [liffReady, setLiffReady] = useState(false)
+  const [lineUserId, setLineUserId] = useState('')
+  const [displayName, setDisplayName] = useState('')
+
+  const [employeeId, setEmployeeId] = useState('')
+  const [leaveDate, setLeaveDate] = useState('')
+  const [leaveType, setLeaveType] = useState('sick')
+  const [otherType, setOtherType] = useState('')
+  const [reason, setReason] = useState('')
+
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    // Load LIFF SDK
+    const script = document.createElement('script')
+    script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'
+    script.async = true
+    script.onload = initializeLiff
+    document.body.appendChild(script)
+
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
+
+  const initializeLiff = async () => {
+    try {
+      await window.liff.init({ liffId: '2008436560-J06MeXN4' })
+
+      if (!window.liff.isLoggedIn()) {
+        window.liff.login()
+        return
+      }
+
+      const profile = await window.liff.getProfile()
+      setLineUserId(profile.userId)
+      setDisplayName(profile.displayName)
+      setLiffReady(true)
+    } catch (error) {
+      console.error('LIFF initialization failed:', error)
+      setMessage('ไม่สามารถเชื่อมต่อกับ LINE ได้')
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setMessage('')
+
+    try {
+      // Convert dd/mm/yyyy to yyyy-mm-dd for database
+      const dateParts = leaveDate.split('-')
+      const formattedDate = `${dateParts[0]}-${dateParts[1]}-${dateParts[2]}`
+
+      const finalLeaveType = leaveType === 'other' ? otherType : leaveType
+
+      const response = await fetch('/api/line/submit-leave', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lineUserId,
+          employeeId,
+          leaveDate: formattedDate,
+          leaveType: finalLeaveType,
+          reason,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setSuccess(true)
+        setMessage(`✅ ${result.message}`)
+        // Clear form
+        setEmployeeId('')
+        setLeaveDate('')
+        setLeaveType('sick')
+        setOtherType('')
+        setReason('')
+      } else {
+        setSuccess(false)
+        setMessage(`❌ ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Leave request error:', error)
+      setSuccess(false)
+      setMessage('❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!liffReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="spinner mx-auto mb-4"></div>
+          <p className="text-gray-600">กำลังโหลด...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-8 px-4">
+      <div className="max-w-md mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-4">🏖️</div>
+            <h1 className="text-3xl font-bold text-green-600 mb-2">
+              แบบฟอร์มขอลางาน
+            </h1>
+            <p className="text-gray-600 text-sm">
+              สวัสดี {displayName}!
+            </p>
+          </div>
+
+          {message && (
+            <div
+              className={`mb-6 p-4 rounded-lg ${
+                success
+                  ? 'bg-green-50 text-green-800 border border-green-200'
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}
+            >
+              <p className="whitespace-pre-line">{message}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                รหัสพนักงาน <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                placeholder="กรอกรหัสพนักงาน"
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                วันที่ลา <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={leaveDate}
+                onChange={(e) => setLeaveDate(e.target.value)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ประเภทการลา <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={leaveType}
+                onChange={(e) => setLeaveType(e.target.value)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="sick">ลาป่วย</option>
+                <option value="vacation">ลาพักร้อน</option>
+                <option value="personal">ลากิจ</option>
+                <option value="other">อื่นๆ (ระบุ)</option>
+              </select>
+            </div>
+
+            {leaveType === 'other' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ระบุประเภทการลา <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={otherType}
+                  onChange={(e) => setOtherType(e.target.value)}
+                  placeholder="เช่น ลาคลอด, ลาบวช"
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                เหตุผลการลา
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="ระบุเหตุผล (ถ้ามี)"
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? 'กำลังส่งคำขอ...' : '📤 ส่งคำขอลา'}
+            </button>
+          </form>
+
+          <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <p className="text-sm text-yellow-800">
+              <strong>⚠️ หมายเหตุ:</strong> คำขอลาของคุณจะถูกส่งไปยังผู้จัดการเพื่อพิจารณาอนุมัติ คุณจะได้รับการแจ้งเตือนผลการพิจารณาทาง LINE
+            </p>
+          </div>
+
+          <div className="mt-6 text-center text-xs text-gray-500">
+            <p>ระบบคำนวณชั่วโมง OT</p>
+            <p>© 2025 E-Cloud Technology</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS employees (
     perhr_salary DECIMAL(10,2) ,
     bank_id INTEGER,
     bank_account INTEGER,
-    identity_id INTEGER,
+    identity_id VARCHAR(20), -- Changed to VARCHAR to store identity card number
+    line_id TEXT, -- LINE User ID
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -64,6 +65,8 @@ CREATE TABLE IF NOT EXISTS leave_records (
     leave_date DATE NOT NULL,
     leave_type VARCHAR(50) DEFAULT 'Personal', -- Personal, Sick, Vacation, etc.
     reason TEXT,
+    leave_able BOOLEAN DEFAULT FALSE, -- Approval status
+    rejected_reason TEXT, -- Reason if rejected
     created_by VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT fk_leave_employee FOREIGN KEY (employee_id) REFERENCES employees(employee_id),
