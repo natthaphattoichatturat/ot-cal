@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS leave_records (
     rejected_reason TEXT, -- Reason if rejected
     created_by VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT fk_leave_employee FOREIGN KEY (employee_id) REFERENCES employees(employee_id),
     UNIQUE(employee_id, leave_date)
 );

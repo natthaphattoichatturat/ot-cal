@@ -14,6 +14,7 @@ export const LINE_CONFIG = {
     employeeRegistration: '2008436560-GMZNa4OA', // LIFF 1: Employee registration
     adminRegistration: '2008436560-lygzv9WO',    // LIFF 2: Admin registration
     leaveRequest: '2008436560-J06MeXN4',          // LIFF 3: Leave request
+    attendanceCheckin: '2008436560-DQqw6EPV',     // LIFF 4: Attendance check-in/out
   },
 
   // Admin password
