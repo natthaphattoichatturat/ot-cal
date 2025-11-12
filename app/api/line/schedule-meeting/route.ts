@@ -7,17 +7,17 @@ import { th } from 'date-fns/locale'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { employee_id, line_id, meeting_date, meeting_time, meeting_topic, meeting_details } = body
+    const { employee_id, meeting_date, meeting_time, meeting_topic, meeting_details } = body
 
     // Validation
-    if (!employee_id || !line_id || !meeting_date || !meeting_time || !meeting_topic) {
+    if (!employee_id || !meeting_date || !meeting_time || !meeting_topic) {
       return NextResponse.json(
         { success: false, error: 'ข้อมูลไม่ครบถ้วน' },
         { status: 400 }
       )
     }
 
-    // Get employee data
+    // Get employee data - need line_id_employ to send to Employee LINE OA
     const { data: employee, error: empError } = await supabase
       .from('employees')
       .select('*')
@@ -31,13 +31,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!employee.line_id_employ) {
+      return NextResponse.json(
+        { success: false, error: 'พนักงานยังไม่ได้ลงทะเบียน Employee LINE OA' },
+        { status: 400 }
+      )
+    }
+
     // Format date and time for display
     const formattedDate = format(new Date(meeting_date), 'dd MMMM yyyy', { locale: th })
     const timeDisplay = meeting_time.substring(0, 5) // HH:MM
 
     // Send LINE message to employee via Employee LINE OA
     try {
-      await sendLineMessage(line_id, [
+      await sendLineMessage(employee.line_id_employ, [
         {
           type: 'flex',
           altText: 'นัดหมายคุยส่วนตัว',

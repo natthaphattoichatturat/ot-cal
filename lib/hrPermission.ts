@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 /**
  * Check if a LINE user has HR permissions
  * Requirements:
- * 1. User must have line_id registered in employees table
+ * 1. User must have line_id_hr registered in employees table
  * 2. User must be in admin_etec department
  * 3. User must have active status
  */
@@ -13,18 +13,18 @@ export async function checkHRPermission(lineUserId: string): Promise<{
   error?: string
 }> {
   try {
-    // Query employee by LINE ID
+    // Query employee by HR LINE ID
     const { data: employee, error } = await supabase
       .from('employees')
       .select('*')
-      .eq('line_id', lineUserId)
+      .eq('line_id_hr', lineUserId)
       .eq('status', 'active')
       .single()
 
     if (error || !employee) {
       return {
         allowed: false,
-        error: 'ไม่พบข้อมูลพนักงานในระบบ กรุณาลงทะเบียนก่อน',
+        error: 'ไม่พบข้อมูลพนักงานในระบบ กรุณาลงทะเบียน HR LINE OA ก่อน',
       }
     }
 

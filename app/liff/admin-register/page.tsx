@@ -1,12 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-
-declare global {
-  interface Window {
-    liff: any
-  }
-}
+import liff from '@line/liff'
+import { LINE_CONFIG } from '@/lib/lineConfig'
 
 export default function AdminRegisterPage() {
   const [liffReady, setLiffReady] = useState(false)
@@ -26,28 +22,20 @@ export default function AdminRegisterPage() {
   const [success, setSuccess] = useState(false)
 
   useEffect(() => {
-    // Load LIFF SDK
-    const script = document.createElement('script')
-    script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'
-    script.async = true
-    script.onload = initializeLiff
-    document.body.appendChild(script)
-
-    return () => {
-      document.body.removeChild(script)
-    }
+    initializeLiff()
   }, [])
 
   const initializeLiff = async () => {
     try {
-      await window.liff.init({ liffId: '2008436560-lygzv9WO' })
+      // Use HR LINE OA LIFF ID
+      await liff.init({ liffId: LINE_CONFIG.liff.adminRegistration })
 
-      if (!window.liff.isLoggedIn()) {
-        window.liff.login()
+      if (!liff.isLoggedIn()) {
+        liff.login()
         return
       }
 
-      const profile = await window.liff.getProfile()
+      const profile = await liff.getProfile()
       setLineUserId(profile.userId)
       setDisplayName(profile.displayName)
       setName(profile.displayName) // Pre-fill name

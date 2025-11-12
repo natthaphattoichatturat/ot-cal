@@ -9,7 +9,7 @@ interface Employee {
   employee_id: string
   name: string
   department: string
-  line_id: string | null
+  line_id_employ: string | null
   status?: string
 }
 
@@ -113,8 +113,8 @@ export default function EmployeeMeetingPage() {
       return
     }
 
-    if (!selectedEmployee.line_id) {
-      setMessage('พนักงานคนนี้ยังไม่ได้ลงทะเบียน LINE')
+    if (!selectedEmployee.line_id_employ) {
+      setMessage('พนักงานคนนี้ยังไม่ได้ลงทะเบียน Employee LINE OA')
       setSuccess(false)
       return
     }
@@ -130,7 +130,6 @@ export default function EmployeeMeetingPage() {
         },
         body: JSON.stringify({
           employee_id: selectedEmployee.employee_id,
-          line_id: selectedEmployee.line_id,
           meeting_date: meetingDate,
           meeting_time: meetingTime,
           meeting_topic: meetingTopic,
@@ -245,8 +244,8 @@ export default function EmployeeMeetingPage() {
                       <p className="font-semibold text-gray-900">{emp.name}</p>
                       <p className="text-sm text-gray-600">{emp.employee_id}</p>
                       <p className="text-xs text-gray-500">{emp.department}</p>
-                      {!emp.line_id && (
-                        <p className="text-xs text-red-500 mt-1">ยังไม่ได้ลงทะเบียน LINE</p>
+                      {!emp.line_id_employ && (
+                        <p className="text-xs text-red-500 mt-1">ยังไม่ได้ลงทะเบียน Employee LINE OA</p>
                       )}
                     </div>
                     <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

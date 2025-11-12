@@ -69,7 +69,8 @@ export async function POST(request: NextRequest) {
             bank_id: emp.bank_id || null,
             bank_account: emp.bank_account || null,
             identity_id: emp.identity_id || null,
-            line_id: emp.line_id || null,
+            line_id_employ: emp.line_id_employ || null,
+            line_id_hr: emp.line_id_hr || null,
             remarks: emp.remarks || null,
             status: 'active',
           })

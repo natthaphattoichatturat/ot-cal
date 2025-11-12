@@ -62,15 +62,15 @@ async function handlePostback(event: any) {
     return
   }
 
-  // Get employee info
+  // Get employee info - need line_id_employ for Employee LINE OA
   const { data: employee, error: empError } = await supabase
     .from('employees')
     .select('*')
     .eq('employee_id', employeeId)
     .single()
 
-  if (empError || !employee || !employee.line_id) {
-    console.error('Employee not found or no LINE ID:', employeeId)
+  if (empError || !employee || !employee.line_id_employ) {
+    console.error('Employee not found or no Employee LINE ID:', employeeId)
     return
   }
 
@@ -105,9 +105,9 @@ async function handlePostback(event: any) {
       console.error('Failed to update attendance:', attendanceError)
     }
 
-    // Send approval notification to employee
+    // Send approval notification to employee via Employee LINE OA
     try {
-      await sendLineMessage(employee.line_id, [
+      await sendLineMessage(employee.line_id_employ, [
         {
           type: 'text',
           text: `✅ การลาของคุณได้รับการอนุมัติแล้ว\n\nวันที่: ${leaveRecord.leave_date}\nประเภท: ${leaveRecord.leave_type}\n\nขอให้มีความสุขในวันลา!`
@@ -134,9 +134,9 @@ async function handlePostback(event: any) {
       return
     }
 
-    // Send rejection notification to employee
+    // Send rejection notification to employee via Employee LINE OA
     try {
-      await sendLineMessage(employee.line_id, [
+      await sendLineMessage(employee.line_id_employ, [
         {
           type: 'text',
           text: `❌ ขออภัย การลาของคุณไม่ได้รับการอนุมัติ\n\nวันที่: ${leaveRecord.leave_date}\nประเภท: ${leaveRecord.leave_type}\n\nหากต้องการลา กรุณากรอกแบบฟอร์มใหม่อีกครั้ง`

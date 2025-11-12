@@ -58,11 +58,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find employee by LINE ID
+    // Find employee by Employee LINE ID
     const { data: employee, error: employeeError } = await supabase
       .from('employees')
       .select('employee_id, name')
-      .eq('line_id', lineUserId)
+      .eq('line_id_employ', lineUserId)
       .single()
 
     if (employeeError || !employee) {

@@ -23,16 +23,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if LINE ID already registered
+    // Check if HR LINE ID already registered
     const { data: existingLineUser } = await supabase
       .from('employees')
       .select('*')
-      .eq('line_id', lineUserId)
+      .eq('line_id_hr', lineUserId)
       .single()
 
     if (existingLineUser) {
       return NextResponse.json(
-        { success: false, error: 'LINE ID นี้ได้ลงทะเบียนแล้ว' },
+        { success: false, error: 'HR LINE ID นี้ได้ลงทะเบียนแล้ว' },
         { status: 400 }
       )
     }
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create new admin employee
+    // Create new admin employee with HR LINE ID
     const { data: newAdmin, error: insertError } = await supabase
       .from('employees')
       .insert({
@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
         name: name,
         department: 'admin_etec',
         identity_id: identityId,
-        line_id: lineUserId,
+        line_id_hr: lineUserId,
+        line_id_employ: null, // Can register Employee LINE later
         perday_salary: null,
         perhr_salary: null,
         bank_id: null,

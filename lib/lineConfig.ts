@@ -16,14 +16,17 @@ export const LINE_CONFIG = {
 
   // LIFF IDs
   liff: {
+    // Employee LINE OA LIFFs (Channel ID: 2008436527)
     employeeRegistration: '2008436560-GMZNa4OA', // LIFF 1: Employee registration
-    adminRegistration: '2008436560-lygzv9WO',    // LIFF 2: Admin registration
     leaveRequest: '2008436560-J06MeXN4',          // LIFF 3: Leave request
     attendanceCheckin: '2008436560-DQqw6EPV',     // LIFF 4: Attendance check-in/out
+    employeeOtViewer: '2008436560-WZqNLp6Z',      // LIFF 7: Employee OT viewer
+    aiPerformance: '2008436560-wJ3Mnl7g',         // LIFF 8: AI Performance evaluation (mock)
+
+    // HR LINE OA LIFFs (Channel ID: 2008409511)
+    adminRegistration: '2008409515-rgKMDQBb',     // LIFF 2: HR Admin registration (NEW)
     hrAdmin: '2008409515-1Ew4WMVL',               // LIFF 5: HR Admin management
     otViewer: '2008409515-EDXmdnJG',              // LIFF 6: OT hours viewer
-    employeeOtViewer: '2008436560-WZqNLp6Z',      // LIFF 7: Employee OT viewer (for employees)
-    aiPerformance: '2008436560-wJ3Mnl7g',         // LIFF 8: AI Performance evaluation (mock)
     hrDashboard: '2008409515-XnPV2b48',           // LIFF 9: HR Dashboard with AI analytics
     employeeMeeting: '2008409515-V336WkL9',       // LIFF 10: Schedule employee meetings
     aiChatbot: '2008409515-JPzQG38r',             // LIFF 11: AI Chatbot

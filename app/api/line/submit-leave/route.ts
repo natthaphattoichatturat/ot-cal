@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         leave_type: leaveType,
         reason: reason || null,
         leave_able: false, // Default to not approved
-        created_by: employee.line_id,
+        created_by: employee.line_id_employ,
       })
       .select()
       .single()
@@ -66,12 +66,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get all HR admins (admin_etec department)
+    // Get all HR admins (admin_etec department) - need line_id_hr for HR LINE OA
     const { data: admins, error: adminError} = await supabase
       .from('employees')
-      .select('line_id, name')
+      .select('line_id_hr, name')
       .eq('department', 'admin_etec')
-      .not('line_id', 'is', null)
+      .not('line_id_hr', 'is', null)
 
     if (!adminError && admins && admins.length > 0) {
       // Send approval request to all HR admins via HR LINE OA
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
       for (const admin of admins) {
         try {
-          await sendHRLineMessage(admin.line_id, [
+          await sendHRLineMessage(admin.line_id_hr, [
             {
               type: 'flex',
               altText: 'คำขอลางาน',
@@ -274,7 +274,7 @@ export async function POST(request: NextRequest) {
             }
           ])
         } catch (msgError) {
-          console.error(`Failed to send message to admin ${admin.line_id}:`, msgError)
+          console.error(`Failed to send message to admin ${admin.line_id_hr}:`, msgError)
         }
       }
     }

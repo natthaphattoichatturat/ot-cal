@@ -73,8 +73,8 @@ export default function EmployeeOTViewerPage() {
 
   const fetchEmployeeData = async (userId: string) => {
     try {
-      // Get employee by LINE ID
-      const response = await fetch(`/api/employees?search=${userId}&searchBy=line_id`)
+      // Get employee by Employee LINE ID
+      const response = await fetch(`/api/employees?search=${userId}&searchBy=line_id_employ`)
       const result = await response.json()
 
       if (result.success && result.data && result.data.length > 0) {

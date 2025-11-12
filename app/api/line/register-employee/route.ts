@@ -14,16 +14,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if LINE ID already registered
+    // Check if Employee LINE ID already registered
     const { data: existingLineUser } = await supabase
       .from('employees')
       .select('*')
-      .eq('line_id', lineUserId)
+      .eq('line_id_employ', lineUserId)
       .single()
 
     if (existingLineUser) {
       return NextResponse.json(
-        { success: false, error: 'LINE ID นี้ได้ลงทะเบียนแล้ว' },
+        { success: false, error: 'Employee LINE ID นี้ได้ลงทะเบียนแล้ว' },
         { status: 400 }
       )
     }
@@ -52,12 +52,12 @@ export async function POST(request: NextRequest) {
       employeeRecord = data
     }
 
-    // If employee found, update with LINE ID
+    // If employee found, update with Employee LINE ID
     if (employeeRecord) {
       const { error: updateError } = await supabase
         .from('employees')
         .update({
-          line_id: lineUserId,
+          line_id_employ: lineUserId,
           name: name, // Update name as well
           updated_at: new Date().toISOString(),
         })

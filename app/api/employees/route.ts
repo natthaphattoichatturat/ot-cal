@@ -31,6 +31,10 @@ export async function GET(request: NextRequest) {
         query = query.ilike('name', `%${search}%`)
       } else if (searchBy === 'employee_id') {
         query = query.ilike('employee_id', `%${search}%`)
+      } else if (searchBy === 'line_id_employ') {
+        query = query.eq('line_id_employ', search)
+      } else if (searchBy === 'line_id_hr') {
+        query = query.eq('line_id_hr', search)
       }
     }
 
@@ -70,7 +74,8 @@ export async function POST(request: NextRequest) {
       bank_id,
       bank_account,
       identity_id,
-      line_id,
+      line_id_employ,
+      line_id_hr,
       remarks,
     } = body
 
@@ -109,7 +114,8 @@ export async function POST(request: NextRequest) {
         bank_id,
         bank_account,
         identity_id,
-        line_id,
+        line_id_employ,
+        line_id_hr,
         remarks,
         status: 'active',
       })
