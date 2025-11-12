@@ -33,11 +33,11 @@ export default function HRAdminLandingPage() {
       const profile = await liff.getProfile()
       setUserName(profile.displayName)
 
-      // Check authorization
+      // Check authorization - use line_id_hr for HR LINE OA
       const { data: employee } = await supabase
         .from('employees')
         .select('department')
-        .eq('line_id', profile.userId)
+        .eq('line_id_hr', profile.userId)
         .single()
 
       if (employee && employee.department === 'admin_etec') {
