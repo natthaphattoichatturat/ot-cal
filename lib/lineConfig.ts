@@ -9,12 +9,19 @@ export const LINE_CONFIG = {
   loginChannelId: '2008436560',
   loginChannelSecret: 'c0f5746d2541552c7c006afcddeb2fb0',
 
+  // HR LINE OA (for HR admin functions)
+  hrChannelId: '2008409515',
+  hrChannelSecret: '4335066cdfd6a6fa7cd0b04c8993c0bb',
+  hrChannelAccessToken: '1YxuekdODxH0PKgSl+xLpXYrnViKidJAC64ZirqFXHv68FiPl4ybkqTnz7W+gwx24ysl0vj5xTsLg8uEXUmTNSGEBA7QbzL6R3xA8BsscP5ov5eWXSCjSuo5G9LIbNvAlgWOEzVQWok1EMzy/csE9wdB04t89/1O/w1cDnyilFU=',
+
   // LIFF IDs
   liff: {
     employeeRegistration: '2008436560-GMZNa4OA', // LIFF 1: Employee registration
     adminRegistration: '2008436560-lygzv9WO',    // LIFF 2: Admin registration
     leaveRequest: '2008436560-J06MeXN4',          // LIFF 3: Leave request
     attendanceCheckin: '2008436560-DQqw6EPV',     // LIFF 4: Attendance check-in/out
+    hrAdmin: '2008409515-1Ew4WMVL',               // LIFF 5: HR Admin management
+    otViewer: '2008409515-EDXmdnJG',              // LIFF 6: OT hours viewer
   },
 
   // Admin password
@@ -63,6 +70,50 @@ export async function replyLineMessage(replyToken: string, messages: any[]) {
   if (!response.ok) {
     const error = await response.text()
     throw new Error(`Failed to reply LINE message: ${error}`)
+  }
+
+  return response.json()
+}
+
+// Helper function to send HR LINE message
+export async function sendHRLineMessage(to: string, messages: any[]) {
+  const response = await fetch(`${LINE_CONFIG.messagingApiEndpoint}/push`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${LINE_CONFIG.hrChannelAccessToken}`,
+    },
+    body: JSON.stringify({
+      to,
+      messages,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Failed to send HR LINE message: ${error}`)
+  }
+
+  return response.json()
+}
+
+// Helper function to reply HR LINE message
+export async function replyHRLineMessage(replyToken: string, messages: any[]) {
+  const response = await fetch(`${LINE_CONFIG.messagingApiEndpoint}/reply`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${LINE_CONFIG.hrChannelAccessToken}`,
+    },
+    body: JSON.stringify({
+      replyToken,
+      messages,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Failed to reply HR LINE message: ${error}`)
   }
 
   return response.json()
