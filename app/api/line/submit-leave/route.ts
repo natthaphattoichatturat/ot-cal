@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { sendLineMessage } from '@/lib/lineConfig'
+import { sendHRLineMessage } from '@/lib/lineConfig'
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,15 +66,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get all admins
-    const { data: admins, error: adminError } = await supabase
+    // Get all HR admins (admin_etec department)
+    const { data: admins, error: adminError} = await supabase
       .from('employees')
       .select('line_id, name')
       .eq('department', 'admin_etec')
       .not('line_id', 'is', null)
 
     if (!adminError && admins && admins.length > 0) {
-      // Send approval request to all admins
+      // Send approval request to all HR admins via HR LINE OA
       const leaveTypeMap: any = {
         'sick': 'ลาป่วย',
         'vacation': 'ลาพักร้อน',
@@ -82,65 +82,159 @@ export async function POST(request: NextRequest) {
         'other': 'อื่นๆ'
       }
 
+      const leaveTypeColor: any = {
+        'sick': '#EF4444',
+        'vacation': '#3B82F6',
+        'personal': '#F59E0B',
+        'other': '#6B7280'
+      }
+
       for (const admin of admins) {
         try {
-          await sendLineMessage(admin.line_id, [
+          await sendHRLineMessage(admin.line_id, [
             {
               type: 'flex',
               altText: 'คำขอลางาน',
               contents: {
                 type: 'bubble',
+                size: 'mega',
                 header: {
                   type: 'box',
                   layout: 'vertical',
                   contents: [
                     {
                       type: 'text',
-                      text: '📋 คำขอลางาน',
+                      text: 'คำขอลางาน',
                       weight: 'bold',
                       size: 'xl',
-                      color: '#ffffff'
+                      color: '#FFFFFF',
+                      align: 'center'
                     }
                   ],
-                  backgroundColor: '#2C5AA0'
+                  backgroundColor: '#1E40AF',
+                  paddingAll: '20px'
                 },
                 body: {
                   type: 'box',
                   layout: 'vertical',
                   contents: [
                     {
-                      type: 'text',
-                      text: `รหัสพนักงาน: ${employeeId}`,
-                      size: 'sm',
+                      type: 'box',
+                      layout: 'vertical',
+                      contents: [
+                        {
+                          type: 'text',
+                          text: 'รหัสพนักงาน',
+                          size: 'xs',
+                          color: '#6B7280',
+                          weight: 'bold'
+                        },
+                        {
+                          type: 'text',
+                          text: employeeId,
+                          size: 'md',
+                          color: '#1E40AF',
+                          weight: 'bold',
+                          margin: 'xs'
+                        }
+                      ],
+                      paddingBottom: '12px'
+                    },
+                    {
+                      type: 'box',
+                      layout: 'vertical',
+                      contents: [
+                        {
+                          type: 'text',
+                          text: 'ชื่อพนักงาน',
+                          size: 'xs',
+                          color: '#6B7280',
+                          weight: 'bold'
+                        },
+                        {
+                          type: 'text',
+                          text: employee.name,
+                          size: 'md',
+                          color: '#111827',
+                          weight: 'bold',
+                          margin: 'xs'
+                        }
+                      ],
+                      paddingBottom: '12px'
+                    },
+                    {
+                      type: 'separator',
                       margin: 'md'
                     },
                     {
-                      type: 'text',
-                      text: `ชื่อ: ${employee.name}`,
-                      size: 'sm',
-                      margin: 'md'
+                      type: 'box',
+                      layout: 'vertical',
+                      contents: [
+                        {
+                          type: 'text',
+                          text: 'วันที่ลา',
+                          size: 'xs',
+                          color: '#6B7280',
+                          weight: 'bold'
+                        },
+                        {
+                          type: 'text',
+                          text: leaveDate,
+                          size: 'lg',
+                          color: '#1E40AF',
+                          weight: 'bold',
+                          margin: 'xs'
+                        }
+                      ],
+                      paddingTop: '12px',
+                      paddingBottom: '12px'
                     },
                     {
-                      type: 'text',
-                      text: `วันที่ลา: ${leaveDate}`,
-                      size: 'sm',
-                      margin: 'md',
-                      weight: 'bold'
+                      type: 'box',
+                      layout: 'vertical',
+                      contents: [
+                        {
+                          type: 'text',
+                          text: 'ประเภทการลา',
+                          size: 'xs',
+                          color: '#6B7280',
+                          weight: 'bold'
+                        },
+                        {
+                          type: 'text',
+                          text: leaveTypeMap[leaveType] || leaveType,
+                          size: 'md',
+                          color: leaveTypeColor[leaveType] || '#6B7280',
+                          weight: 'bold',
+                          margin: 'xs'
+                        }
+                      ],
+                      paddingBottom: '12px'
                     },
                     {
-                      type: 'text',
-                      text: `ประเภท: ${leaveTypeMap[leaveType] || leaveType}`,
-                      size: 'sm',
-                      margin: 'md'
-                    },
-                    {
-                      type: 'text',
-                      text: `เหตุผล: ${reason || '-'}`,
-                      size: 'sm',
-                      margin: 'md',
-                      wrap: true
+                      type: 'box',
+                      layout: 'vertical',
+                      contents: [
+                        {
+                          type: 'text',
+                          text: 'เหตุผลการลา',
+                          size: 'xs',
+                          color: '#6B7280',
+                          weight: 'bold'
+                        },
+                        {
+                          type: 'text',
+                          text: reason || 'ไม่ระบุ',
+                          size: 'sm',
+                          color: '#374151',
+                          margin: 'xs',
+                          wrap: true
+                        }
+                      ]
                     }
-                  ]
+                  ],
+                  backgroundColor: '#FFFFFF',
+                  paddingAll: '20px'
                 },
                 footer: {
                   type: 'box',
@@ -150,26 +244,31 @@ export async function POST(request: NextRequest) {
                       type: 'button',
                       action: {
                         type: 'postback',
-                        label: '✅ อนุมัติ',
+                        label: 'อนุมัติ',
                         data: `action=approve&leaveId=${leaveRecord.id}&employeeId=${employeeId}`,
                         displayText: 'อนุมัติการลา'
                       },
                       style: 'primary',
-                      color: '#48BB78'
+                      color: '#3B82F6',
+                      height: 'sm'
                     },
                     {
                       type: 'button',
                       action: {
                         type: 'postback',
-                        label: '❌ ไม่อนุมัติ',
+                        label: 'ไม่อนุมัติ',
                         data: `action=reject&leaveId=${leaveRecord.id}&employeeId=${employeeId}`,
                         displayText: 'ไม่อนุมัติการลา'
                       },
                       style: 'primary',
-                      color: '#F56565',
+                      color: '#EF4444',
+                      height: 'sm',
                       margin: 'sm'
                     }
-                  ]
+                  ],
+                  spacing: 'sm',
+                  backgroundColor: '#F3F4F6',
+                  paddingAll: '16px'
                 }
               }
             }

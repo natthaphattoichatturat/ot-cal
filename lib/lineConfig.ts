@@ -10,8 +10,8 @@ export const LINE_CONFIG = {
   loginChannelSecret: 'c0f5746d2541552c7c006afcddeb2fb0',
 
   // HR LINE OA (for HR admin functions)
-  hrChannelId: '2008409515',
-  hrChannelSecret: '4335066cdfd6a6fa7cd0b04c8993c0bb',
+  hrChannelId: '2008409511',
+  hrChannelSecret: '99b6f4656a2037e14c8975b5fb61916b',
   hrChannelAccessToken: '1YxuekdODxH0PKgSl+xLpXYrnViKidJAC64ZirqFXHv68FiPl4ybkqTnz7W+gwx24ysl0vj5xTsLg8uEXUmTNSGEBA7QbzL6R3xA8BsscP5ov5eWXSCjSuo5G9LIbNvAlgWOEzVQWok1EMzy/csE9wdB04t89/1O/w1cDnyilFU=',
 
   // LIFF IDs
@@ -22,6 +22,11 @@ export const LINE_CONFIG = {
     attendanceCheckin: '2008436560-DQqw6EPV',     // LIFF 4: Attendance check-in/out
     hrAdmin: '2008409515-1Ew4WMVL',               // LIFF 5: HR Admin management
     otViewer: '2008409515-EDXmdnJG',              // LIFF 6: OT hours viewer
+    employeeOtViewer: '2008436560-WZqNLp6Z',      // LIFF 7: Employee OT viewer (for employees)
+    aiPerformance: '2008436560-wJ3Mnl7g',         // LIFF 8: AI Performance evaluation (mock)
+    hrDashboard: '2008409515-XnPV2b48',           // LIFF 9: HR Dashboard with AI analytics
+    employeeMeeting: '2008409515-V336WkL9',       // LIFF 10: Schedule employee meetings
+    aiChatbot: '2008409515-JPzQG38r',             // LIFF 11: AI Chatbot
   },
 
   // Admin password

@@ -118,16 +118,20 @@ export default function LeaveRequestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-8 px-4">
       <div className="max-w-md mx-auto">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-6">
-            <div className="text-6xl mb-4">🏖️</div>
-            <h1 className="text-3xl font-bold text-green-600 mb-2">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-blue-900 mb-2">
               แบบฟอร์มขอลางาน
             </h1>
             <p className="text-gray-600 text-sm">
-              สวัสดี {displayName}!
+              สวัสดี {displayName}
             </p>
           </div>
 
@@ -135,8 +139,8 @@ export default function LeaveRequestPage() {
             <div
               className={`mb-6 p-4 rounded-lg ${
                 success
-                  ? 'bg-green-50 text-green-800 border border-green-200'
-                  : 'bg-red-50 text-red-800 border border-red-200'
+                  ? 'bg-blue-50 text-blue-900 border border-blue-200'
+                  : 'bg-red-50 text-red-900 border border-red-200'
               }`}
             >
               <p className="whitespace-pre-line">{message}</p>
@@ -154,7 +158,7 @@ export default function LeaveRequestPage() {
                 onChange={(e) => setEmployeeId(e.target.value)}
                 placeholder="กรอกรหัสพนักงาน"
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
@@ -167,7 +171,7 @@ export default function LeaveRequestPage() {
                 value={leaveDate}
                 onChange={(e) => setLeaveDate(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
@@ -179,7 +183,7 @@ export default function LeaveRequestPage() {
                 value={leaveType}
                 onChange={(e) => setLeaveType(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="sick">ลาป่วย</option>
                 <option value="vacation">ลาพักร้อน</option>
@@ -199,7 +203,7 @@ export default function LeaveRequestPage() {
                   onChange={(e) => setOtherType(e.target.value)}
                   placeholder="เช่น ลาคลอด, ลาบวช"
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             )}
@@ -220,15 +224,15 @@ export default function LeaveRequestPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'กำลังส่งคำขอ...' : '📤 ส่งคำขอลา'}
+              {loading ? 'กำลังส่งคำขอ...' : 'ส่งคำขอลา'}
             </button>
           </form>
 
-          <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-            <p className="text-sm text-yellow-800">
-              <strong>⚠️ หมายเหตุ:</strong> คำขอลาของคุณจะถูกส่งไปยังผู้จัดการเพื่อพิจารณาอนุมัติ คุณจะได้รับการแจ้งเตือนผลการพิจารณาทาง LINE
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-900">
+              <strong>หมายเหตุ:</strong> คำขอลาของคุณจะถูกส่งไปยังฝ่ายบุคคลเพื่อพิจารณาอนุมัติ คุณจะได้รับการแจ้งเตือนผลการพิจารณาทาง LINE
             </p>
           </div>
 
