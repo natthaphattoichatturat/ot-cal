@@ -19,12 +19,16 @@ export default function ImportEmployeesPage() {
       'address',
       'identity_id',
       'line_id',
+      'perday_salary',
+      'perhr_salary',
+      'bank_id',
+      'bank_account',
       'remarks',
     ]
 
     const exampleData = [
-      'EMP001,สมชาย ใจดี,ผลิต,001,001,123 ถ.สุขุมวิท กรุงเทพฯ,1234567890123,U1234567890abcdef,',
-      'EMP002,สมหญิง รักดี,บัญชี,002,002,456 ถ.พหลโยธิน กรุงเทพฯ,9876543210987,,หมายเหตุ',
+      'EMP001,สมชาย ใจดี,ผลิต,001,001,123 ถ.สุขุมวิท กรุงเทพฯ,1234567890123,U1234567890abcdef,350.00,50.00,004,1234567890,',
+      'EMP002,สมหญิง รักดี,บัญชี,002,002,456 ถ.พหลโยธิน กรุงเทพฯ,9876543210987,,400.00,55.00,006,9876543210,หมายเหตุ',
     ]
 
     const csvContent = [headers.join(','), ...exampleData].join('\n')

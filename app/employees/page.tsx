@@ -17,6 +17,9 @@ interface Employee {
   created_at: string
 }
 
+type SortField = keyof Employee
+type SortDirection = 'asc' | 'desc'
+
 export default function EmployeesPage() {
   const router = useRouter()
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -24,14 +27,16 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true)
   const [searchName, setSearchName] = useState('')
   const [searchId, setSearchId] = useState('')
+  const [sortField, setSortField] = useState<SortField>('created_at')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
   useEffect(() => {
     fetchEmployees()
   }, [])
 
   useEffect(() => {
-    filterEmployees()
-  }, [searchName, searchId, employees])
+    filterAndSortEmployees()
+  }, [searchName, searchId, employees, sortField, sortDirection])
 
   const fetchEmployees = async () => {
     setLoading(true)
@@ -49,9 +54,10 @@ export default function EmployeesPage() {
     }
   }
 
-  const filterEmployees = () => {
+  const filterAndSortEmployees = () => {
     let filtered = employees
 
+    // Filter
     if (searchName) {
       filtered = filtered.filter((emp) =>
         emp.name.toLowerCase().includes(searchName.toLowerCase())
@@ -64,7 +70,45 @@ export default function EmployeesPage() {
       )
     }
 
+    // Sort
+    filtered = [...filtered].sort((a, b) => {
+      let aVal = a[sortField]
+      let bVal = b[sortField]
+
+      // Handle null values
+      if (aVal === null) aVal = ''
+      if (bVal === null) bVal = ''
+
+      // Convert to string for comparison
+      const aStr = String(aVal).toLowerCase()
+      const bStr = String(bVal).toLowerCase()
+
+      if (sortDirection === 'asc') {
+        return aStr > bStr ? 1 : aStr < bStr ? -1 : 0
+      } else {
+        return aStr < bStr ? 1 : aStr > bStr ? -1 : 0
+      }
+    })
+
     setFilteredEmployees(filtered)
+  }
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      // New field, default to ascending
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <span style={{ opacity: 0.3 }}>⇅</span>
+    }
+    return sortDirection === 'asc' ? '↑' : '↓'
   }
 
   const handleRowClick = (employeeId: string) => {
@@ -161,15 +205,60 @@ export default function EmployeesPage() {
             <table className="data-table">
               <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 1 }}>
                 <tr>
-                  <th>รหัสพนักงาน</th>
-                  <th>ชื่อ-นามสกุล</th>
-                  <th>แผนก</th>
-                  <th>รหัสฝ่าย</th>
-                  <th>รหัสแผนก</th>
-                  <th>เลขบัตรประชาชน</th>
-                  <th>ที่อยู่</th>
-                  <th>LINE ID</th>
-                  <th>สถานะ</th>
+                  <th
+                    onClick={() => handleSort('employee_id')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    รหัสพนักงาน {getSortIcon('employee_id')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('name')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    ชื่อ-นามสกุล {getSortIcon('name')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('department')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    แผนก {getSortIcon('department')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('division_code')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    รหัสฝ่าย {getSortIcon('division_code')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('section_code')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    รหัสแผนก {getSortIcon('section_code')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('identity_id')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    เลขบัตรประชาชน {getSortIcon('identity_id')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('address')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    ที่อยู่ {getSortIcon('address')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('line_id')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    LINE ID {getSortIcon('line_id')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('status')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    สถานะ {getSortIcon('status')}
+                  </th>
                 </tr>
               </thead>
               <tbody>

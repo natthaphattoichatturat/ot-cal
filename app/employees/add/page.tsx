@@ -16,6 +16,10 @@ export default function AddEmployeePage() {
     address: '',
     identity_id: '',
     line_id: '',
+    perday_salary: '',
+    perhr_salary: '',
+    bank_id: '',
+    bank_account: '',
     remarks: '',
   })
 
@@ -213,6 +217,84 @@ export default function AddEmployeePage() {
                   value={formData.line_id}
                   onChange={(e) => handleChange('line_id', e.target.value)}
                   placeholder="U1234567890abcdef"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: '8px',
+                  }}
+                />
+              </div>
+
+              {/* เงินเดือนรายวัน */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                  เงินเดือนรายวัน (บาท)
+                </label>
+                <input
+                  type="number"
+                  value={formData.perday_salary}
+                  onChange={(e) => handleChange('perday_salary', e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: '8px',
+                  }}
+                />
+              </div>
+
+              {/* เงินเดือนรายชั่วโมง */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                  เงินเดือนรายชั่วโมง (บาท)
+                </label>
+                <input
+                  type="number"
+                  value={formData.perhr_salary}
+                  onChange={(e) => handleChange('perhr_salary', e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: '8px',
+                  }}
+                />
+              </div>
+
+              {/* รหัสธนาคาร */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                  รหัสธนาคาร
+                </label>
+                <input
+                  type="number"
+                  value={formData.bank_id}
+                  onChange={(e) => handleChange('bank_id', e.target.value)}
+                  placeholder="เช่น 004 (กสิกร)"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: '8px',
+                  }}
+                />
+              </div>
+
+              {/* เลขบัญชีธนาคาร */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                  เลขบัญชีธนาคาร
+                </label>
+                <input
+                  type="number"
+                  value={formData.bank_account}
+                  onChange={(e) => handleChange('bank_account', e.target.value)}
+                  placeholder="เลขบัญชี 10 หลัก"
                   style={{
                     width: '100%',
                     padding: '10px 12px',
