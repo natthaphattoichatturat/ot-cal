@@ -113,7 +113,7 @@ const SYSTEM_USAGE_GUIDE = `
 
 async function normalizeInput(userInput: string): Promise<string> {
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1-mini',
     messages: [
       {
         role: 'system',
@@ -147,7 +147,7 @@ Output: "How do I add a new employee?"`,
 
 async function classifyQuery(normalizedInput: string): Promise<'database' | 'system_usage' | 'general'> {
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1-mini',
     messages: [
       {
         role: 'system',
@@ -181,7 +181,7 @@ Respond with ONLY ONE WORD: either "database", "system_usage", or "general".`,
 
 async function generateSQL(normalizedInput: string): Promise<string> {
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-5-mini',
     messages: [
       {
         role: 'system',
@@ -247,7 +247,7 @@ async function generateNaturalLanguageResponse(
   queryResult: any[]
 ): Promise<string> {
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1-mini',
     messages: [
       {
         role: 'system',
@@ -278,7 +278,7 @@ Please provide a natural language response to the user.`,
 
 async function generateSystemUsageResponse(normalizedInput: string): Promise<string> {
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1-mini',
     messages: [
       {
         role: 'system',
@@ -308,7 +308,7 @@ Rules:
 
 async function generateGeneralResponse(normalizedInput: string): Promise<string> {
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1-mini',
     messages: [
       {
         role: 'system',
