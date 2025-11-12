@@ -126,7 +126,7 @@ export default function EmployeesPage() {
               รายชื่อพนักงานทั้งหมด {filteredEmployees.length} คน
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <a href="/employees/import" className="btn btn-secondary">
               📥 Import พนักงาน
             </a>
@@ -135,6 +135,9 @@ export default function EmployeesPage() {
             </a>
             <a href="/employees/add" className="btn btn-primary">
               ➕ เพิ่มพนักงาน
+            </a>
+            <a href="/employees/remove" className="btn" style={{ background: '#f44336', color: 'white' }}>
+              🗑️ ลบ/ปลดพนักงาน
             </a>
             <a href="/" className="btn btn-secondary">
               กลับหน้าหลัก
