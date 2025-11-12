@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { LINE_CONFIG, replyHRLineMessage } from '@/lib/lineConfig'
+import { checkHRPermission } from '@/lib/hrPermission'
 import crypto from 'crypto'
 
 // Verify LINE signature
@@ -14,6 +15,20 @@ function verifySignature(body: string, signature: string): boolean {
 // Handle text message from user
 async function handleTextMessage(replyToken: string, text: string, userId: string) {
   try {
+    // Check HR permission first
+    const permission = await checkHRPermission(userId)
+
+    if (!permission.allowed) {
+      // User doesn't have HR permission
+      await replyHRLineMessage(replyToken, [
+        {
+          type: 'text',
+          text: permission.error || 'คุณไม่มีสิทธิ์ใช้งานระบบ HR\n\nระบบนี้เฉพาะพนักงานแผนก admin_etec เท่านั้น',
+        },
+      ])
+      return
+    }
+
     // Call chatbot API
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://ot-cal-sdht.vercel.app'}/api/chatbot`, {
       method: 'POST',
