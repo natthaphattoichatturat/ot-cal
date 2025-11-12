@@ -130,6 +130,9 @@ export default function EmployeesPage() {
             <a href="/employees/import" className="btn btn-secondary">
               📥 Import พนักงาน
             </a>
+            <a href="/employees/edit" className="btn btn-secondary">
+              ✏️ แก้ไขข้อมูลพนักงาน
+            </a>
             <a href="/employees/add" className="btn btn-primary">
               ➕ เพิ่มพนักงาน
             </a>
