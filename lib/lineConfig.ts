@@ -10,8 +10,8 @@ export const LINE_CONFIG = {
   loginChannelSecret: 'c0f5746d2541552c7c006afcddeb2fb0',
 
   // HR LINE OA (for HR admin functions)
-  hrChannelId: '2008409511',
-  hrChannelSecret: '99b6f4656a2037e14c8975b5fb61916b',
+  hrChannelId: '2008409515',
+  hrChannelSecret: '4335066cdfd6a6fa7cd0b04c8993c0bb',
   hrChannelAccessToken: '1YxuekdODxH0PKgSl+xLpXYrnViKidJAC64ZirqFXHv68FiPl4ybkqTnz7W+gwx24ysl0vj5xTsLg8uEXUmTNSGEBA7QbzL6R3xA8BsscP5ov5eWXSCjSuo5G9LIbNvAlgWOEzVQWok1EMzy/csE9wdB04t89/1O/w1cDnyilFU=',
 
   // LIFF IDs

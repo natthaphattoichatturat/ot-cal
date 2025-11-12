@@ -7,31 +7,35 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const month = searchParams.get('month') // Format: YYYY-MM
     const period = searchParams.get('period') // '1' or '2'
+    let startDate = searchParams.get('startDate')
+    let endDate = searchParams.get('endDate')
+    const groupBy = searchParams.get('groupBy') // optional: 'employee'
 
-    if (!month || !period) {
+    // Support both month/period and startDate/endDate formats
+    if (startDate && endDate) {
+      // Use provided date range (for OT viewer)
+      // startDate and endDate already set
+    } else if (month && period) {
+      // Calculate date range based on period (for attendance page)
+      const [year, monthNum] = month.split('-').map(Number)
+
+      if (period === '1') {
+        // Period 1: 26th of previous month to 10th of selected month
+        const prevMonth = monthNum === 1 ? 12 : monthNum - 1
+        const prevYear = monthNum === 1 ? year - 1 : year
+
+        startDate = `${prevYear}-${prevMonth.toString().padStart(2, '0')}-26`
+        endDate = `${year}-${monthNum.toString().padStart(2, '0')}-10`
+      } else {
+        // Period 2: 11th to 25th of selected month
+        startDate = `${year}-${monthNum.toString().padStart(2, '0')}-11`
+        endDate = `${year}-${monthNum.toString().padStart(2, '0')}-25`
+      }
+    } else {
       return NextResponse.json(
-        { error: 'Month and period parameters are required' },
+        { error: 'Either (month and period) or (startDate and endDate) parameters are required' },
         { status: 400 }
       )
-    }
-
-    const [year, monthNum] = month.split('-').map(Number)
-
-    // Calculate date range based on period
-    let startDate: string
-    let endDate: string
-
-    if (period === '1') {
-      // Period 1: 26th of previous month to 10th of selected month
-      const prevMonth = monthNum === 1 ? 12 : monthNum - 1
-      const prevYear = monthNum === 1 ? year - 1 : year
-
-      startDate = `${prevYear}-${prevMonth.toString().padStart(2, '0')}-26`
-      endDate = `${year}-${monthNum.toString().padStart(2, '0')}-10`
-    } else {
-      // Period 2: 11th to 25th of selected month
-      startDate = `${year}-${monthNum.toString().padStart(2, '0')}-11`
-      endDate = `${year}-${monthNum.toString().padStart(2, '0')}-25`
     }
 
     // Get all daily attendance records for the period
@@ -54,6 +58,32 @@ export async function GET(request: NextRequest) {
       throw error
     }
 
+    // If groupBy=employee, return detailed records with employee info
+    if (groupBy === 'employee') {
+      const detailedRecords = attendance?.map((record: any) => ({
+        id: record.id,
+        employee_id: record.employee_id,
+        employee_name: record.employees?.name || 'Unknown',
+        work_date: record.work_date,
+        check_in_time: record.check_in_time,
+        check_out_time: record.check_out_time,
+        actual_hours: record.actual_hours || 0,
+        ot_hours: record.ot_hours || 0,
+        is_holiday: record.is_holiday || false,
+        is_leave: record.is_leave || false,
+        late: record.late || false,
+        late_hours: record.late_hours || 0,
+        notes: record.notes,
+      })) || []
+
+      return NextResponse.json({
+        success: true,
+        startDate,
+        endDate,
+        data: detailedRecords
+      })
+    }
+
     // Get all employees
     const { data: employees, error: empError } = await supabase
       .from('employees')
@@ -64,7 +94,7 @@ export async function GET(request: NextRequest) {
       throw empError
     }
 
-    // Format data for frontend
+    // Format data for frontend (original format for attendance page)
     const attendanceMap = new Map()
 
     attendance?.forEach((record: any) => {
