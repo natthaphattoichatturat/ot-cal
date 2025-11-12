@@ -14,16 +14,24 @@ export async function GET(
   try {
     const { id } = params
 
-    // Try to get by numeric ID first, then by employee_id
-    let query = supabase.from('employees').select('*')
+    // Try to get by employee_id first (most common case)
+    let { data, error } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('employee_id', id)
+      .single()
 
-    if (!isNaN(Number(id))) {
-      query = query.eq('id', id)
-    } else {
-      query = query.eq('employee_id', id)
+    // If not found and id is numeric, try searching by primary key id
+    if (error && !isNaN(Number(id))) {
+      const result = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', Number(id))
+        .single()
+
+      data = result.data
+      error = result.error
     }
-
-    const { data, error } = await query.single()
 
     if (error || !data) {
       return NextResponse.json(
