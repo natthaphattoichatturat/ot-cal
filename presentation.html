@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart HR & Attendance System - AI-Powered LINE OA Solution</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><path d="M0,300 Q300,100 600,300 T1200,300 L1200,600 L0,600 Z" fill="rgba(255,255,255,0.05)"/></svg>') repeat-x bottom;
+            opacity: 0.3;
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            animation: fadeInUp 1s ease;
+        }
+
+        .hero .tagline {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+            animation: fadeInUp 1s ease 0.2s backwards;
+        }
+
+        .hero .description {
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto 3rem;
+            opacity: 0.9;
+            animation: fadeInUp 1s ease 0.4s backwards;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 1s ease 0.6s backwards;
+        }
+
+        .btn {
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        /* Section Styles */
+        .section {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #2d3748;
+        }
+
+        .section-subtitle {
+            font-size: 1.2rem;
+            text-align: center;
+            color: #718096;
+            margin-bottom: 4rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Stats Section */
+        .stats {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 4rem 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-top: 0.5rem;
+        }
+
+        /* Features Section */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #2d3748;
+        }
+
+        .feature-description {
+            color: #4a5568;
+            line-height: 1.8;
+        }
+
+        /* Dual LINE OA Section */
+        .dual-oa {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 5rem 2rem;
+        }
+
+        .dual-oa .section-title,
+        .dual-oa .section-subtitle {
+            color: white;
+        }
+
+        .oa-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .oa-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2.5rem;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .oa-card h3 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .oa-features {
+            list-style: none;
+        }
+
+        .oa-features li {
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: start;
+            gap: 1rem;
+        }
+
+        .oa-features li:last-child {
+            border-bottom: none;
+        }
+
+        /* Screenshot Section */
+        .screenshots {
+            background: #f7fafc;
+            padding: 5rem 2rem;
+        }
+
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .screenshot-item {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .screenshot-item:hover {
+            transform: scale(1.05);
+        }
+
+        .screenshot-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .screenshot-caption {
+            padding: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        /* AI Section */
+        .ai-section {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 5rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ai-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(102,126,234,0.3) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .ai-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .ai-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .ai-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .ai-card h4 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #60a5fa;
+        }
+
+        /* Benefits Section */
+        .benefits {
+            padding: 5rem 2rem;
+            background: white;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .benefit-item {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .benefit-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .benefit-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #2d3748;
+        }
+
+        .benefit-text {
+            color: #718096;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5rem 2rem;
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .cta-section p {
+            font-size: 1.2rem;
+            margin-bottom: 2.5rem;
+            opacity: 0.95;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1a202c;
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer p {
+            opacity: 0.7;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero .tagline {
+                font-size: 1.2rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .oa-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .screenshot-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            .hero {
+                min-height: auto;
+                page-break-after: always;
+            }
+
+            .section {
+                page-break-inside: avoid;
+            }
+
+            .btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Smart HR & Attendance System</h1>
+            <p class="tagline">AI-Powered LINE OA Solution for Modern Workplaces</p>
+            <p class="description">
+                Transform your workforce management with our intelligent dual LINE Official Account system.
+                Automate attendance tracking, streamline leave requests, and empower HR with AI-driven insights - all within LINE.
+            </p>
+            <div class="cta-buttons">
+                <a href="#features" class="btn btn-primary">Explore Features</a>
+                <a href="#demo" class="btn btn-secondary">See Demo</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">1 Sec</div>
+                <div class="stat-label">Check-in Time</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">2</div>
+                <div class="stat-label">LINE OA Systems</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Automated</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">AI</div>
+                <div class="stat-label">Powered Chatbot</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dual LINE OA Section -->
+    <section class="dual-oa">
+        <h2 class="section-title">Dual LINE Official Account Architecture</h2>
+        <p class="section-subtitle">Two specialized LINE OA systems working together seamlessly</p>
+
+        <div class="oa-grid">
+            <!-- Employee LINE OA -->
+            <div class="oa-card">
+                <h3>👥 Employee LINE OA</h3>
+                <p style="opacity: 0.9; margin-bottom: 2rem;">For all employees - Simple, fast, and user-friendly</p>
+                <ul class="oa-features">
+                    <li>
+                        <span>⚡</span>
+                        <div>
+                            <strong>1-Click Check-in/out</strong><br>
+                            <small>Automated attendance with GPS location in 1 second</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span>📝</span>
+                        <div>
+                            <strong>Leave Request System</strong><br>
+                            <small>Submit leave requests and receive instant notifications</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span>⏱️</span>
+                        <div>
+                            <strong>Personal OT Viewer</strong><br>
+                            <small>Track your own overtime hours in real-time</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span>📱</span>
+                        <div>
+                            <strong>Easy Registration</strong><br>
+                            <small>Simple onboarding process for all employees</small>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- HR LINE OA -->
+            <div class="oa-card">
+                <h3>🏢 HR LINE OA</h3>
+                <p style="opacity: 0.9; margin-bottom: 2rem;">For HR admins - Powerful, secure, and intelligent</p>
+                <ul class="oa-features">
+                    <li>
+                        <span>🔐</span>
+                        <div>
+                            <strong>Secure Access Control</strong><br>
+                            <small>Password-protected registration for admin_etec only</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span>📊</span>
+                        <div>
+                            <strong>Employee Management</strong><br>
+                            <small>View, edit, add, and remove employee records</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span>✅</span>
+                        <div>
+                            <strong>Leave Approval System</strong><br>
+                            <small>Approve or reject leave requests instantly</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span>📈</span>
+                        <div>
+                            <strong>OT Analytics</strong><br>
+                            <small>View and analyze employee overtime hours</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span>📅</span>
+                        <div>
+                            <strong>Meeting Scheduler</strong><br>
+                            <small>Schedule one-on-one meetings with employees</small>
+                        </div>
+                    </li>
+                    <li>
+                        <span>🤖</span>
+                        <div>
+                            <strong>AI Chatbot</strong><br>
+                            <small>Ask anything about employee data, system usage, or HR policies</small>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="section">
+        <h2 class="section-title">Key Features</h2>
+        <p class="section-subtitle">Everything you need to manage your workforce efficiently</p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3 class="feature-title">Lightning-Fast Check-in</h3>
+                <p class="feature-description">
+                    One-click attendance tracking with automatic GPS location capture.
+                    No more manual timesheets or time clock queues - everything happens in 1 second.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h3 class="feature-title">100% Automated</h3>
+                <p class="feature-description">
+                    From attendance tracking to leave approvals, notifications, and OT calculations -
+                    everything is fully automated, reducing manual work by 90%.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3 class="feature-title">AI-Powered Intelligence</h3>
+                <p class="feature-description">
+                    Multi-stage LLM pipeline chatbot that understands context, queries databases,
+                    and provides intelligent responses about employee data and HR policies.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔐</div>
+                <h3 class="feature-title">Enterprise Security</h3>
+                <p class="feature-description">
+                    Role-based access control, password protection, and department-level permissions
+                    ensure only authorized personnel can access sensitive HR data.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3 class="feature-title">Real-time Analytics</h3>
+                <p class="feature-description">
+                    Live dashboards showing attendance trends, OT hours, leave patterns,
+                    and workforce analytics with beautiful visualizations.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <h3 class="feature-title">Mobile-First Design</h3>
+                <p class="feature-description">
+                    Built specifically for LINE - works perfectly on any smartphone.
+                    No app installation required, everything within LINE messenger.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Section -->
+    <section class="ai-section">
+        <div class="ai-content">
+            <h2 class="section-title" style="color: white;">AI Chatbot Intelligence</h2>
+            <p class="section-subtitle" style="color: rgba(255,255,255,0.9);">
+                Powered by GPT-4o-mini with advanced multi-stage processing
+            </p>
+
+            <div class="ai-features">
+                <div class="ai-card">
+                    <h4>🧠 Natural Language Understanding</h4>
+                    <p>Ask questions in Thai or English - the AI understands context and intent,
+                    providing accurate responses to HR queries.</p>
+                </div>
+
+                <div class="ai-card">
+                    <h4>🔍 Database Query Generation</h4>
+                    <p>Automatically generates SQL queries from natural language questions,
+                    fetching real-time data from your employee database.</p>
+                </div>
+
+                <div class="ai-card">
+                    <h4>📖 System Knowledge</h4>
+                    <p>Trained on your HR policies and system documentation,
+                    providing instant answers about leave policies, OT rules, and more.</p>
+                </div>
+
+                <div class="ai-card">
+                    <h4>🎯 Smart Classification</h4>
+                    <p>Multi-stage pipeline classifies queries into categories
+                    (database, system usage, general) for optimal response accuracy.</p>
+                </div>
+
+                <div class="ai-card">
+                    <h4>💬 Conversational Interface</h4>
+                    <p>Simply send messages to HR LINE OA - no commands to remember,
+                    just natural conversation with instant, intelligent responses.</p>
+                </div>
+
+                <div class="ai-card">
+                    <h4>🚀 Instant Responses</h4>
+                    <p>Get answers in seconds, not hours. No need to wait for HR staff -
+                    the AI handles routine queries 24/7.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Employee LINE OA Screenshots -->
+    <section id="demo" class="screenshots">
+        <h2 class="section-title">Employee LINE OA</h2>
+        <p class="section-subtitle">Designed for simplicity and speed</p>
+
+        <div class="screenshot-grid">
+            <div class="screenshot-item">
+                <img src="image/IMG_5229.PNG" alt="Employee LINE OA Interface" loading="lazy">
+                <div class="screenshot-caption">LINE OA Chat Interface</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5218.PNG" alt="Employee Registration" loading="lazy">
+                <div class="screenshot-caption">Easy Registration Process</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5237.PNG" alt="Check-in Screen" loading="lazy">
+                <div class="screenshot-caption">1-Second Check-in with GPS</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5238.PNG" alt="Check-in Confirmation" loading="lazy">
+                <div class="screenshot-caption">Instant Confirmation</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5216.PNG" alt="Leave Request" loading="lazy">
+                <div class="screenshot-caption">Leave Request Form</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5219.PNG" alt="OT Viewer" loading="lazy">
+                <div class="screenshot-caption">Personal OT Hours Viewer</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HR LINE OA Screenshots -->
+    <section class="screenshots" style="background: #e6f3ff;">
+        <h2 class="section-title">HR LINE OA</h2>
+        <p class="section-subtitle">Powerful tools for HR management</p>
+
+        <div class="screenshot-grid">
+            <div class="screenshot-item">
+                <img src="image/IMG_5239.PNG" alt="HR LINE OA Interface" loading="lazy">
+                <div class="screenshot-caption">HR LINE OA Dashboard</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5225.PNG" alt="HR Registration" loading="lazy">
+                <div class="screenshot-caption">Secure Admin Registration</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5223.PNG" alt="Employee Management" loading="lazy">
+                <div class="screenshot-caption">Employee Management System</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5221.PNG" alt="Leave Approval" loading="lazy">
+                <div class="screenshot-caption">Leave Request Approval</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5224.PNG" alt="OT Analytics" loading="lazy">
+                <div class="screenshot-caption">Employee OT Analytics</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5240.PNG" alt="Dashboard" loading="lazy">
+                <div class="screenshot-caption">Overview Dashboard</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5226.PNG" alt="Meeting Scheduler" loading="lazy">
+                <div class="screenshot-caption">Employee Meeting Scheduler</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5227.PNG" alt="AI Chatbot Features" loading="lazy">
+                <div class="screenshot-caption">AI Chatbot Capabilities</div>
+            </div>
+
+            <div class="screenshot-item">
+                <img src="image/IMG_5222.PNG" alt="Chatbot Conversation" loading="lazy">
+                <div class="screenshot-caption">Live Chat with AI</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits">
+        <h2 class="section-title">Why Choose Our System?</h2>
+        <p class="section-subtitle">Measurable improvements for your organization</p>
+
+        <div class="benefits-grid">
+            <div class="benefit-item">
+                <div class="benefit-icon">⏱️</div>
+                <div class="benefit-title">Save 90% Time</div>
+                <div class="benefit-text">Reduce administrative work from hours to minutes</div>
+            </div>
+
+            <div class="benefit-item">
+                <div class="benefit-icon">💰</div>
+                <div class="benefit-title">Cut Costs</div>
+                <div class="benefit-text">Eliminate expensive time clock hardware and manual processes</div>
+            </div>
+
+            <div class="benefit-item">
+                <div class="benefit-icon">📍</div>
+                <div class="benefit-title">100% Accuracy</div>
+                <div class="benefit-text">GPS-verified attendance with automatic location tracking</div>
+            </div>
+
+            <div class="benefit-item">
+                <div class="benefit-icon">🚀</div>
+                <div class="benefit-title">Instant Deploy</div>
+                <div class="benefit-text">No hardware installation - works immediately via LINE</div>
+            </div>
+
+            <div class="benefit-item">
+                <div class="benefit-icon">📊</div>
+                <div class="benefit-title">Data-Driven</div>
+                <div class="benefit-text">Make informed decisions with real-time analytics</div>
+            </div>
+
+            <div class="benefit-item">
+                <div class="benefit-icon">🤝</div>
+                <div class="benefit-title">Better Employee Experience</div>
+                <div class="benefit-text">Employees love the simplicity - no learning curve</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technical Architecture -->
+    <section class="section" style="background: #f7fafc;">
+        <h2 class="section-title">Technical Excellence</h2>
+        <p class="section-subtitle">Built with modern, enterprise-grade technology</p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">⚛️</div>
+                <h3 class="feature-title">Next.js 14</h3>
+                <p class="feature-description">
+                    Latest React framework with App Router, server components,
+                    and optimized performance for lightning-fast page loads.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🗄️</div>
+                <h3 class="feature-title">Supabase PostgreSQL</h3>
+                <p class="feature-description">
+                    Enterprise-grade database with real-time capabilities,
+                    row-level security, and automatic backups.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3 class="feature-title">OpenAI GPT-4o-mini</h3>
+                <p class="feature-description">
+                    Advanced AI model with custom fine-tuning for HR domain,
+                    multi-stage processing pipeline for accurate responses.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <h3 class="feature-title">LINE LIFF SDK</h3>
+                <p class="feature-description">
+                    Native integration with LINE platform, seamless authentication,
+                    and rich messaging capabilities.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3 class="feature-title">Enterprise Security</h3>
+                <p class="feature-description">
+                    Dual LINE ID architecture, role-based access control,
+                    encrypted communications, and secure webhook verification.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">☁️</div>
+                <h3 class="feature-title">Cloud Deployment</h3>
+                <p class="feature-description">
+                    Hosted on Vercel with global CDN, automatic scaling,
+                    and 99.9% uptime guarantee.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section class="section">
+        <h2 class="section-title">Perfect For</h2>
+        <p class="section-subtitle">Industries and organizations we serve</p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🏭</div>
+                <h3 class="feature-title">Manufacturing</h3>
+                <p class="feature-description">
+                    Track shift workers, manage OT hours, and monitor factory floor attendance with GPS verification.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🏢</div>
+                <h3 class="feature-title">Corporations</h3>
+                <p class="feature-description">
+                    Streamline office attendance, remote work tracking, and leave management for large teams.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🏪</div>
+                <h3 class="feature-title">Retail</h3>
+                <p class="feature-description">
+                    Manage multiple store locations, part-time workers, and flexible schedules efficiently.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🏗️</div>
+                <h3 class="feature-title">Construction</h3>
+                <p class="feature-description">
+                    Track workers across multiple sites with GPS, manage hazard pay, and OT calculations.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🏨</div>
+                <h3 class="feature-title">Hospitality</h3>
+                <p class="feature-description">
+                    Handle complex shift patterns, seasonal workers, and 24/7 operations seamlessly.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">💼</div>
+                <h3 class="feature-title">SMEs</h3>
+                <p class="feature-description">
+                    Affordable solution for small-medium enterprises wanting professional HR management.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <h2>Ready to Transform Your HR Management?</h2>
+        <p>Join leading organizations using AI-powered LINE OA for workforce management</p>
+        <div class="cta-buttons">
+            <a href="#contact" class="btn btn-primary">Request Demo</a>
+            <a href="#pricing" class="btn btn-secondary">View Pricing</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <h3 style="margin-bottom: 1rem;">Smart HR & Attendance System</h3>
+            <p>AI-Powered LINE OA Solution</p>
+            <p style="margin-top: 1.5rem; opacity: 0.5; font-size: 0.9rem;">
+                © 2025 All Rights Reserved. Built with Next.js, Supabase, and OpenAI.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add scroll animation to feature cards
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card, .stat-card, .ai-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>
