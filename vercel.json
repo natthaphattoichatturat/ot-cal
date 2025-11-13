@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/check-overtime-alerts",
-      "schedule": "0 * * * *"
-    }
-  ]
-}
