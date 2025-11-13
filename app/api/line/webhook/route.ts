@@ -110,7 +110,7 @@ async function handlePostback(event: any) {
       await sendLineMessage(employee.line_id_employ, [
         {
           type: 'text',
-          text: `✅ การลาของคุณได้รับการอนุมัติแล้ว\n\nวันที่: ${leaveRecord.leave_date}\nประเภท: ${leaveRecord.leave_type}\n\nขอให้มีความสุขในวันลา!`
+          text: `การลาของคุณได้รับการอนุมัติแล้ว\n\nวันที่: ${leaveRecord.leave_date}\nประเภท: ${leaveRecord.leave_type}\n\nข้อมูลถูกบันทึกในระบบเรียบร้อยแล้ว`
         }
       ])
     } catch (msgError) {
@@ -139,7 +139,7 @@ async function handlePostback(event: any) {
       await sendLineMessage(employee.line_id_employ, [
         {
           type: 'text',
-          text: `❌ ขออภัย การลาของคุณไม่ได้รับการอนุมัติ\n\nวันที่: ${leaveRecord.leave_date}\nประเภท: ${leaveRecord.leave_type}\n\nหากต้องการลา กรุณากรอกแบบฟอร์มใหม่อีกครั้ง`
+          text: `ขออภัย การลาของคุณไม่ได้รับการอนุมัติ\n\nวันที่: ${leaveRecord.leave_date}\nประเภท: ${leaveRecord.leave_type}\nเหตุผล: ${leaveRecord.rejected_reason || 'ไม่อนุมัติโดยผู้จัดการ'}\n\nหากต้องการลา กรุณากรอกแบบฟอร์มใหม่อีกครั้ง`
         }
       ])
     } catch (msgError) {

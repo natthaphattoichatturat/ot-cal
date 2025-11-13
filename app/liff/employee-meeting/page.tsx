@@ -161,10 +161,25 @@ export default function EmployeeMeetingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            border: '6px solid rgba(255,255,255,0.2)',
+            borderTop: '6px solid white',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 24px'
+          }}></div>
+          <p style={{ color: 'white', fontSize: '18px', fontWeight: '500' }}>กำลังโหลดระบบ...</p>
+          <p style={{ color: 'rgba(255,255,255,0.8)', marginTop: '8px', fontSize: '14px' }}>โปรดรอสักครู่</p>
         </div>
       </div>
     )
@@ -346,7 +361,7 @@ export default function EmployeeMeetingPage() {
                   disabled={sending}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
                 >
-                  {sending ? 'กำลังส่ง...' : 'ส่งนัดหมาย'}
+                  {sending ? 'กำลังดำเนินการ...' : 'ส่งนัดหมาย'}
                 </button>
               </div>
             </div>

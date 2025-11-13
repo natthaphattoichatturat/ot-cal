@@ -86,7 +86,7 @@ export default function LeaveRequestPage() {
 
       if (result.success) {
         setSuccess(true)
-        setMessage(`✅ ${result.message}`)
+        setMessage(`${result.message}\n\nข้อมูลถูกบันทึกในระบบเรียบร้อยแล้ว`)
         // Clear form
         setEmployeeId('')
         setLeaveDate('')
@@ -95,12 +95,12 @@ export default function LeaveRequestPage() {
         setReason('')
       } else {
         setSuccess(false)
-        setMessage(`❌ ${result.error}`)
+        setMessage(result.error)
       }
     } catch (error) {
       console.error('Leave request error:', error)
       setSuccess(false)
-      setMessage('❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
+      setMessage('เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง')
     } finally {
       setLoading(false)
     }
@@ -108,10 +108,25 @@ export default function LeaveRequestPage() {
 
   if (!liffReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="spinner mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังโหลด...</p>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            border: '6px solid rgba(255,255,255,0.2)',
+            borderTop: '6px solid white',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 24px'
+          }}></div>
+          <p style={{ color: 'white', fontSize: '18px', fontWeight: '500' }}>กำลังโหลดระบบ...</p>
+          <p style={{ color: 'rgba(255,255,255,0.8)', marginTop: '8px', fontSize: '14px' }}>โปรดรอสักครู่</p>
         </div>
       </div>
     )
@@ -131,7 +146,7 @@ export default function LeaveRequestPage() {
               แบบฟอร์มขอลางาน
             </h1>
             <p className="text-gray-600 text-sm">
-              สวัสดี {displayName}
+              สวัสดีคุณ {displayName}
             </p>
           </div>
 

@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
       result = data
 
       const shiftText = shift === 1 ? 'กะเช้า (08:00-17:00)' : 'กะดึก (20:00-05:00)'
-      messageText = `✅ บันทึก Check-in สำเร็จ\n\nชื่อ: ${employee.name}\nรหัสพนักงาน: ${employee.employee_id}\nวันที่: ${formatThaiDate(thailandTime)}\nเวลา Check-in: ${formatThaiTime(thailandTime)}\nกะการทำงาน: ${shiftText}`
+      messageText = `บันทึกเวลาเข้างานสำเร็จ\n\nชื่อพนักงาน: ${employee.name}\nรหัสพนักงาน: ${employee.employee_id}\nวันที่: ${formatThaiDate(thailandTime)}\nเวลาเข้างาน: ${formatThaiTime(thailandTime)}\nกะการทำงาน: ${shiftText}\n\nข้อมูลถูกบันทึกในระบบเรียบร้อยแล้ว`
 
       // Send LINE notification
       try {
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
       const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60))
 
       const shiftText = existingRecord.shift === 1 ? 'กะเช้า (08:00-17:00)' : 'กะดึก (20:00-05:00)'
-      messageText = `✅ บันทึก Check-out สำเร็จ\n\nชื่อ: ${employee.name}\nรหัสพนักงาน: ${employee.employee_id}\nวันที่: ${formatThaiDate(thailandTime)}\nเวลา Check-out: ${formatThaiTime(thailandTime)}\nกะการทำงาน: ${shiftText}\nระยะเวลาทำงาน: ${hours} ชั่วโมง ${minutes} นาที`
+      messageText = `บันทึกเวลาออกงานสำเร็จ\n\nชื่อพนักงาน: ${employee.name}\nรหัสพนักงาน: ${employee.employee_id}\nวันที่: ${formatThaiDate(thailandTime)}\nเวลาออกงาน: ${formatThaiTime(thailandTime)}\nกะการทำงาน: ${shiftText}\nระยะเวลาทำงาน: ${hours} ชั่วโมง ${minutes} นาที\n\nข้อมูลถูกบันทึกในระบบเรียบร้อยแล้ว`
 
       // Send LINE notification
       try {
