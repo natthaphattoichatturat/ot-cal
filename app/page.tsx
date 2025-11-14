@@ -349,9 +349,20 @@ export default function Home() {
               {currentDateTime ? formatThaiDate(currentDateTime) : 'กำลังโหลด...'}
             </p>
           </div>
-          <a href="/leave" className="btn btn-secondary">
-            บันทึกการลา
-          </a>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <a href="/employees" className="btn btn-secondary">
+              จัดการพนักงาน
+            </a>
+            <a href="/leave" className="btn btn-secondary">
+              บันทึกการลา
+            </a>
+            <a href="/guide/webapp" className="btn btn-secondary">
+              คู่มือ Web App
+            </a>
+            <a href="/guide/line" className="btn btn-secondary">
+              คู่มือระบบ LINE
+            </a>
+          </div>
         </div>
       </div>
 
