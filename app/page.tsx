@@ -10,6 +10,9 @@ interface AttendanceData {
   attendance: {
     [date: string]: {
       otHours: number
+      otNormalHours: number
+      otSpecialHours: number
+      otPremiumHours: number
       actualHours: number
       isHoliday: boolean
       late: boolean
@@ -282,21 +285,31 @@ export default function Home() {
                   )
                 })}
                 <th className="text-center" style={{ minWidth: '90px' }}>รวม OT</th>
+                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>OT ปกติ (×1.5)</th>
+                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>OT พิเศษ (×2)</th>
+                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>OT ขั้นสูง (×3)</th>
               </tr>
             </thead>
             <tbody>
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={dates.length + 3} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={dates.length + 6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     {searchQuery ? 'ไม่พบข้อมูลพนักงานที่ค้นหา' : 'ไม่มีข้อมูล OT'}
                   </td>
                 </tr>
               ) : (
                 data.map((employee) => {
                   let totalOT = 0
+                  let totalNormalOT = 0
+                  let totalSpecialOT = 0
+                  let totalPremiumOT = 0
+
                   dates.forEach(date => {
                     if (employee.attendance[date]) {
                       totalOT += employee.attendance[date].otHours
+                      totalNormalOT += employee.attendance[date].otNormalHours || 0
+                      totalSpecialOT += employee.attendance[date].otSpecialHours || 0
+                      totalPremiumOT += employee.attendance[date].otPremiumHours || 0
                     }
                   })
 
@@ -324,6 +337,15 @@ export default function Home() {
                       })}
                       <td className="text-center" style={{ fontWeight: '700', fontSize: '15px', background: 'var(--primary-light)', color: 'var(--primary)' }}>
                         {totalOT.toFixed(2)}
+                      </td>
+                      <td className="text-center" style={{ fontWeight: '600', fontSize: '14px', background: 'var(--surface-bg)', color: 'var(--text-primary)' }}>
+                        {totalNormalOT.toFixed(2)}
+                      </td>
+                      <td className="text-center" style={{ fontWeight: '600', fontSize: '14px', background: 'var(--surface-bg)', color: 'var(--text-primary)' }}>
+                        {totalSpecialOT.toFixed(2)}
+                      </td>
+                      <td className="text-center" style={{ fontWeight: '600', fontSize: '14px', background: 'var(--surface-bg)', color: 'var(--text-primary)' }}>
+                        {totalPremiumOT.toFixed(2)}
                       </td>
                     </tr>
                   )

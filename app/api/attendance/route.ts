@@ -111,6 +111,9 @@ export async function GET(request: NextRequest) {
       attendanceMap.get(empId).attendance[record.work_date] = {
         actualHours: record.actual_hours,
         otHours: record.ot_hours,
+        otNormalHours: record.ot_normal_hours || 0,
+        otSpecialHours: record.ot_special_hours || 0,
+        otPremiumHours: record.ot_premium_hours || 0,
         isHoliday: record.is_holiday,
         late: record.late,
         checkInTime: record.check_in_time,

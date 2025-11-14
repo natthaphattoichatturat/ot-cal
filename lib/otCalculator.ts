@@ -15,6 +15,9 @@ interface WorkSession {
   checkOutTime: string
   actualHours: number
   otHours: number
+  otNormalHours: number // OT ปกติที่คูณ 1.5
+  otSpecialHours: number // OT พิเศษที่คูณ 2 (8 ชม.แรกในวันหยุด)
+  otPremiumHours: number // OT ขั้นสูงที่คูณ 3 (เกิน 8 ชม.ในวันหยุด)
   isHoliday: boolean
   shift: 1 | 2 // 1 = 8:00-17:00, 2 = 20:00-05:00
   late: boolean
@@ -67,7 +70,7 @@ function calculateShift1OT(
   checkOutDate: Date,
   checkInDate: Date,
   isHoliday: boolean
-): { actualHours: number; otHours: number; allowLateNextDay: boolean; late: boolean; lateHours: number } {
+): { actualHours: number; otHours: number; otNormalHours: number; otSpecialHours: number; otPremiumHours: number; allowLateNextDay: boolean; late: boolean; lateHours: number } {
   const scheduledIn = 480 // 8:00
   const scheduledOut = 1020 // 17:00
   const otStart = 360 // 6:00
@@ -126,22 +129,35 @@ function calculateShift1OT(
 
   // Calculate OT hours based on holiday status
   let otHours = 0
+  let otNormalHours = 0
+  let otSpecialHours = 0
+  let otPremiumHours = 0
+
   if (isHoliday) {
     // Special day: first 8 hours * 2, after 8 hours * 3
     const totalMinutes = morningOT + nightOT
     if (totalMinutes <= 480) {
-      otHours = (totalMinutes / 60) * 2
+      // ทั้งหมดเป็น OT พิเศษ (× 2)
+      otSpecialHours = totalMinutes / 60
+      otHours = otSpecialHours * 2
     } else {
-      otHours = (480 / 60) * 2 + ((totalMinutes - 480) / 60) * 3
+      // 8 ชม.แรก × 2, ที่เกินมา × 3
+      otSpecialHours = 480 / 60 // 8 ชั่วโมง
+      otPremiumHours = (totalMinutes - 480) / 60
+      otHours = (otSpecialHours * 2) + (otPremiumHours * 3)
     }
   } else {
     // Regular day: * 1.5
+    otNormalHours = actualHours
     otHours = actualHours * 1.5
   }
 
   return {
     actualHours: Math.round(actualHours * 100) / 100,
     otHours: Math.round(otHours * 100) / 100,
+    otNormalHours: Math.round(otNormalHours * 100) / 100,
+    otSpecialHours: Math.round(otSpecialHours * 100) / 100,
+    otPremiumHours: Math.round(otPremiumHours * 100) / 100,
     allowLateNextDay,
     late,
     lateHours: Math.round(lateHours * 100) / 100
@@ -155,7 +171,7 @@ function calculateShift2OT(
   checkOutDate: Date,
   checkInDate: Date,
   isHoliday: boolean
-): { actualHours: number; otHours: number; allowLateNextDay: boolean; late: boolean; lateHours: number } {
+): { actualHours: number; otHours: number; otNormalHours: number; otSpecialHours: number; otPremiumHours: number; allowLateNextDay: boolean; late: boolean; lateHours: number } {
   const scheduledIn = 1200 // 20:00
   const scheduledOut = 300 // 5:00 next day
   const otStart = 1050 // 17:30
@@ -198,22 +214,35 @@ function calculateShift2OT(
 
   // Calculate OT hours based on holiday status
   let otHours = 0
+  let otNormalHours = 0
+  let otSpecialHours = 0
+  let otPremiumHours = 0
+
   if (isHoliday) {
     // Special day: first 8 hours * 2, after 8 hours * 3
     const totalMinutes = eveningOT + morningOT
     if (totalMinutes <= 480) {
-      otHours = (totalMinutes / 60) * 2
+      // ทั้งหมดเป็น OT พิเศษ (× 2)
+      otSpecialHours = totalMinutes / 60
+      otHours = otSpecialHours * 2
     } else {
-      otHours = (480 / 60) * 2 + ((totalMinutes - 480) / 60) * 3
+      // 8 ชม.แรก × 2, ที่เกินมา × 3
+      otSpecialHours = 480 / 60 // 8 ชั่วโมง
+      otPremiumHours = (totalMinutes - 480) / 60
+      otHours = (otSpecialHours * 2) + (otPremiumHours * 3)
     }
   } else {
     // Regular day: * 1.5
+    otNormalHours = actualHours
     otHours = actualHours * 1.5
   }
 
   return {
     actualHours: Math.round(actualHours * 100) / 100,
     otHours: Math.round(otHours * 100) / 100,
+    otNormalHours: Math.round(otNormalHours * 100) / 100,
+    otSpecialHours: Math.round(otSpecialHours * 100) / 100,
+    otPremiumHours: Math.round(otPremiumHours * 100) / 100,
     allowLateNextDay,
     late,
     lateHours: Math.round(lateHours * 100) / 100
@@ -340,6 +369,9 @@ export function calculateOTFromScans(
           checkOutTime: minutesToTime(defaultCheckOutMinutes),
           actualHours: result.actualHours,
           otHours: result.otHours,
+          otNormalHours: result.otNormalHours,
+          otSpecialHours: result.otSpecialHours,
+          otPremiumHours: result.otPremiumHours,
           isHoliday,
           shift,
           late: result.late,
@@ -378,6 +410,9 @@ export function calculateOTFromScans(
         checkOutTime: checkOut.scanTime,
         actualHours: result.actualHours,
         otHours: result.otHours,
+        otNormalHours: result.otNormalHours,
+        otSpecialHours: result.otSpecialHours,
+        otPremiumHours: result.otPremiumHours,
         isHoliday,
         shift,
         late: result.late,
@@ -430,6 +465,9 @@ export function calculateOTFromScans(
         checkOutTime: scan.scanTime,
         actualHours: result.actualHours,
         otHours: result.otHours,
+        otNormalHours: result.otNormalHours,
+        otSpecialHours: result.otSpecialHours,
+        otPremiumHours: result.otPremiumHours,
         isHoliday,
         shift,
         late: result.late,

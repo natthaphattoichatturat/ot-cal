@@ -41,6 +41,9 @@ export interface DailyAttendance {
   scheduled_out_time: string | null
   actual_hours: number
   ot_hours: number
+  ot_normal_hours: number | null // OT ปกติ × 1.5
+  ot_special_hours: number | null // OT พิเศษ × 2 (วันหยุด/อาทิตย์)
+  ot_premium_hours: number | null // OT ขั้นสูง × 3 (เกิน 8 ชม. ในวันหยุด)
   is_holiday: boolean
   is_leave: boolean
   late: boolean
