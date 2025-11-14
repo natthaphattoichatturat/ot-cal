@@ -7,3 +7,34 @@
    - Environments: .env.local
 
  ✓ Ready in 2.1s
+ ○ Compiling / ...
+
+
+Source path: /Users/piw/Downloads/ot_cal/app/globals.css
+Setting up new context...
+Finding changed files: 3.993ms
+Reading changed files: 91.762ms
+Sorting candidates: 2.23ms
+Generate rules: 40.847ms
+Build stylesheet: 1.21ms
+Potential classes:  4613
+Active contexts:  1
+JIT TOTAL: 284.65ms
+
+
+ ✓ Compiled / in 2.5s (523 modules)
+
+
+Source path: /Users/piw/Downloads/ot_cal/app/globals.css
+Finding changed files: 4.317ms
+Reading changed files: 0.235ms
+Sorting candidates: 0.011ms
+Generate rules: 3.567ms
+Build stylesheet: 0.003ms
+Potential classes:  1
+Active contexts:  1
+JIT TOTAL: 36.047ms
+
+
+ ✓ Compiled in 151ms (265 modules)
+ ✓ Compiled /api/attendance in 231ms (594 modules)
