@@ -224,9 +224,20 @@ export async function POST(request: NextRequest) {
 
       if (upsertError) {
         console.error('Batch upsert error:', upsertError)
+        return NextResponse.json(
+          {
+            error: `Failed to save attendance records: ${upsertError.message}`,
+            details: upsertError,
+            inserted: insertedScans?.length || 0,
+            duplicates: duplicates
+          },
+          { status: 500 }
+        )
       } else {
         console.log('Attendance records upserted successfully')
       }
+    } else {
+      console.log('No attendance records to upsert (no valid work sessions generated)')
     }
 
     console.log('Import completed successfully')
