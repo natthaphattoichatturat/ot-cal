@@ -140,12 +140,21 @@ export async function POST(request: NextRequest) {
 
     console.log(`Calculating OT for ${affectedEmployees.length} employees...`)
 
-    // Get min/max dates for batch query
+    // Get min/max dates for batch query with ±1 day buffer
     const scanDates = (insertedScans || []).map(s => s.scan_date).sort()
-    const empMinDate = scanDates[0]
-    const empMaxDate = scanDates[scanDates.length - 1]
+    const minDateObj = new Date(scanDates[0])
+    const maxDateObj = new Date(scanDates[scanDates.length - 1])
 
-    // BATCH FETCH - get all employee scans in ONE query
+    // Add ±1 day buffer to handle edge cases and overlapping scans
+    minDateObj.setDate(minDateObj.getDate() - 1)
+    maxDateObj.setDate(maxDateObj.getDate() + 1)
+
+    const empMinDate = minDateObj.toISOString().split('T')[0]
+    const empMaxDate = maxDateObj.toISOString().split('T')[0]
+
+    console.log(`Calculating OT for date range: ${empMinDate} to ${empMaxDate} (original: ${scanDates[0]} to ${scanDates[scanDates.length - 1]})`)
+
+    // BATCH FETCH - get all employee scans in the date range (±1 day)
     const { data: allEmployeeScans } = await supabase
       .from('attendance_scans')
       .select('*')

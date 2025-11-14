@@ -284,13 +284,38 @@ export function calculateOTFromScans(
       return timeToMinutes(a.scanTime) - timeToMinutes(b.scanTime)
     })
 
+    // Remove duplicate scans (same type within 2 minutes)
+    const cleanedRecords: ScanRecord[] = []
+    for (let idx = 0; idx < records.length; idx++) {
+      const current = records[idx]
+
+      // Check if this is a duplicate of the last added scan
+      if (cleanedRecords.length > 0) {
+        const last = cleanedRecords[cleanedRecords.length - 1]
+        const isSameDate = current.scanDate.getTime() === last.scanDate.getTime()
+        const isSameType = current.scanType === last.scanType
+        const timeDiff = Math.abs(timeToMinutes(current.scanTime) - timeToMinutes(last.scanTime))
+
+        // If same date, same type, and within 2 minutes, skip (duplicate scan)
+        if (isSameDate && isSameType && timeDiff <= 2) {
+          console.log(`Removing duplicate scan for ${employeeId} at ${current.scanTime} (within 2min of ${last.scanTime})`)
+          continue
+        }
+      }
+
+      cleanedRecords.push(current)
+    }
+
+    // Use cleaned records instead of original
+    const processedRecords = cleanedRecords
+
     // Track which scans have been processed
     const processedIndices = new Set<number>()
 
     // Match check-in and check-out pairs
     let i = 0
-    while (i < records.length) {
-      const checkIn = records[i]
+    while (i < processedRecords.length) {
+      const checkIn = processedRecords[i]
 
       if (checkIn.scanType !== 1) {
         i++
@@ -311,14 +336,14 @@ export function calculateOTFromScans(
       let j = i + 1
 
       // Look for check-out, handling special case of shift 2 with break scan
-      while (j < records.length) {
-        if (records[j].scanType === 2) {
-          checkOut = records[j]
+      while (j < processedRecords.length) {
+        if (processedRecords[j].scanType === 2) {
+          checkOut = processedRecords[j]
           break
-        } else if (records[j].scanType === 1) {
+        } else if (processedRecords[j].scanType === 1) {
           // Found another check-in before check-out
           // Skip if it's a break scan (00:00-01:00)
-          const nextCheckInMinutes = timeToMinutes(records[j].scanTime)
+          const nextCheckInMinutes = timeToMinutes(processedRecords[j].scanTime)
 
           if (nextCheckInMinutes >= 0 && nextCheckInMinutes <= 60) {
             // This is a break scan after midnight, skip it and continue looking for check-out
@@ -333,52 +358,9 @@ export function calculateOTFromScans(
       }
 
       if (!checkOut) {
-        // Handle incomplete scan - only check-in, no check-out
-        // checkInMinutes already declared above
-        const checkInDate = checkIn.scanDate
-
-        // Determine shift and default check-out time based on check-in time
-        let defaultCheckOutMinutes: number
-        let checkOutDate: Date
-        let shift: 1 | 2
-
-        if (checkInMinutes > 720) { // > 12:00 (720 minutes)
-          // Assume Shift 1: default check-out = 17:00 same day
-          shift = 1
-          defaultCheckOutMinutes = 1020 // 17:00
-          checkOutDate = checkInDate
-        } else {
-          // Assume Shift 2: default check-out = 05:00 next day
-          shift = 2
-          defaultCheckOutMinutes = 300 // 05:00
-          checkOutDate = addDays(checkInDate, 1)
-        }
-
-        const isHoliday = isSpecialDay(checkInDate, holidays)
-
-        let result
-        if (shift === 1) {
-          result = calculateShift1OT(checkInMinutes, defaultCheckOutMinutes, checkOutDate, checkInDate, isHoliday)
-        } else {
-          result = calculateShift2OT(checkInMinutes, defaultCheckOutMinutes, checkOutDate, checkInDate, isHoliday)
-        }
-
-        workSessions.push({
-          workDate: format(checkInDate, 'yyyy-MM-dd'),
-          checkInTime: checkIn.scanTime,
-          checkOutTime: minutesToTime(defaultCheckOutMinutes),
-          actualHours: result.actualHours,
-          otHours: result.otHours,
-          otNormalHours: result.otNormalHours,
-          otSpecialHours: result.otSpecialHours,
-          otPremiumHours: result.otPremiumHours,
-          isHoliday,
-          shift,
-          late: result.late,
-          lateHours: result.lateHours,
-          allowLateNextDay: result.allowLateNextDay
-        })
-
+        // Skip incomplete scan - only check-in without check-out
+        // This is a penalty for employees who don't scan properly
+        console.log(`Skipping incomplete scan for employee ${checkIn.employeeId} on ${format(checkIn.scanDate, 'yyyy-MM-dd')} - check-in only`)
         processedIndices.add(i)
         i++
         continue
@@ -424,56 +406,15 @@ export function calculateOTFromScans(
     }
 
     // Handle orphan check-out scans (check-out without check-in)
-    for (let k = 0; k < records.length; k++) {
+    // Skip these as penalty for not scanning properly
+    for (let k = 0; k < processedRecords.length; k++) {
       if (processedIndices.has(k)) continue
 
-      const scan = records[k]
+      const scan = processedRecords[k]
       if (scan.scanType !== 2) continue // Only process check-out scans
 
-      const checkOutMinutes = timeToMinutes(scan.scanTime)
-      const checkOutDate = scan.scanDate
-
-      // Determine shift and default check-in time based on check-out time
-      let defaultCheckInMinutes: number
-      let checkInDate: Date
-      let shift: 1 | 2
-
-      if (checkOutMinutes > 720) { // > 12:00 (720 minutes)
-        // Assume Shift 1: default check-in = 08:00 same day
-        shift = 1
-        defaultCheckInMinutes = 480 // 08:00
-        checkInDate = checkOutDate
-      } else {
-        // Assume Shift 2: default check-in = 20:00 previous day
-        shift = 2
-        defaultCheckInMinutes = 1200 // 20:00
-        checkInDate = addDays(checkOutDate, -1)
-      }
-
-      const isHoliday = isSpecialDay(checkInDate, holidays)
-
-      let result
-      if (shift === 1) {
-        result = calculateShift1OT(defaultCheckInMinutes, checkOutMinutes, checkOutDate, checkInDate, isHoliday)
-      } else {
-        result = calculateShift2OT(defaultCheckInMinutes, checkOutMinutes, checkOutDate, checkInDate, isHoliday)
-      }
-
-      workSessions.push({
-        workDate: format(checkInDate, 'yyyy-MM-dd'),
-        checkInTime: minutesToTime(defaultCheckInMinutes),
-        checkOutTime: scan.scanTime,
-        actualHours: result.actualHours,
-        otHours: result.otHours,
-        otNormalHours: result.otNormalHours,
-        otSpecialHours: result.otSpecialHours,
-        otPremiumHours: result.otPremiumHours,
-        isHoliday,
-        shift,
-        late: result.late,
-        lateHours: result.lateHours,
-        allowLateNextDay: result.allowLateNextDay
-      })
+      // Skip orphan check-out - no matching check-in
+      console.log(`Skipping orphan check-out for employee ${scan.employeeId} on ${format(scan.scanDate, 'yyyy-MM-dd')} - check-out only`)
     }
   })
 
