@@ -126,7 +126,7 @@ export function checkAttendanceBonus(attendances: DailyAttendance[]): boolean {
 
     if (!scheduled || !checkIn) return false
 
-    const earlyMinutes = (scheduled - checkIn) / (1000 * 60)
+    const earlyMinutes = (scheduled.getTime() - checkIn.getTime()) / (1000 * 60)
     return earlyMinutes >= 5
   })
 }
