@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     // Get all employees
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select('employee_id, name, department')
+      .select('employee_id, name, department, perhr_salary')
       .order('employee_id', { ascending: true })
 
     if (empError) {
@@ -100,10 +100,13 @@ export async function GET(request: NextRequest) {
     attendance?.forEach((record: any) => {
       const empId = record.employee_id
       if (!attendanceMap.has(empId)) {
+        // Find employee data to get perhr_salary
+        const empData = employees?.find(e => e.employee_id === empId)
         attendanceMap.set(empId, {
           employeeId: empId,
           name: record.employees?.name || 'Unknown',
           department: record.employees?.department || 'Unknown',
+          perhr_salary: empData?.perhr_salary || 0,
           attendance: {}
         })
       }
@@ -131,6 +134,7 @@ export async function GET(request: NextRequest) {
           employeeId: emp.employee_id,
           name: emp.name,
           department: emp.department,
+          perhr_salary: emp.perhr_salary || 0,
           attendance: {}
         })
       }

@@ -372,6 +372,9 @@ export default function Home() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <a href="/wages" className="btn btn-primary">
+              คำนวณค่าจ้าง
+            </a>
             <a href="/employees" className="btn btn-secondary">
               จัดการพนักงาน
             </a>

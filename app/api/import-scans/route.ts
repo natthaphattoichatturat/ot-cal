@@ -322,6 +322,33 @@ export async function POST(request: NextRequest) {
 
     console.log('Import completed successfully')
 
+    // ซิงค์ข้อมูลไป daily_wages
+    console.log('Syncing wages...')
+    try {
+      // หาเดือนและงวดจากวันที่ที่ import
+      const importDates = scanDates.map(d => new Date(d))
+      const months = new Set(importDates.map(d => `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`))
+
+      for (const monthStr of months) {
+        // ซิงค์ทั้ง 2 งวด
+        for (const period of [1, 2]) {
+          const syncResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/wages/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ month: monthStr, period })
+          })
+
+          if (syncResponse.ok) {
+            const syncData = await syncResponse.json()
+            console.log(`Synced wages for ${monthStr} period ${period}: ${syncData.synced} records`)
+          }
+        }
+      }
+    } catch (syncError) {
+      console.error('Error syncing wages:', syncError)
+      // ไม่ throw error เพราะ import สำเร็จแล้ว
+    }
+
     // Count actual new scans inserted (not counting duplicates used for recalculation)
     const actualInserted = newScans.length
 
