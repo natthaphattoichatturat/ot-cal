@@ -163,13 +163,46 @@ export async function GET(
     const period2Income = period === 2 ? periodWage.total_income : otherPeriodWage.total_income
     const ssoCalc = calculateMonthlySSO(period1Income, period2Income)
 
-    // ดึงข้อมูล YTD
-    const { data: ytdData } = await supabase
-      .from('employee_wage_summary_ytd')
+    // ดึงข้อมูล YTD จาก wage_summary
+    const { data: ytdRecords } = await supabase
+      .from('wage_summary')
       .select('*')
       .eq('employee_id', employeeId)
       .eq('year', year)
-      .single()
+
+    // คำนวณยอดสะสมรายปี (YTD)
+    let ytd_gross_wage = 0
+    let ytd_attendance_bonus = 0
+    let ytd_total_income = 0
+    let ytd_sso = 0
+    let ytd_tax = 0
+    let ytd_other_deductions = 0
+    let ytd_total_deductions = 0
+    let ytd_net_wage = 0
+
+    if (ytdRecords && ytdRecords.length > 0) {
+      ytdRecords.forEach((record: any) => {
+        ytd_gross_wage += (record.base_wage || 0) + (record.ot_wage || 0)
+        ytd_attendance_bonus += record.attendance_bonus || 0
+        ytd_total_income += record.total_income || 0
+        ytd_sso += record.sso || 0
+        ytd_tax += record.tax || 0
+        ytd_total_deductions += record.total_deduction || 0
+        ytd_net_wage += record.net_wage || 0
+      })
+      ytd_other_deductions = ytd_total_deductions - ytd_sso - ytd_tax
+    }
+
+    const ytdData = {
+      ytd_gross_wage,
+      ytd_attendance_bonus,
+      ytd_total_income,
+      ytd_sso,
+      ytd_tax,
+      ytd_other_deductions,
+      ytd_total_deductions,
+      ytd_net_wage
+    }
 
     return NextResponse.json({
       success: true,
@@ -178,7 +211,7 @@ export async function GET(
         dailyWages,
         periodWage,
         sso: ssoCalc,
-        ytd: ytdData || null,
+        ytd: ytdData,
         currentPeriod: period
       }
     })

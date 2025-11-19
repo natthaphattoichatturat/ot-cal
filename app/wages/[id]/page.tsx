@@ -449,6 +449,39 @@ export default function WageDetailPage() {
         </div>
       )}
 
+      {/* หักเงินงวดนี้ */}
+      <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-primary)' }}>
+          รายการหักเงินงวดนี้
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ประกันสังคม (SSO)</div>
+            <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
+              {periodWage.sso_employee.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+            </div>
+          </div>
+          <div style={{ background: '#fef3c7', padding: '16px', borderRadius: '8px', border: '2px solid #f59e0b' }}>
+            <div style={{ fontSize: '12px', color: '#b45309', marginBottom: '4px', fontWeight: '600' }}>🏦 ภาษีเงินได้งวดนี้</div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#b45309' }}>
+              {periodWage.tax_withholding.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+            </div>
+          </div>
+          <div style={{ background: '#fee2e2', padding: '16px', borderRadius: '8px', border: '2px solid #ef4444' }}>
+            <div style={{ fontSize: '12px', color: '#dc2626', marginBottom: '4px', fontWeight: '600' }}>รวมหักทั้งหมด</div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#dc2626' }}>
+              {periodWage.total_deductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+            </div>
+          </div>
+          <div style={{ background: 'var(--primary-light)', padding: '16px', borderRadius: '8px', border: '3px solid var(--primary)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--primary)', marginBottom: '4px', fontWeight: '700' }}>💰 เงินสุทธิงวดนี้</div>
+            <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary)' }}>
+              {periodWage.net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* YTD Summary - ยอดสะสมทั้งปี */}
       {ytd && (
         <div className="card" style={{ marginTop: '24px', marginBottom: '24px', padding: '24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
