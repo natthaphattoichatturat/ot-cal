@@ -168,16 +168,18 @@ export default function EmployeeOTViewerPage() {
   }, [employee, startDate, endDate])
 
   useEffect(() => {
-    if (employee) {
+    if (employee && startDate) {
       fetchWageData(employee.employee_id)
       fetchYTDData(employee.employee_id)
       fetchAllTimeData(employee.employee_id)
     }
-  }, [employee])
+  }, [employee, startDate])
 
   const fetchWageData = async (employeeId: string) => {
     try {
-      const res = await fetch(`/api/wages/employee-summary?employee_id=${employeeId}&year=${new Date().getFullYear()}`)
+      // ดึงปีจาก startDate ที่เลือก
+      const selectedYear = startDate ? new Date(startDate).getFullYear() : new Date().getFullYear()
+      const res = await fetch(`/api/wages/employee-summary?employee_id=${employeeId}&year=${selectedYear}`)
       const data = await res.json()
       if (data.success) {
         setWageSummaries(data.data)
@@ -189,7 +191,9 @@ export default function EmployeeOTViewerPage() {
 
   const fetchYTDData = async (employeeId: string) => {
     try {
-      const response = await fetch(`/api/employees/${employeeId}/ytd?year=${new Date().getFullYear()}`)
+      // ดึงปีจาก startDate ที่เลือก
+      const selectedYear = startDate ? new Date(startDate).getFullYear() : new Date().getFullYear()
+      const response = await fetch(`/api/employees/${employeeId}/ytd?year=${selectedYear}`)
       const data = await response.json()
       if (data.success) {
         setYtdData(data.data)
