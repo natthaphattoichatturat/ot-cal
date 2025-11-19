@@ -49,6 +49,17 @@ interface YTDData {
   ytd_net_wage: number
 }
 
+interface AllTimeData {
+  total_gross_wage: number
+  total_ot_wage: number
+  total_income: number
+  total_sso: number
+  total_tax: number
+  total_deduction: number
+  total_net_wage: number
+  total_periods: number
+}
+
 export default function EmployeeOTViewerPage() {
   const [loading, setLoading] = useState(true)
   const [lineUserId, setLineUserId] = useState('')
@@ -61,6 +72,7 @@ export default function EmployeeOTViewerPage() {
   const [totalHours, setTotalHours] = useState(0)
   const [wageSummaries, setWageSummaries] = useState<WageSummary[]>([])
   const [ytdData, setYtdData] = useState<YTDData | null>(null)
+  const [allTimeData, setAllTimeData] = useState<AllTimeData | null>(null)
   const [showWageDetail, setShowWageDetail] = useState(false)
 
   useEffect(() => {
@@ -159,6 +171,7 @@ export default function EmployeeOTViewerPage() {
     if (employee) {
       fetchWageData(employee.employee_id)
       fetchYTDData(employee.employee_id)
+      fetchAllTimeData(employee.employee_id)
     }
   }, [employee])
 
@@ -183,6 +196,18 @@ export default function EmployeeOTViewerPage() {
       }
     } catch (error) {
       console.error('Error fetching YTD:', error)
+    }
+  }
+
+  const fetchAllTimeData = async (employeeId: string) => {
+    try {
+      const response = await fetch(`/api/employees/${employeeId}/all-time-summary`)
+      const data = await response.json()
+      if (data.success) {
+        setAllTimeData(data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching All-Time Data:', error)
     }
   }
 
@@ -307,13 +332,18 @@ export default function EmployeeOTViewerPage() {
                           {wage.sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
                         </div>
                         
-                        <div className="text-red-600">หักภาษี:</div>
-                        <div className="text-right text-red-600">
+                        <div className="text-red-600 font-semibold">🏦 ภาษีเงินได้งวดนี้:</div>
+                        <div className="text-right text-red-600 font-semibold">
                           {wage.tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
                         </div>
                         
-                        <div className="font-bold">เงินสุทธิ:</div>
-                        <div className="text-right font-bold text-blue-600">
+                        <div className="font-bold text-gray-700">รวมหักทั้งหมด:</div>
+                        <div className="text-right font-bold text-red-600">
+                          {wage.total_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+                        </div>
+                        
+                        <div className="font-bold text-gray-900 border-t-2 border-gray-300 pt-2">เงินสุทธิ:</div>
+                        <div className="text-right font-bold text-blue-600 text-lg border-t-2 border-gray-300 pt-2">
                           {wage.net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
                         </div>
                       </div>
@@ -323,36 +353,74 @@ export default function EmployeeOTViewerPage() {
               )}
             </div>
 
-            {/* YTD Summary */}
+            {/* YTD Summary - ยอดสะสมทั้งปี */}
             {ytdData && (
-              <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
-                  ยอดสะสมรายปี {new Date().getFullYear() + 543}
+              <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl shadow-2xl p-6 mb-6 text-white">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  📊 ยอดสะสมรายปี {new Date().getFullYear() + 543}
                 </h2>
                 <div className="space-y-3">
-                  <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-700">1. เงินเดือนสะสม</span>
+                  <div className="flex justify-between p-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-lg">
+                    <span className="text-white">1. เงินเดือนสะสมทั้งปี</span>
                     <span className="font-bold">{ytdData.ytd_gross_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                   </div>
-                  <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-700">2. ภาษีเงินได้สะสม</span>
-                    <span className="font-bold text-red-600">{ytdData.ytd_tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  <div className="flex justify-between p-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-lg">
+                    <span className="text-white">2. ภาษีเงินได้สะสมทั้งปี</span>
+                    <span className="font-bold">{ytdData.ytd_tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                   </div>
-                  <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-700">3. ประกันสังคมสะสม</span>
-                    <span className="font-bold text-red-600">{ytdData.ytd_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  <div className="flex justify-between p-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-lg">
+                    <span className="text-white">3. ประกันสังคมสะสมทั้งปี</span>
+                    <span className="font-bold">{ytdData.ytd_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                   </div>
-                  <div className="flex justify-between p-3 bg-green-50 rounded-lg">
-                    <span className="text-gray-700 font-bold">4. รวมเงินได้สะสม</span>
-                    <span className="font-bold text-green-600">{ytdData.ytd_total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  <div className="flex justify-between p-3 bg-green-400 bg-opacity-40 backdrop-blur-sm rounded-lg border-2 border-green-300">
+                    <span className="text-white font-bold">4. รวมเงินได้สะสมทั้งปี</span>
+                    <span className="font-bold text-white">{ytdData.ytd_total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                   </div>
-                  <div className="flex justify-between p-3 bg-red-50 rounded-lg">
-                    <span className="text-gray-700 font-bold">5. รวมหักสะสม</span>
-                    <span className="font-bold text-red-600">{ytdData.ytd_total_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  <div className="flex justify-between p-3 bg-red-400 bg-opacity-40 backdrop-blur-sm rounded-lg border-2 border-red-300">
+                    <span className="text-white font-bold">5. รวมหักสะสมทั้งปี</span>
+                    <span className="font-bold text-white">{ytdData.ytd_total_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                   </div>
-                  <div className="flex justify-between p-4 bg-blue-100 rounded-lg border-2 border-blue-500">
-                    <span className="text-gray-900 font-bold text-lg">6. เงินได้สุทธิสะสม</span>
-                    <span className="font-bold text-blue-600 text-xl">{ytdData.ytd_net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  <div className="flex justify-between p-4 bg-yellow-300 rounded-lg border-3 border-yellow-400">
+                    <span className="text-gray-900 font-bold text-lg">6. เงินได้สุทธิสะสมทั้งปี</span>
+                    <span className="font-bold text-gray-900 text-xl">{ytdData.ytd_net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* All-Time Summary - ยอดสะสมทั้งหมด */}
+            {allTimeData && (
+              <div className="bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl shadow-2xl p-6 mb-6 text-white">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  🌟 ยอดสะสมทั้งหมด (ตั้งแต่เริ่มทำงาน)
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex justify-between p-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-lg">
+                    <span className="text-white">1. เงินเดือนสะสมทั้งหมด</span>
+                    <span className="font-bold">{allTimeData.total_gross_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-lg">
+                    <span className="text-white">2. ภาษีเงินได้สะสมทั้งหมด</span>
+                    <span className="font-bold">{allTimeData.total_tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-lg">
+                    <span className="text-white">3. ประกันสังคมสะสมทั้งหมด</span>
+                    <span className="font-bold">{allTimeData.total_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-green-400 bg-opacity-40 backdrop-blur-sm rounded-lg border-2 border-green-300">
+                    <span className="text-white font-bold">4. รวมเงินได้สะสมทั้งหมด</span>
+                    <span className="font-bold text-white">{allTimeData.total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-red-400 bg-opacity-40 backdrop-blur-sm rounded-lg border-2 border-red-300">
+                    <span className="text-white font-bold">5. รวมหักสะสมทั้งหมด</span>
+                    <span className="font-bold text-white">{allTimeData.total_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="flex justify-between p-4 bg-green-300 rounded-lg border-3 border-green-400">
+                    <span className="text-gray-900 font-bold text-lg">6. เงินได้สุทธิสะสมทั้งหมด</span>
+                    <span className="font-bold text-gray-900 text-xl">{allTimeData.total_net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="mt-4 p-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-lg text-center">
+                    <span className="text-sm">📌 ทำงานมาแล้ว: <strong className="text-lg">{allTimeData.total_periods} งวด</strong></span>
                   </div>
                 </div>
               </div>

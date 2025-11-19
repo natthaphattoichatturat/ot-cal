@@ -375,6 +375,9 @@ export default function Home() {
             <a href="/wages" className="btn btn-primary">
               คำนวณค่าจ้าง
             </a>
+            <a href="/documents" className="btn" style={{ background: '#10b981', color: 'white', border: '2px solid #10b981' }}>
+              📑 เอกสาร HR & Export
+            </a>
             <a href="/employees" className="btn btn-secondary">
               จัดการพนักงาน
             </a>

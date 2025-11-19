@@ -1,67 +1,95 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface DocumentType {
   id: string
   name: string
+  nameTh: string
   description: string
-  dataRequired: string
+  dataSource: string
   frequency: string
   icon: string
   color: string
 }
 
-export default function DocumentsPage() {
-  const [selectedDoc, setSelectedDoc] = useState<string | null>(null)
+const documents: DocumentType[] = [
+  {
+    id: 'payslip',
+    name: 'Payslip',
+    nameTh: 'สลิปเงินเดือน',
+    description: 'สลิปเงินเดือนพนักงานแต่ละคน พร้อมรายละเอียดค่าจ้าง OT เงินได้/เงินหัก และยอดสะสม YTD',
+    dataSource: 'ข้อมูลค่าจ้างรายงวด + ยอดสะสม YTD (รายได้, ภาษี, SSO)',
+    frequency: 'ทุกงวด (2 ครั้ง/เดือน)',
+    icon: '💵',
+    color: '#10b981'
+  },
+  {
+    id: 'pnd1',
+    name: 'P.N.D.1',
+    nameTh: 'ภ.ง.ด.1',
+    description: 'แบบรายการภาษีเงินได้หัก ณ ที่จ่าย รวมยอดของพนักงานทั้งหมด',
+    dataSource: '∑(รายได้รวม) และ ∑(ภาษีที่หัก) ของพนักงานทุกคนในเดือนนั้น',
+    frequency: 'รายเดือน (ส่งภายใน 7 ของเดือนถัดไป)',
+    icon: '📝',
+    color: '#3b82f6'
+  },
+  {
+    id: 'sso',
+    name: 'SSO Form (SPS. 1-10)',
+    nameTh: 'สปส. 1-10',
+    description: 'แบบรายงานการส่งเงินสมทบประกันสังคม',
+    dataSource: '∑(ค่าจ้างที่จ่ายจริง) และ ∑(SSO ที่หักสะสม) ครบในเดือนนั้น',
+    frequency: 'รายเดือน (ส่งภายใน 15 ของเดือนถัดไป)',
+    icon: '🏛️',
+    color: '#8b5cf6'
+  },
+  {
+    id: 'cert50',
+    name: 'Certificate of Withholding Tax (50 Tawi)',
+    nameTh: 'หนังสือรับรองฯ 50 ทวิ',
+    description: 'หนังสือรับรองการหักภาษี ณ ที่จ่าย สำหรับพนักงานแต่ละคน',
+    dataSource: 'ยอดสะสมรายปี (YTD) ของ รายได้รวม และ ภาษีของแต่ละคน',
+    frequency: 'รายปี (ออกให้พนักงานภายใน 15 ก.พ.)',
+    icon: '📄',
+    color: '#f59e0b'
+  },
+  {
+    id: 'pnd1kor',
+    name: 'P.N.D.1 Kor',
+    nameTh: 'ภ.ง.ด.1 ก',
+    description: 'แบบยื่นรายการภาษีเงินได้หัก ณ ที่จ่าย รายปี (สรุปรวมทั้งบริษัท)',
+    dataSource: '∑(ยอดสะสมรายปีของรายได้) และ ∑(ภาษี) ของพนักงานทุกคน',
+    frequency: 'รายปี (ยื่นภายในเดือน ก.พ.)',
+    icon: '📊',
+    color: '#ef4444'
+  }
+]
 
-  const documents: DocumentType[] = [
-    {
-      id: 'payslip',
-      name: 'สลิปเงินเดือน (Payslip)',
-      description: 'สลิปเงินเดือนรายบุคคล แสดงรายละเอียดเงินเดือน OT เงินได้ เงินหัก และยอดสะสม YTD',
-      dataRequired: 'ข้อมูลค่าจ้าง, OT, เงินได้, เงินหัก, SSO, ภาษี และยอดสะสม YTD ของรายได้, ภาษี และ SSO',
-      frequency: 'ทุกงวด (2 ครั้ง/เดือน)',
-      icon: '📄',
-      color: '#3B82F6'
-    },
-    {
-      id: 'pnd1',
-      name: 'ภ.ง.ด.1 (P.N.D.1)',
-      description: 'แบบแสดงรายการภาษีเงินได้หัก ณ ที่จ่าย สำหรับเงินเดือน',
-      dataRequired: 'ผลรวมรายได้ทั้งหมดของพนักงานทุกคนในเดือนที่จ่าย และ ผลรวมภาษีที่หักในเดือนนั้น',
-      frequency: 'รายเดือน (ส่งภายในวันที่ 7 ของเดือนถัดไป)',
-      icon: '📋',
-      color: '#EF4444'
-    },
-    {
-      id: 'sso',
-      name: 'สปส. 1-10 (SSO Form)',
-      description: 'แบบรายการเงินสมทบประกันสังคม',
-      dataRequired: 'ผลรวมค่าจ้างที่จ่ายจริงของพนักงานทุกคน และ ผลรวม SSO ที่หักสะสมครบในเดือนนั้น',
-      frequency: 'รายเดือน (ส่งภายในวันที่ 15 ของเดือนถัดไป)',
-      icon: '🏥',
-      color: '#10B981'
-    },
-    {
-      id: 'cert50',
-      name: 'หนังสือรับรองฯ 50 ทวิ',
-      description: 'หนังสือรับรองการหักภาษี ณ ที่จ่าย สำหรับพนักงานแต่ละคน',
-      dataRequired: 'ยอดสะสมรายปี (YTD) ของรายได้รวม และ ยอดสะสมรายปี (YTD) ของภาษี สำหรับพนักงานแต่ละคน',
-      frequency: 'รายปี (ออกให้พนักงานภายในวันที่ 15 ก.พ.)',
-      icon: '📜',
-      color: '#8B5CF6'
-    },
-    {
-      id: 'pnd1kor',
-      name: 'ภ.ง.ด.1ก (P.N.D.1 Kor)',
-      description: 'แบบรายการเงินได้เพื่อการหักภาษี ณ ที่จ่าย ประจำปี',
-      dataRequired: 'ผลรวมยอดสะสมรายปีของรายได้ทั้งหมด และ ผลรวมยอดสะสมรายปีของภาษีที่หัก ของพนักงานทุกคน',
-      frequency: 'รายปี (ส่งภายในเดือน ก.พ.)',
-      icon: '📊',
-      color: '#F59E0B'
-    },
-  ]
+export default function DocumentsPage() {
+  const router = useRouter()
+  const [selectedPeriod, setSelectedPeriod] = useState({
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1,
+    period: 1
+  })
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('all')
+  const [exporting, setExporting] = useState<string | null>(null)
+
+  const handleExport = async (docId: string) => {
+    setExporting(docId)
+    
+    // TODO: Implement actual export functionality
+    setTimeout(() => {
+      const doc = documents.find(d => d.id === docId)
+      alert(`✅ กำลังสร้าง ${doc?.nameTh}...\n\n` +
+        `งวด: ${selectedPeriod.month}/${selectedPeriod.year + 543} งวดที่ ${selectedPeriod.period}\n` +
+        `พนักงาน: ${selectedEmployee === 'all' ? 'ทุกคน' : selectedEmployee}\n\n` +
+        `(ฟังก์ชันนี้ยังไม่ได้เชื่อมต่อ API - กำลังพัฒนา)`)
+      setExporting(null)
+    }, 1500)
+  }
 
   return (
     <div className="app-container">
@@ -69,148 +97,271 @@ export default function DocumentsPage() {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 className="page-title">จัดการเอกสาร HR</h1>
+            <h1 className="page-title">📑 จัดการเอกสาร HR & Export PDF</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-              ระบบจัดการและออกเอกสารทางภาษีและประกันสังคม
+              Export เอกสารภาษี, ประกันสังคม, และสลิปเงินเดือน
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <a href="/" className="btn btn-secondary">
-              ← กลับหน้าหลัก
-            </a>
-          </div>
+          <button onClick={() => router.push('/')} className="btn btn-secondary">
+            ← กลับหน้าหลัก
+          </button>
         </div>
       </div>
 
       {/* Info Banner */}
-      <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', padding: '24px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: 'white' }}>
-          📌 ระบบจัดการเอกสาร HR
-        </h3>
-        <p style={{ fontSize: '14px', lineHeight: '1.6', margin: 0, opacity: 0.9 }}>
-          ระบบนี้ช่วยให้คุณสามารถจัดการและออกเอกสารที่จำเป็นต่อการดำเนินงานด้าน HR ได้อย่างสะดวก
-          ทั้งสลิปเงินเดือน เอกสารภาษี และเอกสารประกันสังคม โดยใช้ข้อมูลจากระบบคำนวณค่าจ้างโดยอัตโนมัติ
-        </p>
+      <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ fontSize: '32px' }}>📋</div>
+          <div>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px', color: 'white' }}>
+              ระบบจัดการและ Export เอกสาร HR
+            </h3>
+            <p style={{ fontSize: '13px', margin: 0, opacity: 0.9 }}>
+              สร้างเอกสารภาษีและประกันสังคมอัตโนมัติจากข้อมูลในระบบ - ครบถ้วนตามมาตรฐานกรมสรรพากร
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Document Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
+      {/* Period Selector */}
+      <div className="card" style={{ marginBottom: '24px' }}>
+        <div style={{ padding: '20px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+            🗓️ เลือกงวดเวลาและพนักงาน
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                ปี พ.ศ.
+              </label>
+              <select
+                value={selectedPeriod.year}
+                onChange={(e) => setSelectedPeriod({ ...selectedPeriod, year: Number(e.target.value) })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '8px'
+                }}
+              >
+                {[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - i
+                  return <option key={year} value={year}>{year + 543}</option>
+                })}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                เดือน
+              </label>
+              <select
+                value={selectedPeriod.month}
+                onChange={(e) => setSelectedPeriod({ ...selectedPeriod, month: Number(e.target.value) })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '8px'
+                }}
+              >
+                {[...Array(12)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(2000, i).toLocaleDateString('th-TH', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                งวด
+              </label>
+              <select
+                value={selectedPeriod.period}
+                onChange={(e) => setSelectedPeriod({ ...selectedPeriod, period: Number(e.target.value) })}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '8px'
+                }}
+              >
+                <option value={1}>งวดที่ 1 (26-10)</option>
+                <option value={2}>งวดที่ 2 (11-25)</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                พนักงาน (สำหรับสลิปและ 50 ทวิ)
+              </label>
+              <select
+                value={selectedEmployee}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '8px'
+                }}
+              >
+                <option value="all">ทุกคน</option>
+                <option value="individual">เลือกพนักงาน...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Documents Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
         {documents.map((doc) => (
           <div
             key={doc.id}
             className="card"
             style={{
               padding: '24px',
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-              border: selectedDoc === doc.id ? `3px solid ${doc.color}` : '1px solid var(--border-light)',
-              transform: selectedDoc === doc.id ? 'scale(1.02)' : 'scale(1)',
-            }}
-            onClick={() => setSelectedDoc(doc.id)}
-            onMouseEnter={(e) => {
-              if (selectedDoc !== doc.id) {
-                e.currentTarget.style.transform = 'translateY(-4px)'
-                e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.1)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (selectedDoc !== doc.id) {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = ''
-              }
+              transition: 'all 0.2s',
+              border: `2px solid ${doc.color}20`,
+              background: `linear-gradient(to bottom, ${doc.color}08, white)`
             }}
           >
-            {/* Icon และชื่อ */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <div
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '12px',
-                  background: `${doc.color}20`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '28px',
-                }}
-              >
-                {doc.icon}
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ fontSize: '48px', marginRight: '16px' }}>{doc.icon}</div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0, color: doc.color }}>
-                  {doc.name}
+                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px', color: doc.color }}>
+                  {doc.nameTh}
                 </h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                  {doc.name}
+                </p>
               </div>
             </div>
-
-            {/* คำอธิบาย */}
-            <p style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            
+            <p style={{ fontSize: '14px', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: '1.6' }}>
               {doc.description}
             </p>
-
-            {/* ความถี่ */}
-            <div style={{ marginBottom: '16px', padding: '8px 12px', background: 'var(--surface-bg)', borderRadius: '6px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '4px' }}>
-                ความถี่ในการออกเอกสาร
-              </div>
-              <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: '600' }}>
-                {doc.frequency}
-              </div>
+            
+            <div style={{ marginBottom: '16px', padding: '14px', background: 'white', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                <strong style={{ color: 'var(--text-primary)' }}>📊 ข้อมูลที่ใช้:</strong><br/>
+                <span style={{ fontSize: '13px' }}>{doc.dataSource}</span>
+              </p>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                <strong style={{ color: 'var(--text-primary)' }}>⏰ ความถี่:</strong><br/>
+                <span style={{ fontSize: '13px' }}>{doc.frequency}</span>
+              </p>
             </div>
 
-            {/* ข้อมูลที่ใช้ */}
-            <div style={{ padding: '12px', background: `${doc.color}10`, borderRadius: '6px', borderLeft: `4px solid ${doc.color}` }}>
-              <div style={{ fontSize: '11px', color: doc.color, fontWeight: '700', marginBottom: '6px' }}>
-                📊 ข้อมูลที่ใช้จากระบบ
-              </div>
-              <div style={{ fontSize: '12px', lineHeight: '1.5', color: 'var(--text-secondary)' }}>
-                {doc.dataRequired}
-              </div>
-            </div>
-
-            {/* ปุ่มดำเนินการ (Coming Soon) */}
-            <div style={{ marginTop: '16px' }}>
-              <button
-                className="btn"
-                style={{
-                  width: '100%',
-                  background: doc.color,
-                  color: 'white',
-                  opacity: 0.6,
-                  cursor: 'not-allowed',
-                }}
-                disabled
-              >
-                🔒 ฟีเจอร์กำลังจะเปิดใช้งานเร็วๆ นี้
-              </button>
-            </div>
+            <button
+              onClick={() => handleExport(doc.id)}
+              disabled={exporting === doc.id}
+              className="btn btn-primary"
+              style={{ 
+                width: '100%', 
+                background: doc.color,
+                border: `2px solid ${doc.color}`,
+                opacity: exporting === doc.id ? 0.7 : 1,
+                cursor: exporting === doc.id ? 'wait' : 'pointer'
+              }}
+            >
+              {exporting === doc.id ? '⏳ กำลังสร้าง...' : '📥 Export PDF'}
+            </button>
           </div>
         ))}
       </div>
 
-      {/* Additional Info */}
-      <div className="card" style={{ marginTop: '32px', padding: '24px', background: '#FEF3C7', border: '1px solid #F59E0B' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#92400E' }}>
-          💡 ข้อมูลเพิ่มเติมสำหรับการคำนวณเอกสาร
-        </h3>
-        <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#78350F' }}>
-          <p style={{ marginBottom: '12px' }}>
-            <strong>สำหรับการออกเอกสารภาษีและประกันสังคม</strong> ระบบจะใช้ข้อมูลจาก:
-          </p>
-          <ul style={{ marginLeft: '20px', marginBottom: '12px' }}>
-            <li>ข้อมูลค่าจ้าง OT และเบี้ยขยันจากระบบคำนวณค่าจ้าง</li>
-            <li>รายการเงินได้และเงินหักเพิ่มเติมจากระบบจัดการเงินได้/เงินหัก</li>
-            <li>ข้อมูลประกันสังคม (SSO) ที่คำนวณแบบรายเดือน</li>
-            <li>ภาษีหัก ณ ที่จ่าย ที่คำนวณแบบ YTD (Year-To-Date)</li>
-            <li>ข้อมูลส่วนตัวและค่าลดหย่อนของพนักงานจากระบบข้อมูลพนักงาน</li>
-          </ul>
-          <p style={{ marginBottom: 0 }}>
-            <strong>หมายเหตุ:</strong> ฟีเจอร์การออกเอกสารอัตโนมัติจะเปิดให้ใช้งานในเวอร์ชันถัดไป
-            ปัจจุบันสามารถส่งออกข้อมูลผ่าน API และนำไปสร้างเอกสารด้วย template ได้
-          </p>
+      {/* Detailed Info Box */}
+      <div className="card" style={{ marginTop: '24px', padding: '24px', background: '#f0fdf4', border: '2px solid #10b981' }}>
+        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#059669' }}>
+          📋 รายละเอียดข้อมูลในเอกสารแต่ละประเภท
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', fontSize: '13px', lineHeight: '1.8', color: '#065f46' }}>
+          <div>
+            <strong>1. สลิปเงินเดือน:</strong>
+            <ul style={{ marginLeft: '20px', marginTop: '8px', marginBottom: 0 }}>
+              <li>ข้อมูลพนักงาน (ชื่อ, รหัส, แผนก)</li>
+              <li>ค่าจ้างพื้นฐาน + OT (1.5x, 2x, 3x)</li>
+              <li>เงินได้เพิ่มเติมทั้งหมด</li>
+              <li>เงินหักทั้งหมด (SSO, ภาษี, อื่นๆ)</li>
+              <li>ยอดสะสม YTD (รายได้, ภาษี, SSO)</li>
+            </ul>
+          </div>
+          <div>
+            <strong>2. ภ.ง.ด.1:</strong>
+            <ul style={{ marginLeft: '20px', marginTop: '8px', marginBottom: 0 }}>
+              <li>รายชื่อพนักงานทั้งหมด</li>
+              <li>รายได้แต่ละคนในเดือนนั้น</li>
+              <li>ภาษีที่หักแต่ละคน</li>
+              <li>ยอดรวมทั้งหมด</li>
+            </ul>
+          </div>
+          <div>
+            <strong>3. สปส. 1-10:</strong>
+            <ul style={{ marginLeft: '20px', marginTop: '8px', marginBottom: 0 }}>
+              <li>รายชื่อพนักงานทั้งหมด</li>
+              <li>ค่าจ้างที่ใช้คำนวณ SSO</li>
+              <li>SSO ที่หัก (5%)</li>
+              <li>SSO ที่บริษัทจ่าย (5%)</li>
+              <li>ยอดรวมทั้งหมด</li>
+            </ul>
+          </div>
+          <div>
+            <strong>4. หนังสือรับรอง 50 ทวิ:</strong>
+            <ul style={{ marginLeft: '20px', marginTop: '8px', marginBottom: 0 }}>
+              <li>ข้อมูลพนักงานแต่ละคน</li>
+              <li>รายได้รวมตลอดปี</li>
+              <li>ภาษีที่หักตลอดปี</li>
+              <li>ค่าลดหย่อนต่างๆ</li>
+            </ul>
+          </div>
+          <div>
+            <strong>5. ภ.ง.ด.1 ก:</strong>
+            <ul style={{ marginLeft: '20px', marginTop: '8px', marginBottom: 0 }}>
+              <li>สรุปรวมทั้งบริษัท</li>
+              <li>รายได้รวมตลอดปี</li>
+              <li>ภาษีรวมตลอดปี</li>
+              <li>จำนวนพนักงานทั้งหมด</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        <div className="card" style={{ padding: '16px', background: '#f0fdf4', border: '2px solid #10b981' }}>
+          <div style={{ fontSize: '24px', marginBottom: '8px' }}>📋</div>
+          <div style={{ fontSize: '14px', color: '#059669', fontWeight: '600' }}>เอกสารทั้งหมด</div>
+          <div style={{ fontSize: '28px', fontWeight: '700', color: '#10b981' }}>5 ประเภท</div>
+        </div>
+        <div className="card" style={{ padding: '16px', background: '#eff6ff', border: '2px solid #3b82f6' }}>
+          <div style={{ fontSize: '24px', marginBottom: '8px' }}>🗓️</div>
+          <div style={{ fontSize: '14px', color: '#2563eb', fontWeight: '600' }}>งวดที่เลือก</div>
+          <div style={{ fontSize: '20px', fontWeight: '700', color: '#3b82f6' }}>
+            {selectedPeriod.month}/{selectedPeriod.year + 543} งวด {selectedPeriod.period}
+          </div>
+        </div>
+        <div className="card" style={{ padding: '16px', background: '#fef3c7', border: '2px solid #f59e0b' }}>
+          <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚡</div>
+          <div style={{ fontSize: '14px', color: '#d97706', fontWeight: '600' }}>สถานะ</div>
+          <div style={{ fontSize: '18px', fontWeight: '700', color: '#f59e0b' }}>UI พร้อมใช้งาน</div>
+        </div>
+      </div>
+
+      {/* Warning Banner */}
+      <div className="card" style={{ marginTop: '24px', padding: '20px', background: '#fef2f2', border: '2px solid #ef4444' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ fontSize: '24px' }}>⚠️</div>
+          <div>
+            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#991b1b' }}>
+              หมายเหตุสำคัญ
+            </h4>
+            <p style={{ fontSize: '13px', color: '#991b1b', margin: 0, lineHeight: '1.6' }}>
+              <strong>ฟังก์ชัน Export PDF กำลังอยู่ระหว่างการพัฒนา</strong> - ปัจจุบันเป็นเพียง UI Demo เท่านั้น 
+              ระบบจะดึงข้อมูลจาก Database ตามงวดที่เลือกและสร้างไฟล์ PDF อัตโนมัติในอนาคต
+              ข้อมูลทั้งหมดจะครบถ้วนตามมาตรฐานกรมสรรพากรและสำนักงานประกันสังคม
+            </p>
+          </div>
         </div>
       </div>
     </div>
   )
 }
-
