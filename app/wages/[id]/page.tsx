@@ -482,46 +482,46 @@ export default function WageDetailPage() {
         </div>
       </div>
 
-      {/* YTD Summary - ยอดสะสมทั้งปี */}
+      {/* YTD Summary - ยอดสะสมรายปี */}
       {ytd && (
-        <div className="card" style={{ marginTop: '24px', marginBottom: '24px', padding: '24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-          <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color: 'white' }}>
+        <div className="card" style={{ marginTop: '24px', marginBottom: '24px', padding: '24px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color: '#1e3a8a', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
             📊 ยอดสะสมรายปี {year + 543}
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
-              <div style={{ fontSize: '13px', opacity: 0.9 }}>1. เงินเดือนสะสมทั้งปี</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', marginTop: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '14px', color: '#64748b' }}>1. เงินเดือนสะสมทั้งปี</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
                 {ytd.ytd_gross_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
-              <div style={{ fontSize: '13px', opacity: 0.9 }}>2. ภาษีเงินได้สะสมทั้งปี</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '14px', color: '#64748b' }}>2. ภาษีเงินได้สะสมทั้งปี</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
                 {ytd.ytd_tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
-              <div style={{ fontSize: '13px', opacity: 0.9 }}>3. ประกันสังคมสะสมทั้งปี</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '14px', color: '#64748b' }}>3. ประกันสังคมสะสมทั้งปี</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
                 {ytd.ytd_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.3)', borderRadius: '12px', backdropFilter: 'blur(10px)', border: '2px solid rgba(16, 185, 129, 0.5)' }}>
-              <div style={{ fontSize: '13px', fontWeight: '600' }}>4. รวมเงินได้สะสมทั้งปี</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #dbeafe' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e40af' }}>4. รวมเงินได้สะสมทั้งปี</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#1e3a8a' }}>
                 {ytd.ytd_total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.3)', borderRadius: '12px', backdropFilter: 'blur(10px)', border: '2px solid rgba(239, 68, 68, 0.5)' }}>
-              <div style={{ fontSize: '13px', fontWeight: '600' }}>5. รวมหักสะสมทั้งปี</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>5. รวมหักสะสมทั้งปี</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#7f1d1d' }}>
                 {ytd.ytd_total_deductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.95)', borderRadius: '12px', border: '3px solid #fbbf24', color: '#92400e' }}>
-              <div style={{ fontSize: '13px', fontWeight: '700' }}>6. เงินได้สุทธิสะสมทั้งปี</div>
-              <div style={{ fontSize: '24px', fontWeight: '900', marginTop: '8px', color: '#f59e0b' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: '#1e3a8a', borderRadius: '8px', color: 'white' }}>
+              <div style={{ fontSize: '16px', fontWeight: '700' }}>6. เงินได้สุทธิสะสมทั้งปี</div>
+              <div style={{ fontSize: '20px', fontWeight: '900' }}>
                 {ytd.ytd_net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
@@ -531,50 +531,50 @@ export default function WageDetailPage() {
 
       {/* All-Time Summary - ยอดสะสมทั้งหมด */}
       {allTimeData && (
-        <div className="card" style={{ marginBottom: '24px', padding: '24px', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
-          <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color: 'white' }}>
+        <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color: '#312e81', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
             🌟 ยอดสะสมทั้งหมด (ตั้งแต่เริ่มทำงาน)
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
-              <div style={{ fontSize: '13px', opacity: 0.9 }}>1. เงินเดือนสะสมทั้งหมด</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', marginTop: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '14px', color: '#64748b' }}>1. เงินเดือนสะสมทั้งหมด</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
                 {allTimeData.total_gross_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
-              <div style={{ fontSize: '13px', opacity: 0.9 }}>2. ภาษีเงินได้สะสมทั้งหมด</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '14px', color: '#64748b' }}>2. ภาษีเงินได้สะสมทั้งหมด</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
                 {allTimeData.total_tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
-              <div style={{ fontSize: '13px', opacity: 0.9 }}>3. ประกันสังคมสะสมทั้งหมด</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '14px', color: '#64748b' }}>3. ประกันสังคมสะสมทั้งหมด</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
                 {allTimeData.total_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.3)', borderRadius: '12px', backdropFilter: 'blur(10px)', border: '2px solid rgba(16, 185, 129, 0.5)' }}>
-              <div style={{ fontSize: '13px', fontWeight: '600' }}>4. รวมเงินได้สะสมทั้งหมด</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#eef2ff', borderRadius: '8px', border: '1px solid #e0e7ff' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#3730a3' }}>4. รวมเงินได้สะสมทั้งหมด</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#312e81' }}>
                 {allTimeData.total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.3)', borderRadius: '12px', backdropFilter: 'blur(10px)', border: '2px solid rgba(239, 68, 68, 0.5)' }}>
-              <div style={{ fontSize: '13px', fontWeight: '600' }}>5. รวมหักสะสมทั้งหมด</div>
-              <div style={{ fontSize: '22px', fontWeight: '700', marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>5. รวมหักสะสมทั้งหมด</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#7f1d1d' }}>
                 {allTimeData.total_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.95)', borderRadius: '12px', border: '3px solid #10b981', color: '#064e3b' }}>
-              <div style={{ fontSize: '13px', fontWeight: '700' }}>6. เงินได้สุทธิสะสมทั้งหมด</div>
-              <div style={{ fontSize: '24px', fontWeight: '900', marginTop: '8px', color: '#10b981' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: '#312e81', borderRadius: '8px', color: 'white' }}>
+              <div style={{ fontSize: '16px', fontWeight: '700' }}>6. เงินได้สุทธิสะสมทั้งหมด</div>
+              <div style={{ fontSize: '20px', fontWeight: '900' }}>
                 {allTimeData.total_net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-          </div>
-          <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(255,255,255,0.2)', borderRadius: '8px', fontSize: '13px', opacity: 0.9 }}>
-            📌 ทำงานมาแล้ว: <strong>{allTimeData.total_periods} งวด</strong>
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '12px', background: '#f1f5f9', borderRadius: '8px', fontSize: '14px', color: '#475569' }}>
+              📌 ทำงานมาแล้ว: <strong style={{ color: '#0f172a' }}>{allTimeData.total_periods} งวด</strong>
+            </div>
           </div>
         </div>
       )}
