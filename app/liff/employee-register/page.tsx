@@ -13,9 +13,8 @@ export default function EmployeeRegisterPage() {
   const [lineUserId, setLineUserId] = useState('')
   const [displayName, setDisplayName] = useState('')
 
-  const [identityId, setIdentityId] = useState('')
-  const [name, setName] = useState('')
   const [employeeId, setEmployeeId] = useState('')
+  const [identityId, setIdentityId] = useState('')
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -46,7 +45,6 @@ export default function EmployeeRegisterPage() {
       const profile = await window.liff.getProfile()
       setLineUserId(profile.userId)
       setDisplayName(profile.displayName)
-      setName(profile.displayName) // Pre-fill name
       setLiffReady(true)
     } catch (error) {
       console.error('LIFF initialization failed:', error)
@@ -67,9 +65,8 @@ export default function EmployeeRegisterPage() {
         },
         body: JSON.stringify({
           lineUserId,
-          identityId,
-          name,
-          employeeId: employeeId || undefined,
+          employeeId,
+          identityId: identityId || undefined,
         }),
       })
 
@@ -79,9 +76,8 @@ export default function EmployeeRegisterPage() {
         setSuccess(true)
         setMessage(`${result.message}\n\nยินดีต้อนรับคุณ ${result.employee.name}\nข้อมูลถูกบันทึกในระบบเรียบร้อยแล้ว`)
         // Clear form
-        setIdentityId('')
-        setName(displayName)
         setEmployeeId('')
+        setIdentityId('')
       } else {
         setSuccess(false)
         setMessage(result.error)
@@ -149,46 +145,35 @@ export default function EmployeeRegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                เลขบัตรประชาชน <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={identityId}
-                onChange={(e) => setIdentityId(e.target.value)}
-                placeholder="กรอกเลขบัตรประชาชน 13 หลัก"
-                required
-                maxLength={13}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ชื่อ-นามสกุล <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="กรอกชื่อ-นามสกุล"
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                รหัสพนักงาน <span className="text-gray-400">(ถ้ามี)</span>
+                รหัสพนักงาน <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
-                placeholder="กรอกรหัสพนักงาน (ไม่บังคับ)"
+                placeholder="กรอกรหัสพนักงาน"
+                required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-1">
-                หากไม่ทราบรหัส ระบบจะค้นหาจากเลขบัตรประชาชน
+                กรุณากรอกรหัสพนักงานของคุณ (บังคับ)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                เลขบัตรประชาชน <span className="text-gray-400">(ถ้ามี)</span>
+              </label>
+              <input
+                type="text"
+                value={identityId}
+                onChange={(e) => setIdentityId(e.target.value)}
+                placeholder="กรอกเลขบัตรประชาชน 13 หลัก (ไม่บังคับ)"
+                maxLength={13}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                เพื่อความปลอดภัยและยืนยันตัวตน (ไม่บังคับ)
               </p>
             </div>
 

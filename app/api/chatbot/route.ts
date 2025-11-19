@@ -219,23 +219,77 @@ async function executeSQL(sqlQuery: string): Promise<any[]> {
     const cleanQuery = sqlQuery.replace(/```sql/g, '').replace(/```/g, '').trim()
 
     // Execute the query using Supabase
-    // Note: This is a simplified version. In production, you should use proper query builders
-    // For now, we'll use a safe approach by parsing the query type
-
     if (!cleanQuery.toUpperCase().startsWith('SELECT')) {
       throw new Error('Only SELECT queries are allowed')
     }
 
-    const { data, error } = await supabase.rpc('execute_raw_query', { query_text: cleanQuery })
-
-    if (error) {
-      console.error('SQL execution error:', error)
-      // If RPC doesn't exist, we'll use standard Supabase queries as fallback
-      // This is a simplified version - in production you'd need proper query parsing
-      return []
+    // Parse the SQL query to determine which table to query
+    // This is a simple parser - in production you'd want more robust parsing
+    const lowerQuery = cleanQuery.toLowerCase()
+    
+    // Check if query is about OT hours
+    if (lowerQuery.includes('daily_attendance') || lowerQuery.includes('ot_hours')) {
+      // Query daily_attendance with employees
+      const { data, error } = await supabase
+        .from('daily_attendance')
+        .select(`
+          *,
+          employee:employees(employee_id, name, department)
+        `)
+      
+      if (error) {
+        console.error('Query error:', error)
+        return []
+      }
+      
+      return data || []
+    }
+    
+    // Check if query is about employees
+    if (lowerQuery.includes('from employees')) {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('status', 'active')
+      
+      if (error) {
+        console.error('Query error:', error)
+        return []
+      }
+      
+      return data || []
+    }
+    
+    // Check if query is about leave records
+    if (lowerQuery.includes('leave_records')) {
+      const { data, error } = await supabase
+        .from('leave_records')
+        .select(`
+          *,
+          employee:employees(employee_id, name, department)
+        `)
+      
+      if (error) {
+        console.error('Query error:', error)
+        return []
+      }
+      
+      return data || []
     }
 
-    return data || []
+    // Default: try to use rpc if available, otherwise return empty
+    try {
+      const { data, error } = await supabase.rpc('execute_raw_query', { query_text: cleanQuery })
+      
+      if (error) {
+        console.log('RPC not available, using fallback')
+        return []
+      }
+      
+      return data || []
+    } catch {
+      return []
+    }
   } catch (error) {
     console.error('SQL execution error:', error)
     return []

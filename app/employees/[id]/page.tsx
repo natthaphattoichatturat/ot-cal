@@ -23,6 +23,29 @@ interface Employee {
   updated_at: string
 }
 
+interface IncomeDeductionRecord {
+  id: number
+  pay_period_month: number
+  pay_period_year: number
+  pay_period: number
+  record_type: 'income' | 'deduction'
+  item_name: string
+  amount: number
+  include_in_sso: boolean
+  notes: string | null
+  created_at: string
+}
+
+interface YTDSummary {
+  ytd_gross_wage: number
+  ytd_ot_wage: number
+  ytd_total_income: number
+  ytd_sso: number
+  ytd_tax: number
+  ytd_total_deduction: number
+  ytd_net_wage: number
+}
+
 export default function EmployeeDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -32,12 +55,24 @@ export default function EmployeeDetailPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [formData, setFormData] = useState<Partial<Employee>>({})
+  const [incomeRecords, setIncomeRecords] = useState<IncomeDeductionRecord[]>([])
+  const [deductionRecords, setDeductionRecords] = useState<IncomeDeductionRecord[]>([])
+  const [ytdSummary, setYtdSummary] = useState<YTDSummary | null>(null)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
 
   useEffect(() => {
     if (params.id) {
       fetchEmployee(params.id as string)
     }
   }, [params.id])
+
+  useEffect(() => {
+    if (employee) {
+      fetchIncomeDeduction(employee.employee_id)
+      fetchYTDSummary(employee.employee_id)
+    }
+  }, [employee, selectedYear, selectedMonth])
 
   const fetchEmployee = async (id: string) => {
     setLoading(true)
@@ -113,6 +148,43 @@ export default function EmployeeDetailPage() {
 
   const handleChange = (field: keyof Employee, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const fetchIncomeDeduction = async (employeeId: string) => {
+    try {
+      const params = new URLSearchParams({
+        employee_id: employeeId,
+        year: selectedYear.toString(),
+      })
+      if (selectedMonth) {
+        params.append('month', selectedMonth.toString())
+      }
+
+      const res = await fetch(`/api/income-deduction?${params}`)
+      const data = await res.json()
+      
+      if (data.success) {
+        const income = data.data.filter((r: any) => r.record_type === 'income')
+        const deduction = data.data.filter((r: any) => r.record_type === 'deduction')
+        setIncomeRecords(income)
+        setDeductionRecords(deduction)
+      }
+    } catch (error) {
+      console.error('Error fetching income/deduction:', error)
+    }
+  }
+
+  const fetchYTDSummary = async (employeeId: string) => {
+    try {
+      const response = await fetch(`/api/employees/${employeeId}/ytd?year=${selectedYear}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setYtdSummary(data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching YTD:', error)
+    }
   }
 
   if (loading) {
@@ -464,6 +536,127 @@ export default function EmployeeDetailPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* YTD Summary */}
+      {ytdSummary && (
+        <div className="card" style={{ marginTop: '24px', padding: '24px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+            ยอดสะสมรายปี {selectedYear + 543}
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div style={{ padding: '12px', background: 'var(--surface-bg)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>เงินเดือนสะสม</div>
+              <div style={{ fontSize: '18px', fontWeight: '600', marginTop: '4px' }}>
+                {ytdSummary.ytd_gross_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: 'var(--surface-bg)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>รวมรายได้สะสม</div>
+              <div style={{ fontSize: '18px', fontWeight: '600', marginTop: '4px', color: '#10b981' }}>
+                {ytdSummary.ytd_total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: 'var(--surface-bg)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>ประกันสังคมสะสม</div>
+              <div style={{ fontSize: '18px', fontWeight: '600', marginTop: '4px', color: '#ef4444' }}>
+                {ytdSummary.ytd_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: 'var(--surface-bg)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>ภาษีสะสม</div>
+              <div style={{ fontSize: '18px', fontWeight: '600', marginTop: '4px', color: '#ef4444' }}>
+                {ytdSummary.ytd_tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: 'var(--surface-bg)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>รวมหักสะสม</div>
+              <div style={{ fontSize: '18px', fontWeight: '600', marginTop: '4px', color: '#ef4444' }}>
+                {ytdSummary.ytd_total_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+              </div>
+            </div>
+            <div style={{ padding: '12px', background: '#d1fae5', borderRadius: '8px' }}>
+              <div style={{ fontSize: '12px', color: '#10b981', fontWeight: '600' }}>เงินสุทธิสะสม</div>
+              <div style={{ fontSize: '20px', fontWeight: '700', marginTop: '4px', color: '#10b981' }}>
+                {ytdSummary.ytd_net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Income Records */}
+      <div className="card" style={{ marginTop: '24px', padding: '24px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+          💰 รายการเงินได้เพิ่มเติม
+        </h3>
+        {incomeRecords.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)' }}>ไม่มีรายการเงินได้เพิ่มเติม</p>
+        ) : (
+          <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+            <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border-light)' }}>งวด</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border-light)' }}>รายการ</th>
+                  <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid var(--border-light)' }}>จำนวนเงิน</th>
+                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid var(--border-light)' }}>คำนวณ SSO</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border-light)' }}>หมายเหตุ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {incomeRecords.map(record => (
+                  <tr key={record.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '12px' }}>{record.pay_period_month}/{record.pay_period_year + 543} งวด {record.pay_period}</td>
+                    <td style={{ padding: '12px' }}>{record.item_name}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#10b981' }}>
+                      {record.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+                    </td>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>{record.include_in_sso ? '✓' : '-'}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{record.notes || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Deduction Records */}
+      <div className="card" style={{ marginTop: '24px', padding: '24px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+          ➖ รายการเงินหัก
+        </h3>
+        {deductionRecords.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)' }}>ไม่มีรายการเงินหัก</p>
+        ) : (
+          <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+            <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border-light)' }}>งวด</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border-light)' }}>รายการ</th>
+                  <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid var(--border-light)' }}>จำนวนเงิน</th>
+                  <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid var(--border-light)' }}>คำนวณ SSO</th>
+                  <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border-light)' }}>หมายเหตุ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deductionRecords.map(record => (
+                  <tr key={record.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '12px' }}>{record.pay_period_month}/{record.pay_period_year + 543} งวด {record.pay_period}</td>
+                    <td style={{ padding: '12px' }}>{record.item_name}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#ef4444' }}>
+                      {record.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+                    </td>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>{record.include_in_sso ? '✓' : '-'}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{record.notes || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

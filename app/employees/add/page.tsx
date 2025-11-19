@@ -21,6 +21,35 @@ export default function AddEmployeePage() {
     bank_id: '',
     bank_account: '',
     remarks: '',
+    // ข้อมูลส่วนตัว
+    section: '',
+    position: '',
+    gender: '',
+    nationality: '',
+    citizenship: '',
+    religion: '',
+    birth_date: '',
+    start_date: '',
+    // ข้อมูลภาษีและประกัน
+    tax_id: '',
+    social_security: '',
+    // กองทุนต่างๆ
+    provident_fund: '',
+    company_provident_fund: '',
+    life_insurance: '',
+    teacher_fund: '',
+    housing_loan: '',
+    rmf_fund: '',
+    // เงินเดือนคงที่
+    position_allowance: '',
+    phone_allowance: '',
+    other_allowance: '',
+    defective_work_deduction: '',
+    // ค่าลดหย่อนภาษี
+    tax_allowance: '60000',
+    spouse_allowance: '',
+    child_allowance: '',
+    number_of_children: '0',
   })
 
   const handleChange = (field: string, value: string) => {
@@ -344,6 +373,482 @@ export default function AddEmployeePage() {
                     resize: 'vertical',
                   }}
                 />
+              </div>
+            </div>
+
+            {/* Section 1: ข้อมูลส่วนตัว */}
+            <div style={{ marginTop: '32px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', borderBottom: '2px solid var(--primary)', paddingBottom: '8px' }}>
+                ข้อมูลส่วนตัว
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    แผนก/ฝ่าย
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.section}
+                    onChange={(e) => handleChange('section', e.target.value)}
+                    placeholder="เช่น ฝ่ายผลิต"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    ตำแหน่ง
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.position}
+                    onChange={(e) => handleChange('position', e.target.value)}
+                    placeholder="เช่น พนักงานทั่วไป"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    เพศ
+                  </label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => handleChange('gender', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <option value="">-- เลือก --</option>
+                    <option value="male">ชาย</option>
+                    <option value="female">หญิง</option>
+                    <option value="other">อื่นๆ</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    สัญชาติ
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nationality}
+                    onChange={(e) => handleChange('nationality', e.target.value)}
+                    placeholder="เช่น ไทย"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    เชื้อชาติ
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.citizenship}
+                    onChange={(e) => handleChange('citizenship', e.target.value)}
+                    placeholder="เช่น ไทย"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    ศาสนา
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.religion}
+                    onChange={(e) => handleChange('religion', e.target.value)}
+                    placeholder="เช่น พุทธ"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    วันเกิด
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.birth_date}
+                    onChange={(e) => handleChange('birth_date', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    วันเริ่มงาน
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => handleChange('start_date', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: ข้อมูลภาษีและประกัน */}
+            <div style={{ marginTop: '32px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', borderBottom: '2px solid var(--primary)', paddingBottom: '8px' }}>
+                ข้อมูลภาษีและประกันสังคม
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    เลขประจำตัวผู้เสียภาษี
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.tax_id}
+                    onChange={(e) => handleChange('tax_id', e.target.value)}
+                    maxLength={13}
+                    placeholder="1234567890123"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    เลขประกันสังคม
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.social_security}
+                    onChange={(e) => handleChange('social_security', e.target.value)}
+                    maxLength={20}
+                    placeholder="เลขประกันสังคม"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: เงินเดือนและค่าตอบแทนคงที่ */}
+            <div style={{ marginTop: '32px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', borderBottom: '2px solid var(--primary)', paddingBottom: '8px' }}>
+                เงินเดือนและค่าตอบแทนคงที่
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    ค่าตำแหน่ง (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.position_allowance}
+                    onChange={(e) => handleChange('position_allowance', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    ค่าโทรศัพท์ (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.phone_allowance}
+                    onChange={(e) => handleChange('phone_allowance', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    ค่าอื่นๆคงที่ (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.other_allowance}
+                    onChange={(e) => handleChange('other_allowance', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    หักงานเสีย (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.defective_work_deduction}
+                    onChange={(e) => handleChange('defective_work_deduction', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 4: กองทุนต่างๆ */}
+            <div style={{ marginTop: '32px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', borderBottom: '2px solid var(--primary)', paddingBottom: '8px' }}>
+                กองทุนและการหักเงิน
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    กองทุนสำรองเลี้ยงชีพ - ลูกจ้าง (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.provident_fund}
+                    onChange={(e) => handleChange('provident_fund', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    กองทุนสำรองเลี้ยงชีพ - บริษัท (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.company_provident_fund}
+                    onChange={(e) => handleChange('company_provident_fund', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    ประกันชีวิต (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.life_insurance}
+                    onChange={(e) => handleChange('life_insurance', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    กองทุนครู (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.teacher_fund}
+                    onChange={(e) => handleChange('teacher_fund', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    เงินกู้บ้าน (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.housing_loan}
+                    onChange={(e) => handleChange('housing_loan', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    กองทุน RMF (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.rmf_fund}
+                    onChange={(e) => handleChange('rmf_fund', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 5: ค่าลดหย่อนภาษี */}
+            <div style={{ marginTop: '32px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', borderBottom: '2px solid var(--primary)', paddingBottom: '8px' }}>
+                ค่าลดหย่อนภาษี
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    ค่าลดหย่อนส่วนตัว (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.tax_allowance}
+                    onChange={(e) => handleChange('tax_allowance', e.target.value)}
+                    step="0.01"
+                    placeholder="60000"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <small style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                    ค่าเริ่มต้น 60,000 บาท/ปี
+                  </small>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    ค่าลดหย่อนคู่สมรส (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.spouse_allowance}
+                    onChange={(e) => handleChange('spouse_allowance', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    จำนวนบุตร
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.number_of_children}
+                    onChange={(e) => handleChange('number_of_children', e.target.value)}
+                    min="0"
+                    placeholder="0"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                    ค่าลดหย่อนบุตร (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.child_allowance}
+                    onChange={(e) => handleChange('child_allowance', e.target.value)}
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <small style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                    30,000 บาท/คน
+                  </small>
+                </div>
               </div>
             </div>
 

@@ -4,12 +4,12 @@ import { supabase } from '@/lib/supabase'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { lineUserId, identityId, name, employeeId } = body
+    const { lineUserId, employeeId, identityId } = body
 
     // Validation
-    if (!lineUserId || !identityId || !name) {
+    if (!lineUserId || !employeeId) {
       return NextResponse.json(
-        { success: false, error: 'ข้อมูลไม่ครบถ้วน' },
+        { success: false, error: 'กรุณาระบุ LINE User ID และรหัสพนักงาน' },
         { status: 400 }
       )
     }
@@ -23,44 +23,33 @@ export async function POST(request: NextRequest) {
 
     if (existingLineUser) {
       return NextResponse.json(
-        { success: false, error: 'Employee LINE ID นี้ได้ลงทะเบียนแล้ว' },
+        { success: false, error: 'LINE ID นี้ได้ลงทะเบียนแล้ว' },
         { status: 400 }
       )
     }
 
-    let employeeRecord = null
-
-    // Case 1: Search by employee_id if provided
-    if (employeeId) {
-      const { data } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('employee_id', employeeId)
-        .single()
-
-      employeeRecord = data
-    }
-
-    // Case 2: If not found or employeeId not provided, search by identity_id
-    if (!employeeRecord) {
-      const { data } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('identity_id', identityId)
-        .single()
-
-      employeeRecord = data
-    }
+    // Search by employee_id (primary method)
+    const { data: employeeRecord } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('employee_id', employeeId)
+      .single()
 
     // If employee found, update with Employee LINE ID
     if (employeeRecord) {
+      const updateData: any = {
+        line_id_employ: lineUserId,
+        updated_at: new Date().toISOString(),
+      }
+
+      // อัพเดท identity_id ถ้ามีการระบุมา
+      if (identityId) {
+        updateData.identity_id = identityId
+      }
+
       const { error: updateError } = await supabase
         .from('employees')
-        .update({
-          line_id_employ: lineUserId,
-          name: name, // Update name as well
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', employeeRecord.id)
 
       if (updateError) {
@@ -76,7 +65,7 @@ export async function POST(request: NextRequest) {
         message: 'ลงทะเบียนสำเร็จ',
         employee: {
           employeeId: employeeRecord.employee_id,
-          name: name,
+          name: employeeRecord.name,
           department: employeeRecord.department,
         },
       })
@@ -85,7 +74,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'ไม่พบข้อมูลพนักงาน กรุณาตรวจสอบรหัสพนักงานหรือเลขบัตรประชาชนอีกครั้ง',
+          error: 'ไม่พบข้อมูลพนักงานตามรหัสที่ระบุ กรุณาตรวจสอบรหัสพนักงานอีกครั้ง',
         },
         { status: 404 }
       )

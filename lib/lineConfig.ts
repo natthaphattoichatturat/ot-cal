@@ -39,7 +39,7 @@ export const LINE_CONFIG = {
   messagingApiEndpoint: 'https://api.line.me/v2/bot/message',
 }
 
-// Helper function to send LINE message
+// Helper function to send LINE message (Employee LINE OA)
 export async function sendLineMessage(to: string, messages: any[]) {
   const response = await fetch(`${LINE_CONFIG.messagingApiEndpoint}/push`, {
     method: 'POST',
@@ -60,6 +60,9 @@ export async function sendLineMessage(to: string, messages: any[]) {
 
   return response.json()
 }
+
+// Alias for Employee LINE OA
+export const sendEmployeeLineMessage = sendLineMessage
 
 // Helper function to send reply message
 export async function replyLineMessage(replyToken: string, messages: any[]) {

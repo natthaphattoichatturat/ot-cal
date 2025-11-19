@@ -31,6 +31,15 @@ interface EmployeeWage {
   totalIncome: number
 }
 
+interface MasterItem {
+  id: number
+  item_name: string
+  item_name_th: string
+  include_in_sso: boolean
+  is_fixed: boolean
+  default_amount: number
+}
+
 export default function WagesPage() {
   const [activeTab, setActiveTab] = useState<'daily' | 'summary'>('daily')
   const [selectedMonth, setSelectedMonth] = useState('')
@@ -50,6 +59,17 @@ export default function WagesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const itemsPerPage = 10
+
+  // Income/Deduction Popup State
+  const [showIncomeDeductionPopup, setShowIncomeDeductionPopup] = useState(false)
+  const [recordType, setRecordType] = useState<'income' | 'deduction'>('income')
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
+  const [selectedItem, setSelectedItem] = useState('')
+  const [amount, setAmount] = useState('')
+  const [notes, setNotes] = useState('')
+  const [masterItems, setMasterItems] = useState<MasterItem[]>([])
+  const [savingRecord, setSavingRecord] = useState(false)
+  const [message, setMessage] = useState('')
 
   const thaiMonths = [
     'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -317,6 +337,108 @@ export default function WagesPage() {
     )
   }
 
+  // Fetch master items เมื่อเปิด popup
+  const fetchMasterItems = async (type: 'income' | 'deduction') => {
+    try {
+      const res = await fetch(`/api/income-deduction/master?category=${type}`)
+      const data = await res.json()
+      if (data.success) {
+        setMasterItems(data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching master items:', error)
+    }
+  }
+
+  const openIncomeDeductionPopup = (type: 'income' | 'deduction') => {
+    setRecordType(type)
+    setShowIncomeDeductionPopup(true)
+    setSelectedEmployees([])
+    setSelectedItem('')
+    setAmount('')
+    setNotes('')
+    setMessage('')
+    fetchMasterItems(type)
+  }
+
+  const closeIncomeDeductionPopup = () => {
+    setShowIncomeDeductionPopup(false)
+    setSelectedEmployees([])
+    setSelectedItem('')
+    setAmount('')
+    setNotes('')
+    setMessage('')
+  }
+
+  const toggleEmployee = (employeeId: string) => {
+    if (selectedEmployees.includes(employeeId)) {
+      setSelectedEmployees(selectedEmployees.filter(id => id !== employeeId))
+    } else {
+      setSelectedEmployees([...selectedEmployees, employeeId])
+    }
+  }
+
+  const selectAllEmployees = () => {
+    if (selectedEmployees.length === filteredEmployees.length) {
+      setSelectedEmployees([])
+    } else {
+      setSelectedEmployees(filteredEmployees.map(emp => emp.employeeId))
+    }
+  }
+
+  const saveIncomeDeduction = async () => {
+    if (selectedEmployees.length === 0) {
+      setMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+      return
+    }
+
+    if (!selectedItem || !amount) {
+      setMessage('กรุณากรอกข้อมูลให้ครบถ้วน')
+      return
+    }
+
+    setSavingRecord(true)
+    setMessage('')
+
+    try {
+      const selectedMasterItem = masterItems.find(item => item.item_name === selectedItem)
+
+      const res = await fetch('/api/income-deduction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeIds: selectedEmployees,
+          payPeriodMonth: parseInt(selectedMonth),
+          payPeriodYear: parseInt(selectedYear),
+          payPeriod: selectedPeriod,
+          recordType,
+          itemName: selectedItem,
+          amount: parseFloat(amount),
+          includeInSso: selectedMasterItem?.include_in_sso || false,
+          isFixed: selectedMasterItem?.is_fixed || false,
+          notes,
+          createdBy: 'admin'
+        })
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        setMessage(`✓ ${data.message}`)
+        setTimeout(() => {
+          closeIncomeDeductionPopup()
+        }, 1500)
+      } else {
+        setMessage(`✗ ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Error saving income/deduction:', error)
+      setMessage('✗ เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+    } finally {
+      setSavingRecord(false)
+    }
+  }
+
   const Pagination = () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center' }}>
       <button
@@ -375,6 +497,20 @@ export default function WagesPage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => openIncomeDeductionPopup('income')}
+              className="btn"
+              style={{ background: '#10b981', color: 'white' }}
+            >
+              ➕ เพิ่มเงินได้
+            </button>
+            <button
+              onClick={() => openIncomeDeductionPopup('deduction')}
+              className="btn"
+              style={{ background: '#ef4444', color: 'white' }}
+            >
+              ➖ เพิ่มเงินหัก
+            </button>
             <a href="/" className="btn btn-secondary">
               ← กลับหน้าหลัก
             </a>
@@ -577,6 +713,186 @@ export default function WagesPage() {
             </>
           )}
         </>
+      )}
+
+      {/* Income/Deduction Popup */}
+      {showIncomeDeductionPopup && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={closeIncomeDeductionPopup}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '800px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              padding: '24px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '20px' }}>
+              {recordType === 'income' ? '➕ เพิ่มเงินได้' : '➖ เพิ่มเงินหัก'}
+            </h2>
+
+            {message && (
+              <div
+                style={{
+                  padding: '12px',
+                  marginBottom: '16px',
+                  borderRadius: '8px',
+                  background: message.startsWith('✓') ? '#d1fae5' : '#fee2e2',
+                  color: message.startsWith('✓') ? '#065f46' : '#991b1b',
+                  fontSize: '14px'
+                }}
+              >
+                {message}
+              </div>
+            )}
+
+            {/* งวดที่เลือก */}
+            <div style={{ marginBottom: '20px', padding: '12px', background: 'var(--surface-bg)', borderRadius: '8px' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>งวดที่เลือก:</div>
+              <div style={{ fontSize: '16px', fontWeight: '600', marginTop: '4px' }}>
+                {thaiMonths[parseInt(selectedMonth) - 1]} {parseInt(selectedYear) + 543} - งวดที่ {selectedPeriod}
+              </div>
+            </div>
+
+            {/* เลือกรายการ */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                รายการ <span style={{ color: 'red' }}>*</span>
+              </label>
+              <select
+                value={selectedItem}
+                onChange={(e) => setSelectedItem(e.target.value)}
+                style={{ width: '100%' }}
+              >
+                <option value="">-- เลือกรายการ --</option>
+                {masterItems.map(item => (
+                  <option key={item.id} value={item.item_name}>
+                    {item.item_name_th} {item.include_in_sso && '(คำนวณ SSO)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* จำนวนเงิน */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                จำนวนเงิน (บาท) <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            {/* หมายเหตุ */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+                หมายเหตุ
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"
+                rows={3}
+                style={{ width: '100%', fontFamily: 'inherit' }}
+              />
+            </div>
+
+            {/* เลือกพนักงาน */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600' }}>
+                  เลือกพนักงาน <span style={{ color: 'red' }}>*</span>
+                </label>
+                <button
+                  onClick={selectAllEmployees}
+                  className="btn btn-secondary"
+                  style={{ padding: '6px 12px', fontSize: '13px' }}
+                >
+                  {selectedEmployees.length === filteredEmployees.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                </button>
+              </div>
+
+              <div
+                style={{
+                  maxHeight: '200px',
+                  overflow: 'auto',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '8px',
+                  padding: '12px'
+                }}
+              >
+                {filteredEmployees.map(emp => (
+                  <label
+                    key={emp.employeeId}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px',
+                      marginBottom: '4px',
+                      background: selectedEmployees.includes(emp.employeeId) ? 'var(--primary-light)' : 'transparent',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedEmployees.includes(emp.employeeId)}
+                      onChange={() => toggleEmployee(emp.employeeId)}
+                      style={{ marginRight: '8px' }}
+                    />
+                    <span style={{ fontSize: '14px' }}>
+                      <strong>{emp.employeeId}</strong> - {emp.name} ({emp.department})
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                เลือกแล้ว {selectedEmployees.length} คน
+              </div>
+            </div>
+
+            {/* ปุ่ม */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={closeIncomeDeductionPopup}
+                className="btn btn-secondary"
+                disabled={savingRecord}
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={saveIncomeDeduction}
+                className="btn btn-primary"
+                disabled={savingRecord}
+              >
+                {savingRecord ? 'กำลังบันทึก...' : '💾 บันทึก'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

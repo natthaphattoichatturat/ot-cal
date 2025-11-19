@@ -223,19 +223,85 @@ export function calculateMonthlySSO(
 }
 
 /**
- * คำนวณภาษีเงินได้หัก ณ ที่จ่าย (แบบง่าย)
- * สำหรับรายได้ต่อปี
+ * คำนวณภาษีเงินได้หัก ณ ที่จ่าย แบบประมาณการรายปี (YTD Method)
+ * ตามหลักการคำนวณภาษีของกรมสรรพากร
  */
-export function calculateWithholdingTax(yearlyIncome: number): number {
-  // ค่าลดหย่อนส่วนตัว
-  const PERSONAL_ALLOWANCE = 60000
+export interface TaxCalculationInput {
+  currentPeriodIncome: number // รายได้งวดนี้
+  ytdIncome: number // รายได้สะสม YTD (ไม่รวมงวดนี้)
+  ytdTax: number // ภาษีที่หักไปแล้ว YTD
+  currentMonth: number // เดือนปัจจุบัน (1-12)
+  currentPeriod: number // งวดปัจจุบัน (1 หรือ 2)
+  taxAllowance?: number // ค่าลดหย่อนทั้งหมด (default 60,000)
+  expenseDeduction?: number // ค่าใช้จ่าย (default คำนวณ 50% สูงสุด 100,000)
+}
 
-  // รายได้หลังหักค่าลดหย่อน
-  const taxableIncome = Math.max(0, yearlyIncome - PERSONAL_ALLOWANCE)
+export interface TaxCalculationResult {
+  estimatedYearlyIncome: number // ประมาณการเงินได้ทั้งปี
+  expenseDeduction: number // ค่าใช้จ่าย
+  taxAllowance: number // ค่าลดหย่อนรวม
+  netTaxableIncome: number // เงินได้สุทธิที่ต้องเสียภาษี
+  totalYearlyTax: number // ภาษีที่ต้องเสียทั้งปี
+  taxForThisPeriod: number // ภาษีที่ต้องหักงวดนี้
+  remainingPeriods: number // จำนวนงวดที่เหลือ (รวมงวดนี้)
+}
 
-  // คำนวณภาษีตามขั้นบันได
+export function calculateWithholdingTax(input: TaxCalculationInput): TaxCalculationResult {
+  const {
+    currentPeriodIncome,
+    ytdIncome,
+    ytdTax,
+    currentMonth,
+    currentPeriod,
+    taxAllowance = 60000,
+    expenseDeduction: customExpenseDeduction
+  } = input
+
+  // 1. คำนวณจำนวนงวดที่เหลือในปี (รวมงวดนี้)
+  // แต่ละเดือนมี 2 งวด = 24 งวดต่อปี
+  const totalPeriodsInYear = 24
+  const currentPeriodNumber = (currentMonth - 1) * 2 + currentPeriod
+  const remainingPeriods = totalPeriodsInYear - currentPeriodNumber + 1
+
+  // 2. ประมาณการเงินได้ทั้งปี
+  const estimatedYearlyIncome = ytdIncome + currentPeriodIncome + (currentPeriodIncome * (remainingPeriods - 1))
+
+  // 3. คำนวณค่าใช้จ่าย (50% ของรายได้ แต่สูงสุดไม่เกิน 100,000 บาท)
+  let expenseDeduction: number
+  if (customExpenseDeduction !== undefined) {
+    expenseDeduction = customExpenseDeduction
+  } else {
+    expenseDeduction = Math.min(estimatedYearlyIncome * 0.5, 100000)
+  }
+
+  // 4. คำนวณเงินได้สุทธิ
+  const netTaxableIncome = Math.max(0, estimatedYearlyIncome - expenseDeduction - taxAllowance)
+
+  // 5. คำนวณภาษีที่ต้องเสียทั้งปีตามขั้นบันได
+  const totalYearlyTax = calculateProgressiveTax(netTaxableIncome)
+
+  // 6. คำนวณภาษีที่ต้องหักงวดนี้
+  // ภาษีที่ต้องหักงวดนี้ = (ภาษีทั้งปี - ภาษีที่หักไปแล้ว) / จำนวนงวดที่เหลือ
+  const taxForThisPeriod = Math.max(0, (totalYearlyTax - ytdTax) / remainingPeriods)
+
+  return {
+    estimatedYearlyIncome,
+    expenseDeduction,
+    taxAllowance,
+    netTaxableIncome,
+    totalYearlyTax,
+    taxForThisPeriod: Math.round(taxForThisPeriod * 100) / 100, // ปัดเศษ 2 ตำแหน่ง
+    remainingPeriods
+  }
+}
+
+/**
+ * คำนวณภาษีตามขั้นบันได (Progressive Tax)
+ */
+export function calculateProgressiveTax(taxableIncome: number): number {
   let tax = 0
 
+  // ขั้นบันไดภาษี (ปี 2568)
   if (taxableIncome <= 150000) {
     tax = 0
   } else if (taxableIncome <= 300000) {
@@ -254,7 +320,17 @@ export function calculateWithholdingTax(yearlyIncome: number): number {
     tax = 1265000 + (taxableIncome - 5000000) * 0.35
   }
 
-  return tax
+  return Math.round(tax * 100) / 100 // ปัดเศษ 2 ตำแหน่ง
+}
+
+/**
+ * คำนวณภาษีเงินได้หัก ณ ที่จ่าย (แบบเก่า - deprecated)
+ * @deprecated ใช้ calculateWithholdingTax แทน
+ */
+export function calculateWithholdingTaxSimple(yearlyIncome: number): number {
+  const PERSONAL_ALLOWANCE = 60000
+  const taxableIncome = Math.max(0, yearlyIncome - PERSONAL_ALLOWANCE)
+  return calculateProgressiveTax(taxableIncome)
 }
 
 /**

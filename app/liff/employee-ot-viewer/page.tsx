@@ -26,6 +26,29 @@ interface EmployeeData {
   department: string
 }
 
+interface WageSummary {
+  period: number
+  month: number
+  year: number
+  base_wage: number
+  ot_wage: number
+  total_income: number
+  sso: number
+  tax: number
+  total_deduction: number
+  net_wage: number
+}
+
+interface YTDData {
+  ytd_gross_wage: number
+  ytd_ot_wage: number
+  ytd_total_income: number
+  ytd_sso: number
+  ytd_tax: number
+  ytd_total_deduction: number
+  ytd_net_wage: number
+}
+
 export default function EmployeeOTViewerPage() {
   const [loading, setLoading] = useState(true)
   const [lineUserId, setLineUserId] = useState('')
@@ -36,6 +59,9 @@ export default function EmployeeOTViewerPage() {
   const [error, setError] = useState('')
   const [totalOT, setTotalOT] = useState(0)
   const [totalHours, setTotalHours] = useState(0)
+  const [wageSummaries, setWageSummaries] = useState<WageSummary[]>([])
+  const [ytdData, setYtdData] = useState<YTDData | null>(null)
+  const [showWageDetail, setShowWageDetail] = useState(false)
 
   useEffect(() => {
     const initLiff = async () => {
@@ -129,6 +155,37 @@ export default function EmployeeOTViewerPage() {
     }
   }, [employee, startDate, endDate])
 
+  useEffect(() => {
+    if (employee) {
+      fetchWageData(employee.employee_id)
+      fetchYTDData(employee.employee_id)
+    }
+  }, [employee])
+
+  const fetchWageData = async (employeeId: string) => {
+    try {
+      const res = await fetch(`/api/wages/employee-summary?employee_id=${employeeId}&year=${new Date().getFullYear()}`)
+      const data = await res.json()
+      if (data.success) {
+        setWageSummaries(data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching wage data:', error)
+    }
+  }
+
+  const fetchYTDData = async (employeeId: string) => {
+    try {
+      const response = await fetch(`/api/employees/${employeeId}/ytd?year=${new Date().getFullYear()}`)
+      const data = await response.json()
+      if (data.success) {
+        setYtdData(data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching YTD:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
@@ -208,6 +265,100 @@ export default function EmployeeOTViewerPage() {
             </div>
           </div>
         </div>
+
+        {/* Toggle Button for Wage Details */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+          <button
+            onClick={() => setShowWageDetail(!showWageDetail)}
+            className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            {showWageDetail ? 'ซ่อนรายละเอียดค่าจ้าง' : 'ดูรายละเอียดค่าจ้าง'}
+          </button>
+        </div>
+
+        {/* Wage Details */}
+        {showWageDetail && (
+          <>
+            <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">รายละเอียดค่าจ้างแต่ละงวด</h2>
+              {wageSummaries.length === 0 ? (
+                <p className="text-gray-600">ไม่มีข้อมูลค่าจ้าง</p>
+              ) : (
+                <div className="space-y-4">
+                  {wageSummaries.map((wage, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="font-bold text-gray-900 mb-2">
+                        {wage.month}/{wage.year + 543} - งวดที่ {wage.period}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>ค่าจ้างพื้นฐาน:</div>
+                        <div className="text-right">{wage.base_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</div>
+                        
+                        <div>ค่า OT:</div>
+                        <div className="text-right">{wage.ot_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</div>
+                        
+                        <div className="font-bold text-green-600">รวมรายได้:</div>
+                        <div className="text-right font-bold text-green-600">
+                          {wage.total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+                        </div>
+                        
+                        <div className="text-red-600">หัก SSO:</div>
+                        <div className="text-right text-red-600">
+                          {wage.sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+                        </div>
+                        
+                        <div className="text-red-600">หักภาษี:</div>
+                        <div className="text-right text-red-600">
+                          {wage.tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+                        </div>
+                        
+                        <div className="font-bold">เงินสุทธิ:</div>
+                        <div className="text-right font-bold text-blue-600">
+                          {wage.net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* YTD Summary */}
+            {ytdData && (
+              <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  ยอดสะสมรายปี {new Date().getFullYear() + 543}
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-700">1. เงินเดือนสะสม</span>
+                    <span className="font-bold">{ytdData.ytd_gross_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-700">2. ภาษีเงินได้สะสม</span>
+                    <span className="font-bold text-red-600">{ytdData.ytd_tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-700">3. ประกันสังคมสะสม</span>
+                    <span className="font-bold text-red-600">{ytdData.ytd_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-green-50 rounded-lg">
+                    <span className="text-gray-700 font-bold">4. รวมเงินได้สะสม</span>
+                    <span className="font-bold text-green-600">{ytdData.ytd_total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="flex justify-between p-3 bg-red-50 rounded-lg">
+                    <span className="text-gray-700 font-bold">5. รวมหักสะสม</span>
+                    <span className="font-bold text-red-600">{ytdData.ytd_total_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                  <div className="flex justify-between p-4 bg-blue-100 rounded-lg border-2 border-blue-500">
+                    <span className="text-gray-900 font-bold text-lg">6. เงินได้สุทธิสะสม</span>
+                    <span className="font-bold text-blue-600 text-xl">{ytdData.ytd_net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Attendance Records */}
         <div className="bg-white rounded-2xl shadow-xl p-6">
