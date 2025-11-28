@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface LeaveRecord {
   id: number
@@ -24,6 +25,7 @@ interface Employee {
 }
 
 export default function LeavePage() {
+  const { t } = useLanguage()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([])
   const [loading, setLoading] = useState(false)
@@ -147,7 +149,7 @@ export default function LeavePage() {
       const result = await response.json()
 
       if (result.success) {
-        setMessage('สำเร็จ: บันทึกการลาสำเร็จ')
+        setMessage(`${t('common.success')}: ${t('leave.successMessage')}`)
         // Reset form
         setSelectedEmployee('')
         setLeaveDate('')
@@ -157,10 +159,10 @@ export default function LeavePage() {
         // Refresh records
         fetchLeaveRecords()
       } else {
-        setMessage(`✗ ${result.error}`)
+        setMessage(`${t('common.error')}: ${result.error}`)
       }
     } catch (error) {
-      setMessage('✗ เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+      setMessage(`${t('common.error')}: เกิดข้อผิดพลาดในการบันทึกข้อมูล`)
     } finally {
       setSubmitting(false)
     }
@@ -174,7 +176,7 @@ export default function LeavePage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                บันทึกการลางานพนักงาน
+                {t('leave.title')}
               </h1>
               <p className="text-gray-600">
                 {getCurrentThaiDate()}
@@ -184,19 +186,19 @@ export default function LeavePage() {
               href="/"
               className="btn-primary"
             >
-              กลับหน้าหลัก
+              {t('common.back')}
             </a>
           </div>
         </div>
 
         {/* Leave Form */}
         <div className="card mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">บันทึกการลาใหม่</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('leave.saveLeave')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  พนักงาน <span className="text-red-500">*</span>
+                  {t('leave.employeeName')} <span className="text-red-500">{t('wages.required')}</span>
                 </label>
                 <select
                   value={selectedEmployee}
@@ -204,7 +206,7 @@ export default function LeavePage() {
                   required
                   className="w-full"
                 >
-                  <option value="">-- เลือกพนักงาน --</option>
+                  <option value="">-- {t('documents.selectEmployee')} --</option>
                   {employees.map((emp) => (
                     <option key={emp.employee_id} value={emp.employee_id}>
                       {emp.employee_id} - {emp.name} ({emp.department})
@@ -215,7 +217,7 @@ export default function LeavePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  วันที่ลา <span className="text-red-500">*</span>
+                  {t('leave.leaveDate')} <span className="text-red-500">{t('wages.required')}</span>
                 </label>
                 <input
                   type="date"
@@ -228,17 +230,17 @@ export default function LeavePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ประเภทการลา
+                  {t('leave.leaveType')}
                 </label>
                 <select
                   value={leaveType}
                   onChange={(e) => setLeaveType(e.target.value)}
                   className="w-full"
                 >
-                  <option value="Personal">ลากิจ</option>
-                  <option value="Sick">ลาป่วย</option>
-                  <option value="Vacation">ลาพักร้อน</option>
-                  <option value="Other">อื่นๆ</option>
+                  <option value="Personal">{t('leave.personalLeave')}</option>
+                  <option value="Sick">{t('leave.sickLeave')}</option>
+                  <option value="Vacation">{t('leave.annualLeave')}</option>
+                  <option value="Other">{t('leave.otherLeave')}</option>
                 </select>
               </div>
 
@@ -258,13 +260,13 @@ export default function LeavePage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                เหตุผลการลา
+                {t('leave.reason')}
               </label>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
-                placeholder="ระบุเหตุผล (ถ้ามี)"
+                placeholder={t('leave.reasonPlaceholder')}
                 className="w-full border border-gray-300 rounded-md p-2"
               />
             </div>
@@ -275,10 +277,10 @@ export default function LeavePage() {
                 disabled={submitting}
                 className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {submitting ? 'กำลังบันทึก...' : 'บันทึกการลา'}
+                {submitting ? t('leave.saving') : t('leave.saveLeave')}
               </button>
               {message && (
-                <p className={message.startsWith('สำเร็จ') ? 'text-green-600' : 'text-red-600'}>
+                <p className={message.startsWith(t('common.success')) ? 'text-green-600' : 'text-red-600'}>
                   {message}
                 </p>
               )}
@@ -288,7 +290,7 @@ export default function LeavePage() {
 
         {/* Filter Section */}
         <div className="card mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">ค้นหาประวัติการลา</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('leave.leaveHistory')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -336,29 +338,29 @@ export default function LeavePage() {
 
         {/* Leave Records Table */}
         <div className="card">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">ประวัติการลา</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-700">{t('leave.leaveHistory')}</h2>
           {loading ? (
-            <p className="text-center py-8 text-gray-600">กำลังโหลดข้อมูล...</p>
+            <p className="text-center py-8 text-gray-600">{t('common.loading')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="excel-table w-full">
                 <thead>
                   <tr>
-                    <th>วันที่ลา</th>
-                    <th>รหัสพนักงาน</th>
-                    <th>ชื่อพนักงาน</th>
-                    <th>แผนก</th>
-                    <th>ประเภท</th>
-                    <th>เหตุผล</th>
-                    <th>บันทึกโดย</th>
-                    <th>วันที่บันทึก</th>
+                    <th>{t('leave.leaveDate')}</th>
+                    <th>{t('leave.employeeId')}</th>
+                    <th>{t('leave.employeeName')}</th>
+                    <th>{t('leave.department')}</th>
+                    <th>{t('leave.type')}</th>
+                    <th>{t('leave.reason')}</th>
+                    <th>{t('common.save')}</th>
+                    <th>{t('leave.date')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {leaveRecords.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="text-center py-8 text-gray-500">
-                        ไม่พบข้อมูลการลา
+                        {t('leave.noHistory')}
                       </td>
                     </tr>
                   ) : (

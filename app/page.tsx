@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { format, getDaysInMonth, getDay } from 'date-fns'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface AttendanceData {
   employeeId: string
@@ -23,6 +24,7 @@ interface AttendanceData {
 }
 
 export default function Home() {
+  const { t } = useLanguage()
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
   const [period1Data, setPeriod1Data] = useState<AttendanceData[]>([])
@@ -43,15 +45,12 @@ export default function Home() {
 
   // Thai day names
   const thaiDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
-  const thaiMonths = [
-    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-  ]
 
   const formatThaiDate = (date: Date): string => {
     const day = thaiDays[date.getDay()]
     const dateNum = date.getDate()
-    const month = thaiMonths[date.getMonth()]
+    const monthNum = date.getMonth() + 1
+    const month = t(`months.${monthNum}`)
     const year = date.getFullYear() + 543
     const time = format(date, 'HH:mm:ss')
     return `วัน${day}ที่ ${dateNum} ${month} ${year} เวลา ${time} น.`
@@ -275,15 +274,15 @@ export default function Home() {
       <div className="table-container" style={{ marginBottom: '24px' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-            งวดที่ {period}: {period === 1 ? 'วันที่ 26 (เดือนก่อน) - 10' : 'วันที่ 11 - 25'}
+            {period === 1 ? t('home.period1') : t('home.period2')}
           </h3>
         </div>
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ minWidth: '120px' }}>รหัสพนักงาน</th>
-                <th style={{ minWidth: '180px' }}>ชื่อพนักงาน</th>
+                <th style={{ minWidth: '120px' }}>{t('home.employeeId')}</th>
+                <th style={{ minWidth: '180px' }}>{t('home.employeeName')}</th>
                 {dates.map(date => {
                   const day = parseInt(date.split('-')[2])
                   const dateObj = new Date(date)
@@ -295,17 +294,17 @@ export default function Home() {
                     </th>
                   )
                 })}
-                <th className="text-center" style={{ minWidth: '90px' }}>รวม OT</th>
-                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>OT ปกติ (×1.5)</th>
-                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>OT พิเศษ (×2)</th>
-                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>OT ขั้นสูง (×3)</th>
+                <th className="text-center" style={{ minWidth: '90px' }}>{t('home.totalOT')}</th>
+                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>{t('home.normalOT')}</th>
+                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>{t('home.specialOT')}</th>
+                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>{t('home.premiumOT')}</th>
               </tr>
             </thead>
             <tbody>
               {data.length === 0 ? (
                 <tr>
                   <td colSpan={dates.length + 6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    {searchQuery ? 'ไม่พบข้อมูลพนักงานที่ค้นหา' : 'ไม่มีข้อมูล OT'}
+                    {searchQuery ? t('home.noData') : t('home.noData')}
                   </td>
                 </tr>
               ) : (
@@ -377,29 +376,29 @@ export default function Home() {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 className="page-title">ระบบคำนวณชั่วโมง OT พนักงาน</h1>
+            <h1 className="page-title">{t('home.title')}</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }} suppressHydrationWarning>
-              {currentDateTime ? formatThaiDate(currentDateTime) : 'กำลังโหลด...'}
+              {currentDateTime ? formatThaiDate(currentDateTime) : t('common.loading')}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <a href="/wages" className="btn btn-primary">
-              คำนวณค่าจ้าง
+              {t('nav.wages')}
             </a>
             <a href="/documents" className="btn btn-secondary">
-              เอกสาร HR & Export
+              {t('nav.documents')}
             </a>
             <a href="/employees" className="btn btn-secondary">
-              จัดการพนักงาน
+              {t('nav.employees')}
             </a>
             <a href="/leave" className="btn btn-secondary">
-              บันทึกการลา
+              {t('nav.leave')}
             </a>
             <a href="/guide/webapp" className="btn btn-secondary">
-              คู่มือ Web App
+              {t('nav.guide')}
             </a>
             <a href="/guide/line" className="btn btn-secondary">
-              คู่มือระบบ LINE
+              {t('nav.guide')}
             </a>
           </div>
         </div>
@@ -411,7 +410,7 @@ export default function Home() {
           {/* Search */}
           <div ref={searchRef} style={{ position: 'relative' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-              ค้นหาพนักงาน
+              {t('home.searchEmployee')}
             </label>
             <div className="search-wrapper">
               <svg className="search-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -420,7 +419,7 @@ export default function Home() {
               <input
                 type="text"
                 className="search-input"
-                placeholder="ค้นหาด้วยรหัสหรือชื่อพนักงาน..."
+                placeholder={t('home.searchPlaceholder')}
                 value={searchQuery}
                 onChange={handleSearchChange}
                 onKeyDown={handleKeyDown}
@@ -447,14 +446,15 @@ export default function Home() {
           {/* Month */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-              เดือน
+              {t('home.selectMonth')}
             </label>
             <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
               {Array.from({ length: 12 }, (_, i) => {
                 const month = (i + 1).toString().padStart(2, '0')
+                const monthNum = i + 1
                 return (
                   <option key={month} value={month}>
-                    {thaiMonths[i]}
+                    {t(`months.${monthNum}`)}
                   </option>
                 )
               })}
@@ -464,7 +464,7 @@ export default function Home() {
           {/* Year */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-              ปี พ.ศ.
+              {t('common.year')}
             </label>
             <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
               {Array.from({ length: 5 }, (_, i) => {
@@ -482,7 +482,7 @@ export default function Home() {
         {/* Import */}
         <div style={{ paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-            นำเข้าข้อมูลการสแกน
+            {t('home.importData')}
           </label>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
             <input
@@ -497,7 +497,7 @@ export default function Home() {
               disabled={!importFile || importing}
               className="btn btn-primary"
             >
-              {importing ? 'กำลังนำเข้า...' : 'นำเข้าข้อมูล'}
+              {importing ? t('home.importing') : t('home.importButton')}
             </button>
           </div>
           {importMessage && (
@@ -512,7 +512,7 @@ export default function Home() {
       {loading ? (
         <div className="card" style={{ padding: '60px', textAlign: 'center' }}>
           <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-          <p style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูล...</p>
+          <p style={{ color: 'var(--text-muted)' }}>{t('common.loading')}</p>
         </div>
       ) : (
         <>

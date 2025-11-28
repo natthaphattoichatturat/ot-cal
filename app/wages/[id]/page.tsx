@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { format } from 'date-fns'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface EmployeeInfo {
   employee_id: string
@@ -122,6 +123,7 @@ const deductionCategories = [
 ]
 
 export default function WageDetailPage() {
+  const { t } = useLanguage()
   const params = useParams()
   const searchParams = useSearchParams()
   const employeeId = params.id as string
@@ -154,10 +156,6 @@ export default function WageDetailPage() {
   const [adjustmentDescription, setAdjustmentDescription] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const thaiMonths = [
-    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-  ]
 
   useEffect(() => {
     if (employeeId && month && period) {
@@ -292,7 +290,7 @@ export default function WageDetailPage() {
       <div className="app-container">
         <div className="card" style={{ padding: '60px', textAlign: 'center' }}>
           <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-          <p style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูล...</p>
+          <p style={{ color: 'var(--text-muted)' }}>{t('common.loading')}</p>
         </div>
       </div>
     )
@@ -302,9 +300,9 @@ export default function WageDetailPage() {
     return (
       <div className="app-container">
         <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)' }}>ไม่พบข้อมูลพนักงาน</p>
+          <p style={{ color: 'var(--text-muted)' }}>{t('wages.noData')}</p>
           <a href="/wages" className="btn btn-primary" style={{ marginTop: '16px' }}>
-            กลับหน้ารายการ
+            {t('wages.backToList')}
           </a>
         </div>
       </div>
@@ -323,9 +321,9 @@ export default function WageDetailPage() {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 className="page-title">รายละเอียดค่าจ้างพนักงาน</h1>
+            <h1 className="page-title">{t('wages.detailTitle')}</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-              {thaiMonths[monthNum - 1]} {year + 543} - งวดที่ {currentPeriod}
+              {t(`months.${monthNum}`)} {year + 543} - {t('common.period')} {currentPeriod}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -336,7 +334,7 @@ export default function WageDetailPage() {
                 setShowAddModal(true)
               }}
             >
-              เพิ่มเงินได้
+              {t('wages.addIncome')}
             </button>
             <button
               className="btn btn-secondary"
@@ -345,10 +343,10 @@ export default function WageDetailPage() {
                 setShowAddModal(true)
               }}
             >
-              เพิ่มเงินหัก
+              {t('wages.addDeduction')}
             </button>
             <a href={`/wages?month=${month}&period=${period}`} className="btn btn-secondary">
-              กลับหน้ารายการ
+              {t('wages.backToList')}
             </a>
           </div>
         </div>
@@ -357,44 +355,44 @@ export default function WageDetailPage() {
       {/* ข้อมูลพนักงาน */}
       <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-primary)' }}>
-          ข้อมูลพนักงาน
+          {t('wages.employeeInfo')}
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>รหัสพนักงาน</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t('wages.employeeId')}</div>
             <div style={{ fontSize: '15px', fontWeight: '600' }}>{employee.employee_id}</div>
           </div>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ชื่อพนักงาน</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t('wages.employeeName')}</div>
             <div style={{ fontSize: '15px', fontWeight: '600' }}>{employee.name}</div>
           </div>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>แผนก</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t('wages.department')}</div>
             <div style={{ fontSize: '15px', fontWeight: '600' }}>{employee.department}</div>
           </div>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ประเภทพนักงาน</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t('wages.employeeType')}</div>
             <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
               {employee.employment_type || 'รายวัน'}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ค่าจ้างรายวัน</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t('wages.dailySalary')}</div>
             <div style={{ fontSize: '15px', fontWeight: '600' }}>
-              {employee.perday_salary?.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+              {employee.perday_salary?.toLocaleString('th-TH', { minimumFractionDigits: 2 })} {t('common.baht')}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ค่าจ้างรายชั่วโมง</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t('common.hour')}</div>
             <div style={{ fontSize: '15px', fontWeight: '600' }}>
-              {employee.perhr_salary?.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+              {employee.perhr_salary?.toLocaleString('th-TH', { minimumFractionDigits: 2 })} {t('common.baht')}
             </div>
           </div>
           {employee.employment_type === 'รายเดือน' && (
             <div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>เงินเดือน</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t('wages.monthlySalary')}</div>
               <div style={{ fontSize: '15px', fontWeight: '600' }}>
-                {employee.monthly_salary?.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                {employee.monthly_salary?.toLocaleString('th-TH', { minimumFractionDigits: 2 })} {t('common.baht')}
               </div>
             </div>
           )}
@@ -781,7 +779,7 @@ export default function WageDetailPage() {
       {sso && (
         <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
-            ประกันสังคม (SSO) - {thaiMonths[monthNum - 1]} {year + 543}
+            {t('wages.ssoDetails')} - {t(`months.${monthNum}`)} {year + 543}
           </h3>
           <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '6px', marginBottom: '16px', border: '1px solid var(--border-light)' }}>
             <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: 0, fontWeight: '700' }}>

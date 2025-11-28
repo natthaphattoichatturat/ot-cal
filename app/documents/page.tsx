@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface DocumentType {
   id: string
@@ -68,6 +69,7 @@ const documents: DocumentType[] = [
 ]
 
 export default function DocumentsPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [selectedPeriod, setSelectedPeriod] = useState({
     year: new Date().getFullYear(),
@@ -97,13 +99,13 @@ export default function DocumentsPage() {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 className="page-title">จัดการเอกสาร HR & Export PDF</h1>
+            <h1 className="page-title">{t('documents.title')}</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-              Export เอกสารภาษี, ประกันสังคม, และสลิปเงินเดือน
+              {t('documents.subtitle')}
             </p>
           </div>
           <button onClick={() => router.push('/')} className="btn btn-secondary">
-            ← กลับหน้าหลัก
+            ← {t('common.back')}
           </button>
         </div>
       </div>
@@ -127,12 +129,12 @@ export default function DocumentsPage() {
       <div className="card" style={{ marginBottom: '24px' }}>
         <div style={{ padding: '20px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-            🗓️ เลือกงวดเวลาและพนักงาน
+            🗓️ {t('documents.selectMonth')}
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                ปี พ.ศ.
+                {t('common.year')}
               </label>
               <select
                 value={selectedPeriod.year}
@@ -152,7 +154,7 @@ export default function DocumentsPage() {
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                เดือน
+                {t('common.month')}
               </label>
               <select
                 value={selectedPeriod.month}
@@ -166,14 +168,14 @@ export default function DocumentsPage() {
               >
                 {[...Array(12)].map((_, i) => (
                   <option key={i + 1} value={i + 1}>
-                    {new Date(2000, i).toLocaleDateString('th-TH', { month: 'long' })}
+                    {t(`months.${i + 1}`)}
                   </option>
                 ))}
               </select>
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                งวด
+                {t('common.period')}
               </label>
               <select
                 value={selectedPeriod.period}
@@ -185,13 +187,13 @@ export default function DocumentsPage() {
                   borderRadius: '8px'
                 }}
               >
-                <option value={1}>งวดที่ 1 (26-10)</option>
-                <option value={2}>งวดที่ 2 (11-25)</option>
+                <option value={1}>{t('documents.period1')}</option>
+                <option value={2}>{t('documents.period2')}</option>
               </select>
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                พนักงาน (สำหรับสลิปและ 50 ทวิ)
+                {t('documents.selectEmployee')}
               </label>
               <select
                 value={selectedEmployee}
@@ -203,8 +205,8 @@ export default function DocumentsPage() {
                   borderRadius: '8px'
                 }}
               >
-                <option value="all">ทุกคน</option>
-                <option value="individual">เลือกพนักงาน...</option>
+                <option value="all">{t('documents.allEmployees')}</option>
+                <option value="individual">{t('documents.searchEmployee')}...</option>
               </select>
             </div>
           </div>
@@ -261,7 +263,7 @@ export default function DocumentsPage() {
                 cursor: exporting === doc.id ? 'wait' : 'pointer'
               }}
             >
-              {exporting === doc.id ? 'กำลังสร้าง...' : 'Export PDF'}
+              {exporting === doc.id ? t('documents.generating') : t('documents.downloadPDF')}
             </button>
           </div>
         ))}

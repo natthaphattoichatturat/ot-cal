@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { format, getDaysInMonth, getDay } from 'date-fns'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface DailyWageData {
   employeeId: string
@@ -55,6 +56,7 @@ interface MasterItem {
 }
 
 export default function WagesPage() {
+  const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState<'daily' | 'summary'>('daily')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
@@ -89,12 +91,7 @@ export default function WagesPage() {
   const [calculating, setCalculating] = useState(false)
   const [calculateMessage, setCalculateMessage] = useState('')
 
-  const thaiMonths = [
-    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-  ]
-
-  const thaiDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
+  const thaiDays = [t('days.sunday'), t('days.monday'), t('days.tuesday'), t('days.wednesday'), t('days.thursday'), t('days.friday'), t('days.saturday')]
 
   // Initialize with current month/year
   useEffect(() => {
@@ -261,15 +258,15 @@ export default function WagesPage() {
       <div className="table-container">
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-            ตารางค่าจ้างรายวัน - {thaiMonths[parseInt(selectedMonth) - 1]} {parseInt(selectedYear) + 543} (งวดที่ {selectedPeriod})
+            {t('wages.title')} - {t(`months.${parseInt(selectedMonth)}`)} {parseInt(selectedYear) + 543} ({t('wages.period1')})
           </h3>
         </div>
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ minWidth: '120px' }}>รหัสพนักงาน</th>
-                <th style={{ minWidth: '180px' }}>ชื่อพนักงาน</th>
+                <th style={{ minWidth: '120px' }}>{t('wages.employeeId')}</th>
+                <th style={{ minWidth: '180px' }}>{t('wages.employeeName')}</th>
                 {dates.map(date => {
                   const day = parseInt(date.split('-')[2])
                   const dateObj = new Date(date)
@@ -281,17 +278,17 @@ export default function WagesPage() {
                     </th>
                   )
                 })}
-                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>ค่าจ้างพื้นฐาน</th>
-                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>ค่า OT ปกติ</th>
-                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>ค่า OT พิเศษ</th>
-                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>ค่า OT ขั้นสูง</th>
+                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>{t('wages.baseWage')}</th>
+                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>{t('wages.ot1Wage')}</th>
+                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>{t('wages.ot2Wage')}</th>
+                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>{t('wages.ot3Wage')}</th>
               </tr>
             </thead>
             <tbody>
               {filteredDailyWages.length === 0 ? (
                 <tr>
                   <td colSpan={dates.length + 6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    {searchQuery ? 'ไม่พบข้อมูลพนักงานที่ค้นหา' : 'ไม่มีข้อมูลค่าจ้าง'}
+                    {searchQuery ? t('wages.noData') : t('wages.noData')}
                   </td>
                 </tr>
               ) : (
@@ -322,7 +319,7 @@ export default function WagesPage() {
                           <td
                             key={date}
                             className={`text-center ${dayColor}`}
-                            title={wage ? `รวม: ${wage.daily_total_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท` : ''}
+                            title={wage ? `${t('common.baht')}: ${wage.daily_total_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ${t('common.baht')}` : ''}
                           >
                             {wage ? (
                               <span className="ot-value">
@@ -406,7 +403,7 @@ export default function WagesPage() {
 
   const calculateWages = async () => {
     if (!selectedMonth || !selectedYear) {
-      setCalculateMessage('❌ กรุณาเลือกเดือนและปี')
+      setCalculateMessage(`${t('common.error')}: กรุณาเลือกเดือนและปี`)
       return
     }
 
@@ -428,18 +425,18 @@ export default function WagesPage() {
 
       if (data.success) {
         const duration = data.duration_ms ? ` (${(data.duration_ms / 1000).toFixed(1)}s)` : ''
-        setCalculateMessage(`สำเร็จ: คำนวณสำเร็จ ${data.calculated} รายการ${duration}`)
+        setCalculateMessage(`${t('common.success')}: คำนวณสำเร็จ ${data.calculated} รายการ${duration}`)
         // Refresh data
         await fetchWageData()
         setTimeout(() => {
           setCalculateMessage('')
         }, 3000)
       } else {
-        setCalculateMessage(`ผิดพลาด: ${data.error}`)
+        setCalculateMessage(`${t('common.error')}: ${data.error}`)
       }
     } catch (error) {
       console.error('Error calculating wages:', error)
-      setCalculateMessage('ผิดพลาด: เกิดข้อผิดพลาดในการคำนวณ')
+      setCalculateMessage(`${t('common.error')}: เกิดข้อผิดพลาดในการคำนวณ`)
     } finally {
       setCalculating(false)
     }
@@ -447,12 +444,12 @@ export default function WagesPage() {
 
   const saveIncomeDeduction = async () => {
     if (selectedEmployees.length === 0) {
-      setMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+      setMessage(`${t('common.error')}: กรุณาเลือกพนักงานอย่างน้อย 1 คน`)
       return
     }
 
     if (!selectedItem || !amount) {
-      setMessage('กรุณากรอกข้อมูลให้ครบถ้วน')
+      setMessage(`${t('common.error')}: กรุณากรอกข้อมูลให้ครบถ้วน`)
       return
     }
 
@@ -483,16 +480,16 @@ export default function WagesPage() {
       const data = await res.json()
 
       if (data.success) {
-        setMessage(`สำเร็จ: ${data.message}`)
+        setMessage(`${t('common.success')}: ${data.message}`)
         setTimeout(() => {
           closeIncomeDeductionPopup()
         }, 1500)
       } else {
-        setMessage(`ผิดพลาด: ${data.error}`)
+        setMessage(`${t('common.error')}: ${data.error}`)
       }
     } catch (error) {
       console.error('Error saving income/deduction:', error)
-      setMessage('ผิดพลาด: เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+      setMessage(`${t('common.error')}: เกิดข้อผิดพลาดในการบันทึกข้อมูล`)
     } finally {
       setSavingRecord(false)
     }
@@ -505,7 +502,7 @@ export default function WagesPage() {
         onClick={() => goToPage(currentPage - 1)}
         disabled={currentPage === 1}
       >
-        ← ก่อนหน้า
+        ← {t('common.previous')}
       </button>
 
       <div style={{ display: 'flex', gap: '8px' }}>
@@ -539,7 +536,7 @@ export default function WagesPage() {
         onClick={() => goToPage(currentPage + 1)}
         disabled={currentPage === totalPages}
       >
-        ถัดไป →
+        {t('common.next')} →
       </button>
     </div>
   )
@@ -550,9 +547,9 @@ export default function WagesPage() {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 className="page-title">ระบบคำนวณค่าจ้าง</h1>
+            <h1 className="page-title">{t('wages.title')}</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-              ตรวจสอบค่าจ้างและรายละเอียดการจ่ายเงิน
+              {t('wages.detailTitle')}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -560,16 +557,16 @@ export default function WagesPage() {
               onClick={() => openIncomeDeductionPopup('income')}
               className="btn btn-secondary"
             >
-              เพิ่มเงินได้
+              {t('wages.addIncome')}
             </button>
             <button
               onClick={() => openIncomeDeductionPopup('deduction')}
               className="btn btn-secondary"
             >
-              เพิ่มเงินหัก
+              {t('wages.addDeduction')}
             </button>
             <a href="/" className="btn btn-secondary">
-              ← กลับหน้าหลัก
+              ← {t('common.back')}
             </a>
           </div>
         </div>
@@ -593,7 +590,7 @@ export default function WagesPage() {
               transition: 'all 0.2s'
             }}
           >
-            ค่าจ้างรายวัน
+            {t('wages.dailySalary')}
           </button>
           <button
             onClick={() => setActiveTab('summary')}
@@ -610,7 +607,7 @@ export default function WagesPage() {
               transition: 'all 0.2s'
             }}
           >
-            สรุปค่าจ้างพนักงาน
+            {t('wages.detailTitle')}
           </button>
         </div>
       </div>
@@ -630,14 +627,14 @@ export default function WagesPage() {
           {/* Month */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-              เดือน
+              {t('common.month')}
             </label>
             <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
               {Array.from({ length: 12 }, (_, i) => {
                 const month = (i + 1).toString().padStart(2, '0')
                 return (
                   <option key={month} value={month}>
-                    {thaiMonths[i]}
+                    {t(`months.${i + 1}`)}
                   </option>
                 )
               })}
@@ -647,7 +644,7 @@ export default function WagesPage() {
           {/* Year */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-              ปี พ.ศ.
+              {t('common.year')}
             </label>
             <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
               {Array.from({ length: 5 }, (_, i) => {
@@ -664,22 +661,22 @@ export default function WagesPage() {
           {/* Period */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-              งวดที่
+              {t('common.period')}
             </label>
             <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(Number(e.target.value) as 1 | 2)}>
-              <option value={1}>งวดที่ 1 (26-10)</option>
-              <option value={2}>งวดที่ 2 (11-25)</option>
+              <option value={1}>{t('wages.period1')} (26-10)</option>
+              <option value={2}>{t('wages.period2')} (11-25)</option>
             </select>
           </div>
 
           {/* Search */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-              ค้นหาพนักงาน
+              {t('wages.searchEmployee')}
             </label>
             <input
               type="text"
-              placeholder="ค้นหาด้วยรหัสหรือชื่อพนักงาน..."
+              placeholder={t('wages.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ width: '100%' }}
@@ -698,16 +695,16 @@ export default function WagesPage() {
             {calculating ? (
               <>
                 <div className="spinner" style={{ width: '16px', height: '16px' }}></div>
-                กำลังคำนวณ...
+                {t('wages.calculating')}
               </>
             ) : (
               <>
-                🧮 คำนวณและบันทึกค่าจ้าง
+                🧮 {t('wages.calculateWages')}
               </>
             )}
           </button>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
-            คำนวณค่าจ้างจากข้อมูลการเข้างานเดือน {thaiMonths[parseInt(selectedMonth) - 1]} {parseInt(selectedYear) + 543} (ทั้ง 2 งวด)
+            {t('wages.calculateWages')} {t(`months.${parseInt(selectedMonth)}`)} {parseInt(selectedYear) + 543} (ทั้ง 2 {t('common.period')})
           </p>
         </div>
       </div>
@@ -716,7 +713,7 @@ export default function WagesPage() {
       {loading ? (
         <div className="card" style={{ padding: '60px', textAlign: 'center' }}>
           <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-          <p style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูล...</p>
+          <p style={{ color: 'var(--text-muted)' }}>{t('common.loading')}</p>
         </div>
       ) : (
         <>
@@ -740,37 +737,37 @@ export default function WagesPage() {
               <div className="card">
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)' }}>
                   <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-                    สรุปค่าจ้างพนักงาน - {thaiMonths[parseInt(selectedMonth) - 1]} {parseInt(selectedYear) + 543} (งวดที่ {selectedPeriod})
+                    {t('wages.detailTitle')} - {t(`months.${parseInt(selectedMonth)}`)} {parseInt(selectedYear) + 543} ({t('common.period')} {selectedPeriod})
                   </h3>
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    แสดง {startIndex + 1}-{Math.min(endIndex, filteredEmployees.length)} จากทั้งหมด {filteredEmployees.length} คน
+                    {t('home.showing')} {startIndex + 1}-{Math.min(endIndex, filteredEmployees.length)} {t('common.people')} {filteredEmployees.length} {t('common.people')}
                   </p>
                 </div>
                 <div className="table-wrapper">
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th style={{ minWidth: '100px' }}>รหัส</th>
-                        <th style={{ minWidth: '150px' }}>ชื่อพนักงาน</th>
-                        <th style={{ minWidth: '80px' }}>ประเภท</th>
-                        <th className="text-right" style={{ minWidth: '100px' }}>ค่าจ้าง</th>
+                        <th style={{ minWidth: '100px' }}>{t('wages.employeeId')}</th>
+                        <th style={{ minWidth: '150px' }}>{t('wages.employeeName')}</th>
+                        <th style={{ minWidth: '80px' }}>{t('wages.employeeType')}</th>
+                        <th className="text-right" style={{ minWidth: '100px' }}>{t('wages.baseWage')}</th>
                         <th className="text-right" style={{ minWidth: '80px' }}>OT 1.5</th>
                         <th className="text-right" style={{ minWidth: '80px' }}>OT 2</th>
                         <th className="text-right" style={{ minWidth: '80px' }}>OT 3</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>เบี้ยขยัน</th>
-                        <th className="text-right" style={{ minWidth: '100px', background: '#dcfce7' }}>รวมรายได้</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>หักสาย</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>SSO</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>ภาษี</th>
-                        <th className="text-right" style={{ minWidth: '100px', background: '#fee2e2' }}>รวมหัก</th>
-                        <th className="text-right" style={{ minWidth: '120px', background: 'var(--primary-light)' }}>เงินสุทธิ</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>{t('wages.attendanceBonus')}</th>
+                        <th className="text-right" style={{ minWidth: '100px', background: '#dcfce7' }}>{t('wages.totalIncome')}</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>{t('wages.lateDeduction')}</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>{t('wages.sso')}</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>{t('wages.tax')}</th>
+                        <th className="text-right" style={{ minWidth: '100px', background: '#fee2e2' }}>{t('wages.deductions')}</th>
+                        <th className="text-right" style={{ minWidth: '120px', background: 'var(--primary-light)' }}>{t('wages.netWage')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {currentEmployees.length === 0 ? (
                         <tr>
                           <td colSpan={14} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                            {searchQuery ? 'ไม่พบข้อมูลพนักงานที่ค้นหา' : 'ไม่มีข้อมูลพนักงาน'}
+                            {searchQuery ? t('wages.noData') : t('wages.noData')}
                           </td>
                         </tr>
                       ) : (
@@ -863,7 +860,7 @@ export default function WagesPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px' }}>
-              {recordType === 'income' ? 'เพิ่มเงินได้' : 'เพิ่มเงินหัก'}
+              {recordType === 'income' ? t('wages.addIncome') : t('wages.addDeduction')}
             </h2>
 
             {message && (
@@ -884,23 +881,23 @@ export default function WagesPage() {
 
             {/* งวดที่เลือก */}
             <div style={{ marginBottom: '20px', padding: '12px', background: 'var(--surface-bg)', borderRadius: '8px' }}>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>งวดที่เลือก:</div>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{t('wages.selectPeriod')}:</div>
               <div style={{ fontSize: '16px', fontWeight: '600', marginTop: '4px' }}>
-                {thaiMonths[parseInt(selectedMonth) - 1]} {parseInt(selectedYear) + 543} - งวดที่ {selectedPeriod}
+                {t(`months.${parseInt(selectedMonth)}`)} {parseInt(selectedYear) + 543} - {t('common.period')} {selectedPeriod}
               </div>
             </div>
 
             {/* เลือกรายการ */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                รายการ <span style={{ color: 'red' }}>*</span>
+                {t('wages.category')} <span style={{ color: 'red' }}>{t('wages.required')}</span>
               </label>
               <select
                 value={selectedItem}
                 onChange={(e) => setSelectedItem(e.target.value)}
                 style={{ width: '100%' }}
               >
-                <option value="">-- เลือกรายการ --</option>
+                <option value="">{t('wages.selectCategory')}</option>
                 {masterItems.map(item => (
                   <option key={item.id} value={item.item_name}>
                     {item.item_name_th} {item.include_in_sso && '(คำนวณ SSO)'}
@@ -912,13 +909,13 @@ export default function WagesPage() {
             {/* จำนวนเงิน */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                จำนวนเงิน (บาท) <span style={{ color: 'red' }}>*</span>
+                {t('wages.amount')} ({t('common.baht')}) <span style={{ color: 'red' }}>{t('wages.required')}</span>
               </label>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
+                placeholder={t('wages.enterAmount')}
                 step="0.01"
                 style={{ width: '100%' }}
               />
@@ -927,12 +924,12 @@ export default function WagesPage() {
             {/* หมายเหตุ */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                หมายเหตุ
+                {t('wages.description')}
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"
+                placeholder={t('wages.enterDescription')}
                 rows={3}
                 style={{ width: '100%', fontFamily: 'inherit' }}
               />
@@ -942,14 +939,14 @@ export default function WagesPage() {
             <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <label style={{ fontSize: '14px', fontWeight: '600' }}>
-                  เลือกพนักงาน <span style={{ color: 'red' }}>*</span>
+                  {t('documents.selectEmployee')} <span style={{ color: 'red' }}>{t('wages.required')}</span>
                 </label>
                 <button
                   onClick={selectAllEmployees}
                   className="btn btn-secondary"
                   style={{ padding: '6px 12px', fontSize: '13px' }}
                 >
-                  {selectedEmployees.length === filteredEmployees.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                  {selectedEmployees.length === filteredEmployees.length ? t('common.cancel') : t('documents.allEmployees')}
                 </button>
               </div>
 
@@ -989,7 +986,7 @@ export default function WagesPage() {
               </div>
 
               <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                เลือกแล้ว {selectedEmployees.length} คน
+                {t('documents.selectEmployee')} {selectedEmployees.length} {t('common.people')}
               </div>
             </div>
 
@@ -1000,14 +997,14 @@ export default function WagesPage() {
                 className="btn btn-secondary"
                 disabled={savingRecord}
               >
-                ยกเลิก
+                {t('common.cancel')}
               </button>
               <button
                 onClick={saveIncomeDeduction}
                 className="btn btn-primary"
                 disabled={savingRecord}
               >
-                {savingRecord ? 'กำลังบันทึก...' : '💾 บันทึก'}
+                {savingRecord ? t('wages.saving') : `💾 ${t('common.save')}`}
               </button>
             </div>
           </div>

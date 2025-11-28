@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Employee {
   id: number
@@ -21,6 +22,7 @@ type SortField = keyof Employee
 type SortDirection = 'asc' | 'desc'
 
 export default function EmployeesPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([])
@@ -121,26 +123,26 @@ export default function EmployeesPage() {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 className="page-title">จัดการข้อมูลพนักงาน</h1>
+            <h1 className="page-title">{t('employees.title')}</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-              รายชื่อพนักงานทั้งหมด {filteredEmployees.length} คน
+              {t('employees.totalEmployees')} {filteredEmployees.length} {t('common.people')}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <a href="/employees/import" className="btn btn-secondary">
-              Import พนักงาน
+              {t('employees.importEmployees')}
             </a>
             <a href="/employees/edit" className="btn btn-secondary">
-              แก้ไขข้อมูลพนักงาน
+              {t('employees.editEmployee')}
             </a>
             <a href="/employees/add" className="btn btn-primary">
-              เพิ่มพนักงาน
+              {t('employees.addEmployee')}
             </a>
             <a href="/employees/remove" className="btn btn-secondary">
-              ลบ/ปลดพนักงาน
+              {t('employees.removeEmployee')}
             </a>
             <a href="/" className="btn btn-secondary">
-              กลับหน้าหลัก
+              {t('employees.backToHome')}
             </a>
           </div>
         </div>
@@ -150,16 +152,16 @@ export default function EmployeesPage() {
       <div className="card" style={{ marginBottom: '24px' }}>
         <div style={{ padding: '20px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-            ค้นหาพนักงาน
+            {t('employees.searchSection')}
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                ค้นหาจากชื่อ
+                {t('employees.searchByName')}
               </label>
               <input
                 type="text"
-                placeholder="พิมพ์ชื่อพนักงาน..."
+                placeholder={t('employees.searchByNamePlaceholder')}
                 value={searchName}
                 onChange={(e) => setSearchName(e.target.value)}
                 style={{
@@ -173,11 +175,11 @@ export default function EmployeesPage() {
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                ค้นหาจากรหัส
+                {t('employees.searchById')}
               </label>
               <input
                 type="text"
-                placeholder="พิมพ์รหัสพนักงาน..."
+                placeholder={t('employees.searchByIdPlaceholder')}
                 value={searchId}
                 onChange={(e) => setSearchId(e.target.value)}
                 style={{
@@ -197,14 +199,14 @@ export default function EmployeesPage() {
       <div className="table-container">
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>
-            รายชื่อพนักงาน
+            {t('employees.employeeList')}
           </h3>
         </div>
 
         {loading ? (
           <div style={{ padding: '60px', textAlign: 'center' }}>
             <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-            <p style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูล...</p>
+            <p style={{ color: 'var(--text-muted)' }}>{t('common.loading')}</p>
           </div>
         ) : (
           <div className="table-wrapper" style={{ maxHeight: '600px', overflowY: 'auto' }}>
@@ -215,55 +217,55 @@ export default function EmployeesPage() {
                     onClick={() => handleSort('employee_id')}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
-                    รหัสพนักงาน {getSortIcon('employee_id')}
+                    {t('employees.employeeId')} {getSortIcon('employee_id')}
                   </th>
                   <th
                     onClick={() => handleSort('name')}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
-                    ชื่อ-นามสกุล {getSortIcon('name')}
+                    {t('employees.name')} {getSortIcon('name')}
                   </th>
                   <th
                     onClick={() => handleSort('department')}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
-                    แผนก {getSortIcon('department')}
+                    {t('employees.department')} {getSortIcon('department')}
                   </th>
                   <th
                     onClick={() => handleSort('division_code')}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
-                    รหัสฝ่าย {getSortIcon('division_code')}
+                    {t('employees.divisionCode')} {getSortIcon('division_code')}
                   </th>
                   <th
                     onClick={() => handleSort('section_code')}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
-                    รหัสแผนก {getSortIcon('section_code')}
+                    {t('employees.sectionCode')} {getSortIcon('section_code')}
                   </th>
                   <th
                     onClick={() => handleSort('identity_id')}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
-                    เลขบัตรประชาชน {getSortIcon('identity_id')}
+                    {t('employees.identityId')} {getSortIcon('identity_id')}
                   </th>
                   <th
                     onClick={() => handleSort('address')}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
-                    ที่อยู่ {getSortIcon('address')}
+                    {t('employees.address')} {getSortIcon('address')}
                   </th>
                   <th
                     onClick={() => handleSort('line_id')}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
-                    LINE ID {getSortIcon('line_id')}
+                    {t('employees.lineId')} {getSortIcon('line_id')}
                   </th>
                   <th
                     onClick={() => handleSort('status')}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
                   >
-                    สถานะ {getSortIcon('status')}
+                    {t('employees.status')} {getSortIcon('status')}
                   </th>
                 </tr>
               </thead>
@@ -271,7 +273,7 @@ export default function EmployeesPage() {
                 {filteredEmployees.length === 0 ? (
                   <tr>
                     <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                      ไม่พบข้อมูลพนักงาน
+                      {t('employees.noData')}
                     </td>
                   </tr>
                 ) : (
@@ -299,7 +301,7 @@ export default function EmployeesPage() {
                         {emp.address || '-'}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        {emp.line_id ? 'มี' : '-'}
+                        {emp.line_id ? t('employees.hasLineId') : '-'}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <span
@@ -312,10 +314,10 @@ export default function EmployeesPage() {
                           }`}
                         >
                           {emp.status === 'active'
-                            ? 'ใช้งาน'
+                            ? t('employees.statusActive')
                             : emp.status === 'removed'
-                            ? 'ปลด'
-                            : 'ระงับ'}
+                            ? t('employees.statusRemoved')
+                            : t('employees.statusSuspended')}
                         </span>
                       </td>
                     </tr>
