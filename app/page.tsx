@@ -207,14 +207,25 @@ export default function Home() {
       const result = await response.json()
 
       if (result.success) {
-        setImportMessage(`✓ ${result.message}`)
+        // แสดงผลรวมทั้ง OT และค่าจ้าง
+        let message = `สำเร็จ: ${result.message}`
+
+        // เพิ่มรายละเอียดค่าจ้างถ้ามี
+        if (result.wagesCalculated > 0) {
+          message += `\n\nคำนวณค่าจ้างอัตโนมัติ: ${result.wagesCalculated} รายการ`
+          if (result.wageDetails && result.wageDetails.length > 0) {
+            message += `\n${result.wageDetails.join(', ')}`
+          }
+        }
+
+        setImportMessage(message)
         setImportFile(null)
         await fetchAttendanceData()
       } else {
-        setImportMessage(`✗ ${result.error}`)
+        setImportMessage(`ผิดพลาด: ${result.error}`)
       }
     } catch (error) {
-      setImportMessage('✗ เกิดข้อผิดพลาดในการนำเข้าข้อมูล')
+      setImportMessage('ผิดพลาด: เกิดข้อผิดพลาดในการนำเข้าข้อมูล')
     } finally {
       setImporting(false)
     }
@@ -335,16 +346,16 @@ export default function Home() {
                           </td>
                         )
                       })}
-                      <td className="text-center" style={{ fontWeight: '700', fontSize: '15px', background: 'var(--primary-light)', color: 'var(--primary)' }}>
+                      <td className="text-center" style={{ fontWeight: '700', fontSize: '15px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
                         {totalOT.toFixed(2)}
                       </td>
-                      <td className="text-center" style={{ fontWeight: '600', fontSize: '14px', background: 'var(--surface-bg)', color: 'var(--text-primary)' }}>
+                      <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
                         {totalNormalOT.toFixed(2)}
                       </td>
-                      <td className="text-center" style={{ fontWeight: '600', fontSize: '14px', background: 'var(--surface-bg)', color: 'var(--text-primary)' }}>
+                      <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
                         {totalSpecialOT.toFixed(2)}
                       </td>
-                      <td className="text-center" style={{ fontWeight: '600', fontSize: '14px', background: 'var(--surface-bg)', color: 'var(--text-primary)' }}>
+                      <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
                         {totalPremiumOT.toFixed(2)}
                       </td>
                     </tr>
@@ -375,8 +386,8 @@ export default function Home() {
             <a href="/wages" className="btn btn-primary">
               คำนวณค่าจ้าง
             </a>
-            <a href="/documents" className="btn" style={{ background: '#10b981', color: 'white', border: '2px solid #10b981' }}>
-              📑 เอกสาร HR & Export
+            <a href="/documents" className="btn btn-secondary">
+              เอกสาร HR & Export
             </a>
             <a href="/employees" className="btn btn-secondary">
               จัดการพนักงาน
@@ -490,7 +501,7 @@ export default function Home() {
             </button>
           </div>
           {importMessage && (
-            <div className={importMessage.startsWith('✓') ? 'message message-success' : 'message message-error'}>
+            <div className={importMessage.startsWith('สำเร็จ') ? 'message message-success' : 'message message-error'}>
               {importMessage}
             </div>
           )}

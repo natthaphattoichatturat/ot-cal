@@ -101,7 +101,7 @@ export default function AddEmployeePage() {
     e.preventDefault()
 
     if (!formData.employee_id || !formData.name || !formData.department) {
-      alert('⚠️ กรุณากรอกข้อมูลที่จำเป็น (รหัสพนักงาน, ชื่อ-สกุล, แผนก)')
+      alert('คำเตือน: กรุณากรอกข้อมูลที่จำเป็น (รหัสพนักงาน, ชื่อ-สกุล, แผนก)')
       return
     }
 
@@ -116,7 +116,7 @@ export default function AddEmployeePage() {
       const result = await response.json()
 
       if (result.success) {
-        alert('✅ เพิ่มพนักงานสำเร็จ')
+        alert('สำเร็จ: เพิ่มพนักงานสำเร็จ')
         setFormData({
           employee_id: '',
           name: '',
@@ -127,11 +127,11 @@ export default function AddEmployeePage() {
         // Optionally redirect back
         // router.push('/liff/hr-admin')
       } else {
-        alert(`❌ เกิดข้อผิดพลาด: ${result.error}`)
+        alert(`ผิดพลาด: เกิดข้อผิดพลาด: ${result.error}`)
       }
     } catch (err) {
       console.error('Failed to add employee:', err)
-      alert('❌ ไม่สามารถเพิ่มพนักงานได้')
+      alert('ผิดพลาด: ไม่สามารถเพิ่มพนักงานได้')
     } finally {
       setSaving(false)
     }
@@ -356,7 +356,7 @@ export default function AddEmployeePage() {
           <div className="border-t-2 border-gray-200 pt-4 mt-4">
             <details className="group">
               <summary className="font-medium text-gray-900 cursor-pointer list-none flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100">
-                <span>📝 ข้อมูลเพิ่มเติม (คลิกเพื่อเปิด/ปิด)</span>
+                <span>ข้อมูลเพิ่มเติม (คลิกเพื่อเปิด/ปิด)</span>
                 <span className="transition group-open:rotate-180">⌄</span>
               </summary>
               
@@ -507,7 +507,7 @@ export default function AddEmployeePage() {
               disabled={saving}
               className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'กำลังบันทึก...' : '➕ เพิ่มพนักงาน'}
+              {saving ? 'กำลังบันทึก...' : 'เพิ่มพนักงาน'}
             </button>
           </div>
         </form>

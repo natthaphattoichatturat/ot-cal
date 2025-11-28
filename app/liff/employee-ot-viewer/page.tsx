@@ -362,7 +362,7 @@ export default function EmployeeOTViewerPage() {
                           {wage.sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
                         </div>
                         
-                        <div className="text-red-600 font-semibold">🏦 ภาษีเงินได้งวดนี้:</div>
+                        <div className="text-red-600 font-semibold">ภาษีเงินได้งวดนี้:</div>
                         <div className="text-right text-red-600 font-semibold">
                           {wage.tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
                         </div>
@@ -387,7 +387,7 @@ export default function EmployeeOTViewerPage() {
             {ytdData && (
               <div className="bg-white rounded-xl shadow-sm border border-blue-100 p-6 mb-6">
                 <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-blue-900 border-b border-blue-50 pb-2">
-                  📊 ยอดสะสมรายปี {(startDate ? new Date(startDate).getFullYear() : new Date().getFullYear()) + 543}
+                  ยอดสะสมรายปี {(startDate ? new Date(startDate).getFullYear() : new Date().getFullYear()) + 543}
                 </h2>
                 <div className="grid gap-3">
                   <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
@@ -422,7 +422,7 @@ export default function EmployeeOTViewerPage() {
             {allTimeData && (
               <div className="bg-white rounded-xl shadow-sm border border-indigo-100 p-6 mb-6">
                 <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-indigo-900 border-b border-indigo-50 pb-2">
-                  🌟 ยอดสะสมทั้งหมด (ตั้งแต่เริ่มทำงาน)
+                  ยอดสะสมทั้งหมด (ตั้งแต่เริ่มทำงาน)
                 </h2>
                 <div className="grid gap-3">
                   <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
@@ -450,7 +450,7 @@ export default function EmployeeOTViewerPage() {
                     <span className="font-bold text-xl">{allTimeData.total_net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                   </div>
                   <div className="mt-2 pt-3 text-center border-t border-indigo-50">
-                    <span className="text-sm text-slate-500">📌 ทำงานมาแล้ว: <strong className="text-indigo-900">{allTimeData.total_periods} งวด</strong></span>
+                    <span className="text-sm text-slate-500">ทำงานมาแล้ว: <strong className="text-indigo-900">{allTimeData.total_periods} งวด</strong></span>
                   </div>
                 </div>
               </div>

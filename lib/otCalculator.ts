@@ -16,13 +16,14 @@ interface WorkSession {
   actualHours: number
   otHours: number
   otNormalHours: number // OT ปกติที่คูณ 1.5
-  otSpecialHours: number // OT พิเศษที่คูณ 2 (8 ชม.แรกในวันหยุด)
+  otSpecialHours: number // OT พิเศษที่คูณ 2 (8 ชม.แรกในวันหยุด - รายวัน) หรือ x1 (รายเดือน)
   otPremiumHours: number // OT ขั้นสูงที่คูณ 3 (เกิน 8 ชม.ในวันหยุด)
   isHoliday: boolean
   shift: 1 | 2 // 1 = 8:00-17:00, 2 = 20:00-05:00
   late: boolean
   lateHours: number
   allowLateNextDay: boolean // true if worked past 3:00 AM
+  employmentType: 'รายวัน' | 'รายเดือน' // ประเภทพนักงาน
 }
 
 // Convert time string to minutes from midnight
@@ -41,6 +42,12 @@ function minutesToTime(minutes: number): string {
 // Round down to nearest 30 minutes for OT calculation
 function roundDownToHalfHour(minutes: number): number {
   return Math.floor(minutes / 30) * 30
+}
+
+// Round down hours to nearest 0.5 (ปัดลงเป็น .0 หรือ .5 เท่านั้น)
+// เช่น 3.12 → 3.0, 3.68 → 3.5, 4.99 → 4.5
+function roundDownToHalfHourInHours(hours: number): number {
+  return Math.floor(hours * 2) / 2
 }
 
 // Check if date is a special holiday or Sunday
@@ -69,7 +76,8 @@ function calculateShift1OT(
   checkOutMinutes: number,
   checkOutDate: Date,
   checkInDate: Date,
-  isHoliday: boolean
+  isHoliday: boolean,
+  employmentType: 'รายวัน' | 'รายเดือน' = 'รายวัน'
 ): { actualHours: number; otHours: number; otNormalHours: number; otSpecialHours: number; otPremiumHours: number; allowLateNextDay: boolean; late: boolean; lateHours: number } {
   const scheduledIn = 480 // 8:00
   const scheduledOut = 1020 // 17:00
@@ -125,29 +133,77 @@ function calculateShift1OT(
     }
   }
 
-  actualHours = (morningOT + nightOT) / 60
+  // คำนวณชั่วโมงทำงานจริง (ไม่รวม OT multiplier)
+  let workMinutes = 0
+  
+  if (isHoliday) {
+    // วันหยุด: นับทุกชั่วโมงที่ทำงาน รวมเวลาปกติ 8:00-17:00 ด้วย
+    // คำนวณจากเวลาเข้าถึงเวลาออก หักเวลาพัก
+    const sameDay = checkInDate.toDateString() === checkOutDate.toDateString()
+    
+    if (sameDay) {
+      // ทำงานไม่ข้ามวัน
+      workMinutes = checkOutMinutes - checkInMinutes
+    } else {
+      // ทำงานข้ามวัน
+      const minutesUntilMidnight = 1440 - checkInMinutes
+      const minutesAfterMidnight = checkOutMinutes
+      workMinutes = minutesUntilMidnight + minutesAfterMidnight
+    }
+    
+    // หักเวลาพักกลางวัน 1 ชม. (12:00-13:00 หรือ 720-780 นาที)
+    if (checkInMinutes < 780 && checkOutMinutes > 720) {
+      workMinutes -= 60
+    }
+    
+    // หักเวลาพักเย็น 30 นาที (17:00-17:30 หรือ 1020-1050 นาที)
+    if (checkInMinutes < 1050 && checkOutMinutes > 1020) {
+      workMinutes -= 30
+    }
+    
+    actualHours = workMinutes / 60
+  } else {
+    // วันธรรมดา: นับเฉพาะ OT นอกเวลา
+    actualHours = (morningOT + nightOT) / 60
+  }
 
-  // Calculate OT hours based on holiday status
+  // Calculate OT hours based on holiday status and employment type
   let otHours = 0
   let otNormalHours = 0
   let otSpecialHours = 0
   let otPremiumHours = 0
 
   if (isHoliday) {
-    // Special day: first 8 hours * 2, after 8 hours * 3
-    const totalMinutes = morningOT + nightOT
+    // วันหยุด/อาทิตย์: คำนวณ OT แบบพิเศษ
+    const totalMinutes = workMinutes
+    
     if (totalMinutes <= 480) {
-      // ทั้งหมดเป็น OT พิเศษ (× 2)
-      otSpecialHours = totalMinutes / 60
-      otHours = otSpecialHours * 2
+      // ทำงานไม่เกิน 8 ชม.
+      // ปัดลงเป็น .0 หรือ .5 เท่านั้น (เช่น 7.12 → 7.0, 7.68 → 7.5)
+      otSpecialHours = roundDownToHalfHourInHours(totalMinutes / 60)
+      if (employmentType === 'รายวัน') {
+        // พนักงานรายวัน: 8 ชม.แรก × 2
+        otHours = otSpecialHours * 2
+      } else {
+        // พนักงานรายเดือน: 8 ชม.แรก × 1
+        otHours = otSpecialHours * 1
+      }
     } else {
-      // 8 ชม.แรก × 2, ที่เกินมา × 3
-      otSpecialHours = 480 / 60 // 8 ชั่วโมง
-      otPremiumHours = (totalMinutes - 480) / 60
-      otHours = (otSpecialHours * 2) + (otPremiumHours * 3)
+      // ทำงานเกิน 8 ชม.
+      otSpecialHours = 8 // 8 ชั่วโมงเต็ม (ไม่ต้องปัด)
+      // ปัดลงเป็น .0 หรือ .5 เท่านั้น (เช่น 3.12 → 3.0, 3.68 → 3.5)
+      otPremiumHours = roundDownToHalfHourInHours((totalMinutes - 480) / 60)
+      
+      if (employmentType === 'รายวัน') {
+        // พนักงานรายวัน: 8 ชม.แรก × 2, ที่เกิน × 3
+        otHours = (otSpecialHours * 2) + (otPremiumHours * 3)
+      } else {
+        // พนักงานรายเดือน: 8 ชม.แรก × 1, ที่เกิน × 3
+        otHours = (otSpecialHours * 1) + (otPremiumHours * 3)
+      }
     }
   } else {
-    // Regular day: * 1.5
+    // วันธรรมดา: OT ปกติ × 1.5
     otNormalHours = actualHours
     otHours = actualHours * 1.5
   }
@@ -156,13 +212,15 @@ function calculateShift1OT(
     actualHours: Math.round(actualHours * 100) / 100,
     otHours: Math.round(otHours * 100) / 100,
     otNormalHours: Math.round(otNormalHours * 100) / 100,
-    otSpecialHours: Math.round(otSpecialHours * 100) / 100,
-    otPremiumHours: Math.round(otPremiumHours * 100) / 100,
+    otSpecialHours: otSpecialHours, // ปัดไว้แล้วด้วย roundDownToHalfHourInHours
+    otPremiumHours: otPremiumHours, // ปัดไว้แล้วด้วย roundDownToHalfHourInHours
     allowLateNextDay,
     late,
     lateHours: Math.round(lateHours * 100) / 100
   }
 }
+
+// ============ END calculateShift1OT ============
 
 // Calculate OT for shift 2 (20:00-05:00)
 function calculateShift2OT(
@@ -170,7 +228,8 @@ function calculateShift2OT(
   checkOutMinutes: number,
   checkOutDate: Date,
   checkInDate: Date,
-  isHoliday: boolean
+  isHoliday: boolean,
+  employmentType: 'รายวัน' | 'รายเดือน' = 'รายวัน'
 ): { actualHours: number; otHours: number; otNormalHours: number; otSpecialHours: number; otPremiumHours: number; allowLateNextDay: boolean; late: boolean; lateHours: number } {
   const scheduledIn = 1200 // 20:00
   const scheduledOut = 300 // 5:00 next day
@@ -210,29 +269,69 @@ function calculateShift2OT(
     morningOT = roundDownToHalfHour(otMinutes)
   }
 
-  actualHours = (eveningOT + morningOT) / 60
+  // คำนวณชั่วโมงทำงานจริง
+  let workMinutes = 0
+  
+  if (isHoliday) {
+    // วันหยุด: นับทุกชั่วโมงที่ทำงาน (กะดึกข้ามวันเสมอ)
+    // คำนวณจาก check-in ถึง midnight + midnight ถึง check-out
+    const minutesUntilMidnight = 1440 - checkInMinutes // จาก check-in ถึง 24:00
+    const minutesAfterMidnight = checkOutMinutes // จาก 00:00 ถึง check-out
+    workMinutes = minutesUntilMidnight + minutesAfterMidnight
+    
+    // หักเวลาพักกลางคืน 1 ชม. (00:00-01:00)
+    if (checkOutMinutes > 60) {
+      workMinutes -= 60
+    }
+    
+    // หักเวลาพักเช้า 30 นาที (05:00-05:30)
+    if (checkOutMinutes > 330) {
+      workMinutes -= 30
+    }
+    
+    actualHours = workMinutes / 60
+  } else {
+    // วันธรรมดา: นับเฉพาะ OT นอกเวลา
+    actualHours = (eveningOT + morningOT) / 60
+  }
 
-  // Calculate OT hours based on holiday status
+  // Calculate OT hours based on holiday status and employment type
   let otHours = 0
   let otNormalHours = 0
   let otSpecialHours = 0
   let otPremiumHours = 0
 
   if (isHoliday) {
-    // Special day: first 8 hours * 2, after 8 hours * 3
-    const totalMinutes = eveningOT + morningOT
+    // วันหยุด/อาทิตย์: คำนวณ OT แบบพิเศษ
+    const totalMinutes = workMinutes
+    
     if (totalMinutes <= 480) {
-      // ทั้งหมดเป็น OT พิเศษ (× 2)
-      otSpecialHours = totalMinutes / 60
-      otHours = otSpecialHours * 2
+      // ทำงานไม่เกิน 8 ชม.
+      // ปัดลงเป็น .0 หรือ .5 เท่านั้น (เช่น 7.12 → 7.0, 7.68 → 7.5)
+      otSpecialHours = roundDownToHalfHourInHours(totalMinutes / 60)
+      if (employmentType === 'รายวัน') {
+        // พนักงานรายวัน: 8 ชม.แรก × 2
+        otHours = otSpecialHours * 2
+      } else {
+        // พนักงานรายเดือน: 8 ชม.แรก × 1
+        otHours = otSpecialHours * 1
+      }
     } else {
-      // 8 ชม.แรก × 2, ที่เกินมา × 3
-      otSpecialHours = 480 / 60 // 8 ชั่วโมง
-      otPremiumHours = (totalMinutes - 480) / 60
-      otHours = (otSpecialHours * 2) + (otPremiumHours * 3)
+      // ทำงานเกิน 8 ชม.
+      otSpecialHours = 8 // 8 ชั่วโมงเต็ม (ไม่ต้องปัด)
+      // ปัดลงเป็น .0 หรือ .5 เท่านั้น (เช่น 3.12 → 3.0, 3.68 → 3.5)
+      otPremiumHours = roundDownToHalfHourInHours((totalMinutes - 480) / 60)
+      
+      if (employmentType === 'รายวัน') {
+        // พนักงานรายวัน: 8 ชม.แรก × 2, ที่เกิน × 3
+        otHours = (otSpecialHours * 2) + (otPremiumHours * 3)
+      } else {
+        // พนักงานรายเดือน: 8 ชม.แรก × 1, ที่เกิน × 3
+        otHours = (otSpecialHours * 1) + (otPremiumHours * 3)
+      }
     }
   } else {
-    // Regular day: * 1.5
+    // วันธรรมดา: OT ปกติ × 1.5
     otNormalHours = actualHours
     otHours = actualHours * 1.5
   }
@@ -241,18 +340,21 @@ function calculateShift2OT(
     actualHours: Math.round(actualHours * 100) / 100,
     otHours: Math.round(otHours * 100) / 100,
     otNormalHours: Math.round(otNormalHours * 100) / 100,
-    otSpecialHours: Math.round(otSpecialHours * 100) / 100,
-    otPremiumHours: Math.round(otPremiumHours * 100) / 100,
+    otSpecialHours: otSpecialHours, // ปัดไว้แล้วด้วย roundDownToHalfHourInHours
+    otPremiumHours: otPremiumHours, // ปัดไว้แล้วด้วย roundDownToHalfHourInHours
     allowLateNextDay,
     late,
     lateHours: Math.round(lateHours * 100) / 100
   }
 }
 
+// ============ END calculateShift2OT ============
+
 // Main function to calculate OT from scans
 export function calculateOTFromScans(
   scans: AttendanceScan[],
-  holidays: SpecialHoliday[]
+  holidays: SpecialHoliday[],
+  employeeData?: Map<string, { employment_type?: string }> // ข้อมูลพนักงาน
 ): WorkSession[] {
   // Group scans by employee
   const employeeScans = new Map<string, ScanRecord[]>()
@@ -378,12 +480,16 @@ export function calculateOTFromScans(
 
       const shift = determineShift(checkInMinutes)
       const isHoliday = isSpecialDay(checkInDate, holidays)
+      
+      // ดึงข้อมูลประเภทพนักงาน (default เป็นรายวัน)
+      const empData = employeeData?.get(employeeId)
+      const employmentType = (empData?.employment_type === 'รายเดือน' ? 'รายเดือน' : 'รายวัน') as 'รายวัน' | 'รายเดือน'
 
       let result
       if (shift === 1) {
-        result = calculateShift1OT(checkInMinutes, checkOutMinutes, checkOutDate, checkInDate, isHoliday)
+        result = calculateShift1OT(checkInMinutes, checkOutMinutes, checkOutDate, checkInDate, isHoliday, employmentType)
       } else {
-        result = calculateShift2OT(checkInMinutes, checkOutMinutes, checkOutDate, checkInDate, isHoliday)
+        result = calculateShift2OT(checkInMinutes, checkOutMinutes, checkOutDate, checkInDate, isHoliday, employmentType)
       }
 
       workSessions.push({
@@ -399,7 +505,8 @@ export function calculateOTFromScans(
         shift,
         late: result.late,
         lateHours: result.lateHours,
-        allowLateNextDay: result.allowLateNextDay
+        allowLateNextDay: result.allowLateNextDay,
+        employmentType
       })
 
       i = j + 1

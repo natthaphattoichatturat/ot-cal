@@ -162,15 +162,15 @@ export default function EditEmployeePage() {
       const result = await response.json()
 
       if (result.success) {
-        alert('✅ บันทึกข้อมูลสำเร็จ')
+        alert('สำเร็จ: บันทึกข้อมูลสำเร็จ')
         setSelectedEmployee(null)
         await fetchEmployees()
       } else {
-        alert(`❌ เกิดข้อผิดพลาด: ${result.error}`)
+        alert(`ผิดพลาด: เกิดข้อผิดพลาด: ${result.error}`)
       }
     } catch (err) {
       console.error('Failed to update employee:', err)
-      alert('❌ ไม่สามารถบันทึกข้อมูลได้')
+      alert('ผิดพลาด: ไม่สามารถบันทึกข้อมูลได้')
     } finally {
       setSaving(false)
     }
@@ -420,7 +420,7 @@ export default function EditEmployeePage() {
               <div className="border-t-2 border-gray-200 pt-4 mt-4">
                 <details className="group">
                   <summary className="font-medium text-gray-900 cursor-pointer list-none flex items-center justify-between p-3 bg-pink-50 rounded-lg hover:bg-pink-100">
-                    <span>📝 ข้อมูลเพิ่มเติม (คลิกเพื่อเปิด/ปิด)</span>
+                    <span>ข้อมูลเพิ่มเติม (คลิกเพื่อเปิด/ปิด)</span>
                     <span className="transition group-open:rotate-180">⌄</span>
                   </summary>
                   

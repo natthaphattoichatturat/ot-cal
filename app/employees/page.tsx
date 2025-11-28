@@ -106,7 +106,7 @@ export default function EmployeesPage() {
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <span style={{ opacity: 0.3 }}>⇅</span>
+      return <span style={{ opacity: 0.3 }}>↕</span>
     }
     return sortDirection === 'asc' ? '↑' : '↓'
   }
@@ -128,16 +128,16 @@ export default function EmployeesPage() {
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <a href="/employees/import" className="btn btn-secondary">
-              📥 Import พนักงาน
+              Import พนักงาน
             </a>
             <a href="/employees/edit" className="btn btn-secondary">
-              ✏️ แก้ไขข้อมูลพนักงาน
+              แก้ไขข้อมูลพนักงาน
             </a>
             <a href="/employees/add" className="btn btn-primary">
-              ➕ เพิ่มพนักงาน
+              เพิ่มพนักงาน
             </a>
-            <a href="/employees/remove" className="btn" style={{ background: '#f44336', color: 'white' }}>
-              🗑️ ลบ/ปลดพนักงาน
+            <a href="/employees/remove" className="btn btn-secondary">
+              ลบ/ปลดพนักงาน
             </a>
             <a href="/" className="btn btn-secondary">
               กลับหน้าหลัก
@@ -287,7 +287,7 @@ export default function EmployeesPage() {
                         e.currentTarget.style.backgroundColor = ''
                       }}
                     >
-                      <td style={{ fontWeight: '600', color: 'var(--primary)' }}>
+                      <td style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
                         {emp.employee_id}
                       </td>
                       <td>{emp.name}</td>
@@ -299,7 +299,7 @@ export default function EmployeesPage() {
                         {emp.address || '-'}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        {emp.line_id ? '✓' : '-'}
+                        {emp.line_id ? 'มี' : '-'}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <span

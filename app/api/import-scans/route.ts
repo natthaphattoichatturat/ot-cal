@@ -199,13 +199,23 @@ export async function POST(request: NextRequest) {
     // Use a Map to merge multiple sessions for the same employee on the same date
     const attendanceMap = new Map<string, any>()
 
+    // Get employee data for employment_type
+    const { data: employeesData } = await supabase
+      .from('employees')
+      .select('employee_id, employment_type')
+      .in('employee_id', affectedEmployees)
+    
+    const employeeDataMap = new Map(
+      (employeesData || []).map(emp => [emp.employee_id, { employment_type: emp.employment_type }])
+    )
+
     for (const employeeId of affectedEmployees) {
       const employeeScans = scansByEmployee.get(employeeId) || []
 
       if (employeeScans.length === 0) continue
 
       // Calculate OT for this employee
-      const workSessions = calculateOTFromScans(employeeScans, holidays || [])
+      const workSessions = calculateOTFromScans(employeeScans, holidays || [], employeeDataMap)
 
       // Process sessions and merge if same employee + same date
       workSessions.forEach(session => {
@@ -352,14 +362,65 @@ export async function POST(request: NextRequest) {
     // Count actual new scans inserted (not counting duplicates used for recalculation)
     const actualInserted = newScans.length
 
+    // ⭐ AUTO-CALCULATE WAGES ⭐
+    // หาเดือนและปีที่ได้รับผลกระทบจากการ import
+    const affectedMonths = new Set<string>()
+    allAttendanceRecords.forEach(record => {
+      const date = new Date(record.work_date)
+      const year = date.getFullYear()
+      const month = date.getMonth() + 1
+      affectedMonths.add(`${year}-${month}`)
+    })
+
+    console.log(`Auto-calculating wages for ${affectedMonths.size} affected months:`, Array.from(affectedMonths))
+
+    let wagesCalculated = 0
+    const wageResults: string[] = []
+
+    // คำนวณค่าจ้างสำหรับแต่ละเดือนที่ได้รับผลกระทบ
+    for (const monthStr of affectedMonths) {
+      try {
+        const [year, month] = monthStr.split('-').map(Number)
+        
+        console.log(`Calculating wages for ${month}/${year}...`)
+
+        // เรียก calculate wages API แบบ BATCH (เร็วกว่าเดิม 10-50 เท่า!)
+        const calculateUrl = new URL('/api/wages/calculate-batch', request.url)
+        const calculateRequest = new NextRequest(calculateUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month, year })
+        })
+
+        // Import และเรียกใช้ฟังก์ชันคำนวณแบบ batch
+        const calculateModule = await import('../wages/calculate-batch/route')
+        const calculateResponse = await calculateModule.POST(calculateRequest)
+        const calculateData = await calculateResponse.json()
+
+        if (calculateData.success) {
+          wagesCalculated += calculateData.calculated || 0
+          wageResults.push(`${month}/${year}: ${calculateData.calculated} records`)
+          console.log(`✅ Calculated ${calculateData.calculated} wage records for ${month}/${year}`)
+        } else {
+          console.error(`❌ Failed to calculate wages for ${month}/${year}:`, calculateData.error)
+          wageResults.push(`${month}/${year}: ERROR - ${calculateData.error}`)
+        }
+      } catch (err) {
+        console.error(`Error calculating wages for ${monthStr}:`, err)
+        wageResults.push(`${monthStr}: ERROR`)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       inserted: actualInserted,
       duplicates: duplicates,
       recalculated: duplicates > 0 && actualInserted === 0 ? allAttendanceRecords.length : 0,
+      wagesCalculated,
+      wageDetails: wageResults,
       message: actualInserted > 0
-        ? `Successfully imported ${actualInserted} scans. ${duplicates} duplicates skipped.`
-        : `All ${duplicates} scans were duplicates. Recalculated OT for ${allAttendanceRecords.length} attendance records.`
+        ? `✅ Imported ${actualInserted} scans. ${duplicates} duplicates skipped. 💰 Auto-calculated ${wagesCalculated} wage records.`
+        : `All ${duplicates} scans were duplicates. Recalculated OT for ${allAttendanceRecords.length} records. 💰 Auto-calculated ${wagesCalculated} wages.`
     })
 
   } catch (error) {

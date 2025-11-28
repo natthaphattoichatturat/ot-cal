@@ -27,7 +27,7 @@ export async function GET(
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
     // ดึงข้อมูลพนักงาน
@@ -60,6 +60,36 @@ export async function GET(
       throw attError
     }
 
+    // ดึงข้อมูลการลาในงวดนี้
+    const { data: leaveRecords, error: leaveError } = await supabase
+      .from('leave_records')
+      .select('*')
+      .eq('employee_id', employeeId)
+      .gte('leave_date', startDate)
+      .lte('leave_date', endDate)
+      .eq('status', 'approved')
+      .order('leave_date', { ascending: true })
+
+    if (leaveError) {
+      console.error('Leave records fetch error:', leaveError)
+    }
+
+    // ดึงข้อมูลเงินเพิ่ม/เงินหักในงวดนี้
+    const { data: adjustments, error: adjError } = await supabase
+      .from('wage_adjustments')
+      .select('*')
+      .eq('employee_id', employeeId)
+      .eq('year', year)
+      .eq('month', monthNum)
+      .eq('period', period)
+      .order('created_at', { ascending: false })
+
+    if (adjError) {
+      console.error('Adjustments fetch error:', adjError)
+    }
+
+    const employmentType = (employee.employment_type || 'รายวัน') as 'รายวัน' | 'รายเดือน'
+
     // คำนวณค่าจ้างรายวัน (งวดปัจจุบัน)
     const dailyWages = attendances?.map(att =>
       calculateDailyWage(
@@ -75,7 +105,8 @@ export async function GET(
           is_leave: att.is_leave || false,
           late: att.late || false
         },
-        employee.perhr_salary || 0
+        employee.perhr_salary || 0,
+        employmentType
       )
     ) || []
 
@@ -106,6 +137,52 @@ export async function GET(
       hasBonus
     )
 
+    // คำนวณเงินเพิ่ม/หักจาก adjustments
+    const additionalIncome = (adjustments || [])
+      .filter(adj => adj.adjustment_type === 'income')
+      .reduce((sum, adj) => sum + parseFloat(adj.amount), 0)
+
+    const additionalDeduction = (adjustments || [])
+      .filter(adj => adj.adjustment_type === 'deduction')
+      .reduce((sum, adj) => sum + parseFloat(adj.amount), 0)
+
+    // คำนวณวันลาและเงินหักค่าลา (สำหรับพนักงานรายเดือน)
+    const leaveDays = leaveRecords?.length || 0
+    let leaveDeduction = 0
+    if (employmentType === 'รายเดือน' && leaveDays > 0) {
+      const dailySalary = (employee.monthly_salary || 0) / 15 // แบ่งเป็น 15 วันต่องวด
+      leaveDeduction = dailySalary * leaveDays
+    }
+
+    // คำนวณนาทีมาสายรวม
+    const totalLateMinutes = attendances?.reduce((sum, att) => {
+      if (att.late && att.check_in_time && att.scheduled_in_time) {
+        const checkIn = att.check_in_time.split(':').map(Number)
+        const scheduled = att.scheduled_in_time.split(':').map(Number)
+        const checkInMinutes = checkIn[0] * 60 + checkIn[1]
+        const scheduledMinutes = scheduled[0] * 60 + scheduled[1]
+        if (checkInMinutes > scheduledMinutes) {
+          return sum + (checkInMinutes - scheduledMinutes)
+        }
+      }
+      return sum
+    }, 0) || 0
+
+    // คำนวณเงินหักค่ามาสาย
+    const perMinuteSalary = (employee.perhr_salary || 0) / 60
+    const lateDeduction = totalLateMinutes * perMinuteSalary
+
+    // คำนวณค่ากะดึก
+    const nightShiftDays = attendances?.filter(att => {
+      const checkIn = att.scheduled_in_time || att.check_in_time
+      if (checkIn) {
+        const hour = parseInt(checkIn.split(':')[0])
+        return hour >= 20 || hour < 5
+      }
+      return false
+    }).length || 0
+    const nightShiftAllowance = nightShiftDays * 40
+
     // ดึงข้อมูลงวดอื่นของเดือนเดียวกันเพื่อคำนวณ SSO
     const otherPeriod = period === 1 ? 2 : 1
     const { startDate: otherStart, endDate: otherEnd } = getPeriodDates(year, monthNum, otherPeriod)
@@ -129,7 +206,8 @@ export async function GET(
           is_leave: att.is_leave || false,
           late: att.late || false
         },
-        employee.perhr_salary || 0
+        employee.perhr_salary || 0,
+        employmentType
       )
     ) || []
 
@@ -204,15 +282,51 @@ export async function GET(
       ytd_net_wage
     }
 
+    // สรุปรายละเอียดค่าจ้าง
+    const wageBreakdown = {
+      // รายได้
+      base_wage: periodWage.total_base_wage,
+      ot1_wage: periodWage.total_ot1_wage,
+      ot2_wage: periodWage.total_ot2_wage,
+      ot3_wage: periodWage.total_ot3_wage,
+      attendance_bonus: periodWage.attendance_bonus,
+      night_shift_allowance: nightShiftAllowance,
+      additional_income: additionalIncome,
+      gross_income: periodWage.total_income + nightShiftAllowance + additionalIncome,
+      
+      // เงินหัก
+      late_minutes: totalLateMinutes,
+      late_deduction: lateDeduction,
+      leave_days: leaveDays,
+      leave_deduction: leaveDeduction,
+      additional_deduction: additionalDeduction,
+      sso: period === 1 ? ssoCalc.period1_sso : ssoCalc.period2_sso,
+      tax: periodWage.tax_withholding,
+      
+      // รวม
+      total_income: periodWage.total_income + nightShiftAllowance + additionalIncome,
+      total_deductions: lateDeduction + leaveDeduction + additionalDeduction + 
+        (period === 1 ? ssoCalc.period1_sso : ssoCalc.period2_sso) + periodWage.tax_withholding,
+      net_wage: (periodWage.total_income + nightShiftAllowance + additionalIncome) - 
+        (lateDeduction + leaveDeduction + additionalDeduction + 
+        (period === 1 ? ssoCalc.period1_sso : ssoCalc.period2_sso) + periodWage.tax_withholding)
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         employee,
         dailyWages,
-        periodWage,
+        periodWage: wageBreakdown,
+        leaveRecords: leaveRecords || [],
+        adjustments: adjustments || [],
         sso: ssoCalc,
         ytd: ytdData,
-        currentPeriod: period
+        currentPeriod: period,
+        // ข้อมูลเพิ่มเติม
+        workDays: attendances?.filter(a => !a.is_holiday && !a.is_leave).length || 0,
+        holidayWorkDays: attendances?.filter(a => a.is_holiday).length || 0,
+        nightShiftDays
       }
     })
   } catch (error: any) {

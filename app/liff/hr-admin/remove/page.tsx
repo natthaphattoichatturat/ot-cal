@@ -95,7 +95,7 @@ export default function RemoveEmployeePage() {
     if (!selectedEmployee) return
 
     const confirmMessage = permanent
-      ? `⚠️ ต้องการลบพนักงาน "${selectedEmployee.name}" ออกจากระบบถาวรหรือไม่?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้!`
+      ? `คำเตือน: ต้องการลบพนักงาน "${selectedEmployee.name}" ออกจากระบบถาวรหรือไม่?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้!`
       : `ต้องการปลดพนักงาน "${selectedEmployee.name}" ออกจากระบบหรือไม่?\n\n(สามารถเปิดใช้งานอีกครั้งได้ในภายหลัง)`
 
     if (!confirm(confirmMessage)) return
@@ -115,15 +115,15 @@ export default function RemoveEmployeePage() {
       const result = await response.json()
 
       if (result.success) {
-        alert(permanent ? '✅ ลบพนักงานสำเร็จ' : '✅ ปลดพนักงานสำเร็จ')
+        alert(permanent ? 'สำเร็จ: ลบพนักงานสำเร็จ' : 'สำเร็จ: ปลดพนักงานสำเร็จ')
         setSelectedEmployee(null)
         await fetchEmployees()
       } else {
-        alert(`❌ เกิดข้อผิดพลาด: ${result.error}`)
+        alert(`ผิดพลาด: เกิดข้อผิดพลาด: ${result.error}`)
       }
     } catch (err) {
       console.error('Failed to remove employee:', err)
-      alert('❌ ไม่สามารถดำเนินการได้')
+      alert('ผิดพลาด: ไม่สามารถดำเนินการได้')
     } finally {
       setProcessing(false)
     }
@@ -311,7 +311,7 @@ export default function RemoveEmployeePage() {
                 disabled={processing}
                 className="w-full py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {processing ? 'กำลังดำเนินการ...' : '🔒 ปลดพนักงาน (Soft Delete)'}
+                {processing ? 'กำลังดำเนินการ...' : 'ปลดพนักงาน (Soft Delete)'}
               </button>
 
               <button
@@ -319,7 +319,7 @@ export default function RemoveEmployeePage() {
                 disabled={processing}
                 className="w-full py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {processing ? 'กำลังดำเนินการ...' : '🗑️ ลบถาวร (Permanent Delete)'}
+                {processing ? 'กำลังดำเนินการ...' : 'ลบถาวร (Permanent Delete)'}
               </button>
 
               <button

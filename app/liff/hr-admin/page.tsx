@@ -73,7 +73,11 @@ export default function HRAdminLandingPage() {
     return (
       <div style={styles.container}>
         <div style={styles.errorBox}>
-          <div style={styles.errorIcon}>🚫</div>
+          <div style={styles.errorIcon}>
+            <svg style={{width: '80px', height: '80px', color: '#ef4444'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          </div>
           <h2 style={styles.errorTitle}>ไม่มีสิทธิ์เข้าใช้งาน</h2>
           <p style={styles.errorText}>
             คุณไม่มีสิทธิ์ในการเข้าถึงระบบจัดการพนักงาน
@@ -101,7 +105,9 @@ export default function HRAdminLandingPage() {
         {/* ดูรายละเอียดพนักงาน */}
         <div style={styles.menuCard} onClick={() => navigateTo('/liff/hr-admin/employees')}>
           <div style={{...styles.menuIcon, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>
-            👥
+            <svg style={{width: '30px', height: '30px', color: '#fff'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
           </div>
           <h3 style={styles.menuTitle}>ดูรายละเอียดพนักงาน</h3>
           <p style={styles.menuDescription}>ดูข้อมูลและรายชื่อพนักงาน</p>
@@ -110,7 +116,9 @@ export default function HRAdminLandingPage() {
         {/* แก้ไขข้อมูลพนักงาน */}
         <div style={styles.menuCard} onClick={() => navigateTo('/liff/hr-admin/edit')}>
           <div style={{...styles.menuIcon, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'}}>
-            ✏️
+            <svg style={{width: '30px', height: '30px', color: '#fff'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
           </div>
           <h3 style={styles.menuTitle}>แก้ไขข้อมูลพนักงาน</h3>
           <p style={styles.menuDescription}>แก้ไขข้อมูลพนักงานที่มีอยู่</p>
@@ -119,7 +127,9 @@ export default function HRAdminLandingPage() {
         {/* เพิ่มพนักงาน */}
         <div style={styles.menuCard} onClick={() => navigateTo('/liff/hr-admin/add')}>
           <div style={{...styles.menuIcon, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'}}>
-            ➕
+            <svg style={{width: '30px', height: '30px', color: '#fff'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
           </div>
           <h3 style={styles.menuTitle}>เพิ่มพนักงาน</h3>
           <p style={styles.menuDescription}>เพิ่มพนักงานใหม่เข้าระบบ</p>
@@ -128,7 +138,9 @@ export default function HRAdminLandingPage() {
         {/* ลบพนักงาน */}
         <div style={styles.menuCard} onClick={() => navigateTo('/liff/hr-admin/remove')}>
           <div style={{...styles.menuIcon, background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'}}>
-            🗑️
+            <svg style={{width: '30px', height: '30px', color: '#fff'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
           </div>
           <h3 style={styles.menuTitle}>ลบพนักงาน</h3>
           <p style={styles.menuDescription}>ลบหรือปลดพนักงานออกจากระบบ</p>

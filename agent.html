@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RESILIX - AI Agent Activity</title>
+    <style>
+        /* --- CSS Variables & Base Styles (คงไว้เพื่อให้เข้ากับหน้าอื่นๆ) --- */
+        :root {
+            --bg-main: #1a1a1a;
+            --bg-card: #2d2d2d;
+            --bg-card-hover: #383838;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --border-color: #404040;
+            --color-success: #4caf50;
+            --color-warning: #ffc107;
+            --color-danger: #f44336;
+            --color-maint: #2196f3;
+            --color-info: #2196f3; /* สีฟ้าสำหรับ Sentinel */
+            --color-orange: #ff9800; /* สีส้มสำหรับ Orchestrator */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-primary); padding: 20px; }
+        a { text-decoration: none; color: inherit; cursor: pointer;}
+        ul { list-style: none; }
+
+        /* Utilities */
+        .text-success { color: var(--color-success) !important; }
+        .text-muted { color: var(--text-secondary); font-size: 0.9em; }
+        .flex { display: flex; }
+        .flex-between { justify-content: space-between; }
+        .flex-center { align-items: center; }
+        .mb-2 { margin-bottom: 20px; }
+        .full-width { width: 100%; }
+
+        /* Card Styles */
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; font-weight: bold;
+            border-bottom: 1px solid var(--border-color); padding-bottom: 10px;
+        }
+
+        /* --- Page Specific Styles --- */
+
+        /* Header */
+        .page-header { font-size: 1.1em; margin-bottom: 20px; padding: 15px 20px;}
+        .breadcrumb span { font-weight: bold; }
+        .nav-controls span {
+            margin-left: 15px; cursor: pointer; padding: 5px 10px;
+            border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); font-size: 0.9em;
+        }
+        .nav-controls span:hover { background: var(--bg-card-hover); }
+
+        /* Agent Status Section */
+        .agent-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .agent-box {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 6px; padding: 15px;
+        }
+        .agent-name { font-weight: bold; margin-bottom: 10px; font-size: 0.95em;}
+        .agent-status { margin-bottom: 5px; font-size: 0.9em; }
+        .agent-metric { font-size: 0.85em; color: var(--text-secondary); }
+
+        /* Agent Specific Colors */
+        .agent-sentinel .agent-name { color: var(--color-info); }
+        .agent-diagnostician .agent-name { color: var(--color-success); }
+        .agent-orchestrator .agent-name { color: var(--color-orange); }
+        .agent-safety .agent-name { color: var(--color-danger); }
+
+        /* Live Activity Log Section */
+        .log-container { max-height: 400px; overflow-y: auto; padding-right: 5px;}
+        /* Custom scrollbar for dark theme */
+        .log-container::-webkit-scrollbar { width: 8px; }
+        .log-container::-webkit-scrollbar-track { background: var(--bg-main); }
+        .log-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+        .log-item {
+            padding-bottom: 20px;
+            position: relative;
+        }
+        /* Timeline line effect */
+        .log-item::before {
+            content: ''; position: absolute; left: 6px; top: 25px; bottom: 0;
+            width: 2px; background-color: var(--border-color); z-index: 0;
+        }
+        .log-item:last-child::before { display: none; } /* Hide line on last item */
+
+        .log-meta {
+            font-family: monospace; color: var(--text-secondary); font-size: 0.9em;
+            margin-bottom: 8px; display: flex; align-items: center; position: relative; z-index: 1;
+        }
+        .log-meta span { background: var(--bg-card); padding-right: 10px; } /* mask the line */
+
+        .log-content {
+            margin-left: 25px; /* indent content */
+            padding-left: 15px;
+            border-left: 2px solid transparent; /* Placeholder for hover effect */
+        }
+        .log-title { font-weight: bold; margin-bottom: 5px; }
+        .log-detail { color: var(--text-secondary); font-size: 0.95em; margin-bottom: 4px; }
+        .log-sub-list { margin-left: 15px; margin-bottom: 8px;}
+        .reasoning-link {
+            display: inline-block; font-size: 0.85em; color: var(--color-maint);
+            margin-top: 5px; opacity: 0.8; transition: opacity 0.2s;
+        }
+        .reasoning-link:hover { opacity: 1; text-decoration: underline; }
+
+        /* Reasoning Detail Section */
+        .reasoning-body { font-size: 0.95em; }
+        .reasoning-meta { font-weight: bold; margin-bottom: 15px; color: var(--color-success); }
+        .data-block-label { font-size: 0.9em; color: var(--text-secondary); margin-bottom: 5px; margin-top: 15px;}
+        .data-block {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #d0d0d0;
+        }
+        .data-line { margin-bottom: 4px; }
+        .reasoning-steps .data-line {
+            position: relative; padding-left: 15px;
+        }
+        /* Add quotes visually like the ASCII */
+        .reasoning-steps .data-line::before { content: '"'; color: var(--text-secondary); }
+        .reasoning-steps .data-line::after { content: '"'; color: var(--text-secondary); }
+
+        .decision-block {
+            margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);
+            font-weight: bold; color: var(--color-orange);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="page-header flex flex-between flex-center card">
+        <div class="breadcrumb">
+            🤖 RESILIX > <span>AI Agent Activity</span>
+        </div>
+        <div class="nav-controls">
+            <span>[⟳ Refresh]</span>
+        </div>
+    </header>
+
+    <div class="card full-width mb-2">
+        <div class="card-header">
+            AGENT STATUS
+        </div>
+        <div class="agent-status-grid">
+            <div class="agent-box agent-sentinel">
+                <div class="agent-name">🔵 SENTINEL</div>
+                <div class="agent-status"><span class="text-success">●</span> Active</div>
+                <div class="agent-metric">30 machines monitored</div>
+            </div>
+            <div class="agent-box agent-diagnostician">
+                <div class="agent-name">🟢 DIAGNOSTICIAN</div>
+                <div class="agent-status"><span class="text-success">●</span> Active</div>
+                <div class="agent-metric">2 pending</div>
+            </div>
+            <div class="agent-box agent-orchestrator">
+                <div class="agent-name">🟠 ORCHESTRATOR</div>
+                <div class="agent-status"><span class="text-success">●</span> Active</div>
+                <div class="agent-metric">1 planning</div>
+            </div>
+            <div class="agent-box agent-safety">
+                <div class="agent-name">🔴 SAFETY AGENT</div>
+                <div class="agent-status"><span class="text-success">●</span> Active</div>
+                <div class="agent-metric">0 pending</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card full-width mb-2">
+        <div class="card-header">
+            <span>📜 LIVE ACTIVITY LOG</span>
+            <span style="font-size: 0.9em; cursor: pointer; color: var(--text-secondary);">[Filter ▼]</span>
+        </div>
+        <div class="log-container">
+            
+            <div class="log-item">
+                <div class="log-meta"><span>08:17:32 🔵 SENTINEL</span></div>
+                <div class="log-content">
+                    <div class="log-title">Boiler #2: Anomaly detected (vibration +36%)</div>
+                    <div class="log-detail">→ Routing to DIAGNOSTICIAN</div>
+                    <a class="reasoning-link">[ดู reasoning →]</a>
+                </div>
+            </div>
+
+            <div class="log-item">
+                <div class="log-meta"><span>08:17:45 🟢 DIAGNOSTICIAN</span></div>
+                <div class="log-content">
+                    <div class="log-title">Boiler #2: Analyzing...</div>
+                    <ul class="log-sub-list log-detail">
+                        <li>- Queried failure history <span class="text-success">✓</span></li>
+                        <li>- Checked component age <span class="text-success">✓</span></li>
+                        <li>- Running causal analysis...</li>
+                    </ul>
+                    <a class="reasoning-link">[ดู reasoning →]</a>
+                </div>
+            </div>
+
+            <div class="log-item">
+                <div class="log-meta"><span>08:18:02 🟢 DIAGNOSTICIAN</span></div>
+                <div class="log-content">
+                    <div class="log-title">Boiler #2: Diagnosis complete</div>
+                    <div class="log-detail">Result: Bearing wear (confidence: 92%)</div>
+                    <div class="log-detail">→ Routing to ORCHESTRATOR</div>
+                    <a class="reasoning-link">[ดู reasoning →]</a>
+                </div>
+            </div>
+
+            <div class="log-item">
+                <div class="log-meta"><span>08:18:15 🟠 ORCHESTRATOR</span></div>
+                <div class="log-content">
+                    <div class="log-title">Boiler #2: Planning maintenance...</div>
+                    <ul class="log-sub-list log-detail">
+                        <li>- Checked inventory: 3 bearings available <span class="text-success">✓</span></li>
+                        <li>- Checked schedule: 14:00-16:00 available <span class="text-success">✓</span></li>
+                        <li>- Best technician: สมชาย (skill level 4) <span class="text-success">✓</span></li>
+                    </ul>
+                    <a class="reasoning-link">[ดู reasoning →]</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card full-width">
+        <div class="card-header" style="cursor: pointer;">
+            🔍 AGENT REASONING DETAIL (Click to expand)
+        </div>
+        <div class="reasoning-body">
+            <div class="reasoning-meta">📋 Event: DIAGNOSTICIAN @ 08:18:02</div>
+
+            <div class="data-block-label">Input:</div>
+            <div class="data-block">
+                <div class="data-line">anomaly_type: "vibration_increase"</div>
+                <div class="data-line">current_value: 3.8 mm/s</div>
+                <div class="data-line">baseline: 2.8 mm/s</div>
+            </div>
+
+            <div class="data-block-label">Reasoning:</div>
+            <div class="data-block reasoning-steps">
+                <div class="data-line">Vibration เพิ่มขึ้น 36% จาก baseline...</div>
+                <div class="data-line">ตรวจสอบประวัติ: เครื่องนี้เคยเสีย bearing 2 ครั้ง</div>
+                <div class="data-line">ตรวจสอบอายุ: bearing ปัจจุบันอายุ 10 เดือน = avg lifespan</div>
+                <div class="data-line">Causal analysis: vibration pattern ตรงกับ bearing wear</div>
+                <div class="data-line">Conclusion: Bearing สึกหรอ (confidence 92%)</div>
+            </div>
+
+            <div class="decision-block">
+                Decision: → ORCHESTRATOR (confidence ≥ 85%)
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

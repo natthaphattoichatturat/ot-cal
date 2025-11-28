@@ -147,7 +147,7 @@ export default function LeavePage() {
       const result = await response.json()
 
       if (result.success) {
-        setMessage('✓ บันทึกการลาสำเร็จ')
+        setMessage('สำเร็จ: บันทึกการลาสำเร็จ')
         // Reset form
         setSelectedEmployee('')
         setLeaveDate('')
@@ -278,7 +278,7 @@ export default function LeavePage() {
                 {submitting ? 'กำลังบันทึก...' : 'บันทึกการลา'}
               </button>
               {message && (
-                <p className={message.startsWith('✓') ? 'text-green-600' : 'text-red-600'}>
+                <p className={message.startsWith('สำเร็จ') ? 'text-green-600' : 'text-red-600'}>
                   {message}
                 </p>
               )}

@@ -55,7 +55,7 @@ export default function AdminRegisterPage() {
       setStep('register')
       setPassword('')
     } else {
-      setPasswordError('❌ รหัสผ่านไม่ถูกต้อง')
+      setPasswordError('ผิดพลาด: รหัสผ่านไม่ถูกต้อง')
     }
   }
 
@@ -83,19 +83,19 @@ export default function AdminRegisterPage() {
 
       if (result.success) {
         setSuccess(true)
-        setMessage(`✅ ${result.message}\n\nยินดีต้อนรับคุณ ${result.admin.name}!\n\nคุณสามารถรับการแจ้งเตือนการลาจากพนักงานได้แล้ว`)
+        setMessage(`สำเร็จ: ${result.message}\n\nยินดีต้อนรับคุณ ${result.admin.name}!\n\nคุณสามารถรับการแจ้งเตือนการลาจากพนักงานได้แล้ว`)
         // Clear form
         setEmployeeId('')
         setName(displayName)
         setIdentityId('')
       } else {
         setSuccess(false)
-        setMessage(`❌ ${result.error}`)
+        setMessage(`ผิดพลาด: ${result.error}`)
       }
     } catch (error) {
       console.error('Registration error:', error)
       setSuccess(false)
-      setMessage('❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
+      setMessage('ผิดพลาด: เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
     } finally {
       setLoading(false)
     }
@@ -118,7 +118,11 @@ export default function AdminRegisterPage() {
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="text-center mb-6">
-              <div className="text-6xl mb-4">🔐</div>
+              <div className="w-16 h-16 bg-red-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
               <h1 className="text-3xl font-bold text-red-600 mb-2">
                 Admin Registration
               </h1>
@@ -152,7 +156,7 @@ export default function AdminRegisterPage() {
                 type="submit"
                 className="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-700 transition-colors"
               >
-                🔓 ยืนยัน
+                ยืนยัน
               </button>
             </form>
           </div>
@@ -166,7 +170,11 @@ export default function AdminRegisterPage() {
       <div className="max-w-md mx-auto">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-6">
-            <div className="text-6xl mb-4">👔</div>
+            <div className="w-16 h-16 bg-purple-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
             <h1 className="text-3xl font-bold text-purple-600 mb-2">
               ลงทะเบียน Admin/HR
             </h1>
@@ -236,7 +244,7 @@ export default function AdminRegisterPage() {
               disabled={loading}
               className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'กำลังลงทะเบียน...' : '✅ ยืนยันลงทะเบียน Admin'}
+              {loading ? 'กำลังลงทะเบียน...' : 'ยืนยันลงทะเบียน Admin'}
             </button>
           </form>
 

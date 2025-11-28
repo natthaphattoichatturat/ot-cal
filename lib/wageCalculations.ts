@@ -71,18 +71,37 @@ export interface SSOCalculation {
 
 /**
  * คำนวณค่าจ้างรายวัน
+ * 
+ * สูตรการคำนวณ:
+ * - OT ปกติ (×1.5): ot_normal_hours × perhr_salary × 1.5
+ * - OT พิเศษ (×2 หรือ ×1): ot_special_hours × perhr_salary × 2 (รายวัน) หรือ × 1 (รายเดือน)
+ * - OT ขั้นสูง (×3): ot_premium_hours × perhr_salary × 3
+ * 
+ * หมายเหตุ: ot_special_hours และ ot_premium_hours เป็นชั่วโมงจริง (ยังไม่คูณ multiplier)
+ * ส่วน ot_normal_hours ก็เป็นชั่วโมงจริง (ยังไม่คูณ 1.5)
  */
 export function calculateDailyWage(
   attendance: DailyAttendance,
-  perhrSalary: number
+  perhrSalary: number,
+  employmentType: 'รายวัน' | 'รายเดือน' = 'รายวัน'
 ): DailyWageCalculation {
-  // ค่าจ้างพื้นฐาน = 8 ชม. × perhr_salary (ถ้ามีการทำงาน)
-  const baseWage = attendance.actual_hours > 0 ? 8 * perhrSalary : 0
+  // ค่าจ้างพื้นฐาน = 8 ชม. × perhr_salary (ถ้ามีการทำงานในวันธรรมดา ไม่ใช่วันหยุด)
+  // วันหยุด: ไม่มีค่าจ้างพื้นฐาน เพราะทุกชั่วโมงเป็น OT
+  let baseWage = 0
+  if (!attendance.is_holiday && !attendance.is_leave && attendance.actual_hours > 0) {
+    baseWage = 8 * perhrSalary
+  }
 
-  // ค่า OT แต่ละระดับ (ชั่วโมงที่บันทึกคูณด้วย multiplier แล้ว)
-  const ot1Wage = attendance.ot_normal_hours * perhrSalary
-  const ot2Wage = attendance.ot_special_hours * perhrSalary
-  const ot3Wage = attendance.ot_premium_hours * perhrSalary
+  // ค่า OT แต่ละระดับ (คูณ multiplier ตรงนี้)
+  // OT ปกติ (×1.5): เฉพาะวันธรรมดา
+  const ot1Wage = attendance.ot_normal_hours * perhrSalary * 1.5
+
+  // OT พิเศษ (×2 สำหรับรายวัน, ×1 สำหรับรายเดือน): วันหยุด 8 ชม.แรก
+  const ot2Multiplier = employmentType === 'รายวัน' ? 2 : 1
+  const ot2Wage = attendance.ot_special_hours * perhrSalary * ot2Multiplier
+
+  // OT ขั้นสูง (×3): วันหยุดเกิน 8 ชม.
+  const ot3Wage = attendance.ot_premium_hours * perhrSalary * 3
 
   // รวมค่าจ้างของวัน
   const dailyTotalWage = baseWage + ot1Wage + ot2Wage + ot3Wage

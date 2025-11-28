@@ -22,13 +22,27 @@ interface EmployeeWage {
   employeeId: string
   name: string
   department: string
+  employmentType: string
   totalBaseWage: number
   totalOt1Wage: number
   totalOt2Wage: number
   totalOt3Wage: number
   grossWage: number
   attendanceBonus: number
+  nightShiftAllowance: number
+  additionalIncome: number
   totalIncome: number
+  // เงินหัก
+  lateMinutes: number
+  lateDeduction: number
+  leaveDays: number
+  leaveDeduction: number
+  additionalDeduction: number
+  sso: number
+  tax: number
+  totalDeductions: number
+  // เงินสุทธิ
+  netWage: number
 }
 
 interface MasterItem {
@@ -70,6 +84,10 @@ export default function WagesPage() {
   const [masterItems, setMasterItems] = useState<MasterItem[]>([])
   const [savingRecord, setSavingRecord] = useState(false)
   const [message, setMessage] = useState('')
+  
+  // Calculate wages state
+  const [calculating, setCalculating] = useState(false)
+  const [calculateMessage, setCalculateMessage] = useState('')
 
   const thaiMonths = [
     'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -386,6 +404,47 @@ export default function WagesPage() {
     }
   }
 
+  const calculateWages = async () => {
+    if (!selectedMonth || !selectedYear) {
+      setCalculateMessage('❌ กรุณาเลือกเดือนและปี')
+      return
+    }
+
+    setCalculating(true)
+    setCalculateMessage('')
+
+    try {
+      // ใช้ API batch ที่เร็วกว่าเดิม 10-50 เท่า!
+      const res = await fetch('/api/wages/calculate-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          month: parseInt(selectedMonth),
+          year: parseInt(selectedYear)
+        })
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        const duration = data.duration_ms ? ` (${(data.duration_ms / 1000).toFixed(1)}s)` : ''
+        setCalculateMessage(`สำเร็จ: คำนวณสำเร็จ ${data.calculated} รายการ${duration}`)
+        // Refresh data
+        await fetchWageData()
+        setTimeout(() => {
+          setCalculateMessage('')
+        }, 3000)
+      } else {
+        setCalculateMessage(`ผิดพลาด: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Error calculating wages:', error)
+      setCalculateMessage('ผิดพลาด: เกิดข้อผิดพลาดในการคำนวณ')
+    } finally {
+      setCalculating(false)
+    }
+  }
+
   const saveIncomeDeduction = async () => {
     if (selectedEmployees.length === 0) {
       setMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
@@ -424,16 +483,16 @@ export default function WagesPage() {
       const data = await res.json()
 
       if (data.success) {
-        setMessage(`✓ ${data.message}`)
+        setMessage(`สำเร็จ: ${data.message}`)
         setTimeout(() => {
           closeIncomeDeductionPopup()
         }, 1500)
       } else {
-        setMessage(`✗ ${data.error}`)
+        setMessage(`ผิดพลาด: ${data.error}`)
       }
     } catch (error) {
       console.error('Error saving income/deduction:', error)
-      setMessage('✗ เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+      setMessage('ผิดพลาด: เกิดข้อผิดพลาดในการบันทึกข้อมูล')
     } finally {
       setSavingRecord(false)
     }
@@ -499,17 +558,15 @@ export default function WagesPage() {
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <button
               onClick={() => openIncomeDeductionPopup('income')}
-              className="btn"
-              style={{ background: '#10b981', color: 'white' }}
+              className="btn btn-secondary"
             >
-              ➕ เพิ่มเงินได้
+              เพิ่มเงินได้
             </button>
             <button
               onClick={() => openIncomeDeductionPopup('deduction')}
-              className="btn"
-              style={{ background: '#ef4444', color: 'white' }}
+              className="btn btn-secondary"
             >
-              ➖ เพิ่มเงินหัก
+              เพิ่มเงินหัก
             </button>
             <a href="/" className="btn btn-secondary">
               ← กลับหน้าหลัก
@@ -558,9 +615,18 @@ export default function WagesPage() {
         </div>
       </div>
 
+      {/* Calculate Wages Button & Message */}
+      {calculateMessage && (
+        <div className="card" style={{ marginBottom: '24px', padding: '16px', background: calculateMessage.startsWith('สำเร็จ') ? '#F5F5F5' : '#F5F5F5' }}>
+          <p style={{ margin: 0, color: calculateMessage.startsWith('สำเร็จ') ? 'var(--text-primary)' : 'var(--text-primary)', fontSize: '14px', fontWeight: '700' }}>
+            {calculateMessage}
+          </p>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="card" style={{ marginBottom: '24px', padding: '20px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
           {/* Month */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
@@ -620,6 +686,30 @@ export default function WagesPage() {
             />
           </div>
         </div>
+
+        {/* Calculate Wages Button */}
+        <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button
+            onClick={calculateWages}
+            disabled={calculating}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            {calculating ? (
+              <>
+                <div className="spinner" style={{ width: '16px', height: '16px' }}></div>
+                กำลังคำนวณ...
+              </>
+            ) : (
+              <>
+                🧮 คำนวณและบันทึกค่าจ้าง
+              </>
+            )}
+          </button>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+            คำนวณค่าจ้างจากข้อมูลการเข้างานเดือน {thaiMonths[parseInt(selectedMonth) - 1]} {parseInt(selectedYear) + 543} (ทั้ง 2 งวด)
+          </p>
+        </div>
       </div>
 
       {/* Content */}
@@ -660,21 +750,26 @@ export default function WagesPage() {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th style={{ minWidth: '120px' }}>รหัสพนักงาน</th>
-                        <th style={{ minWidth: '180px' }}>ชื่อพนักงาน</th>
-                        <th style={{ minWidth: '120px' }}>แผนก</th>
-                        <th className="text-right" style={{ minWidth: '120px' }}>ค่าจ้างพื้นฐาน</th>
-                        <th className="text-right" style={{ minWidth: '120px' }}>ค่า OT 1</th>
-                        <th className="text-right" style={{ minWidth: '120px' }}>ค่า OT 2</th>
-                        <th className="text-right" style={{ minWidth: '120px' }}>ค่า OT 3</th>
-                        <th className="text-right" style={{ minWidth: '120px' }}>เบี้ยขยัน</th>
-                        <th className="text-right" style={{ minWidth: '140px', background: 'var(--primary-light)' }}>รวมรายได้</th>
+                        <th style={{ minWidth: '100px' }}>รหัส</th>
+                        <th style={{ minWidth: '150px' }}>ชื่อพนักงาน</th>
+                        <th style={{ minWidth: '80px' }}>ประเภท</th>
+                        <th className="text-right" style={{ minWidth: '100px' }}>ค่าจ้าง</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>OT 1.5</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>OT 2</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>OT 3</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>เบี้ยขยัน</th>
+                        <th className="text-right" style={{ minWidth: '100px', background: '#dcfce7' }}>รวมรายได้</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>หักสาย</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>SSO</th>
+                        <th className="text-right" style={{ minWidth: '80px' }}>ภาษี</th>
+                        <th className="text-right" style={{ minWidth: '100px', background: '#fee2e2' }}>รวมหัก</th>
+                        <th className="text-right" style={{ minWidth: '120px', background: 'var(--primary-light)' }}>เงินสุทธิ</th>
                       </tr>
                     </thead>
                     <tbody>
                       {currentEmployees.length === 0 ? (
                         <tr>
-                          <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                          <td colSpan={14} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                             {searchQuery ? 'ไม่พบข้อมูลพนักงานที่ค้นหา' : 'ไม่มีข้อมูลพนักงาน'}
                           </td>
                         </tr>
@@ -687,14 +782,37 @@ export default function WagesPage() {
                           >
                             <td>{emp.employeeId}</td>
                             <td className="employee-name">{emp.name}</td>
-                            <td>{emp.department}</td>
+                            <td>
+                              <span style={{ 
+                                padding: '2px 6px', 
+                                borderRadius: '4px', 
+                                fontSize: '11px',
+                                background: emp.employmentType === 'รายเดือน' ? '#dbeafe' : '#dcfce7',
+                                color: emp.employmentType === 'รายเดือน' ? '#1e40af' : '#16a34a'
+                              }}>
+                                {emp.employmentType || 'รายวัน'}
+                              </span>
+                            </td>
                             <td className="text-right">{emp.totalBaseWage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                             <td className="text-right">{emp.totalOt1Wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                             <td className="text-right">{emp.totalOt2Wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                             <td className="text-right">{emp.totalOt3Wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                            <td className="text-right">{emp.attendanceBonus.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                            <td className="text-right" style={{ fontWeight: '700', background: 'var(--primary-light)', color: 'var(--primary)' }}>
+                            <td className="text-right" style={{ color: emp.attendanceBonus > 0 ? '#16a34a' : 'inherit' }}>
+                              {emp.attendanceBonus.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="text-right" style={{ fontWeight: '600', background: '#dcfce7', color: '#16a34a' }}>
                               {emp.totalIncome.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="text-right" style={{ color: emp.lateDeduction > 0 ? '#dc2626' : 'inherit' }}>
+                              {emp.lateDeduction > 0 ? `-${emp.lateDeduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })}` : '0.00'}
+                            </td>
+                            <td className="text-right">{emp.sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                            <td className="text-right">{emp.tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                            <td className="text-right" style={{ fontWeight: '600', background: '#fee2e2', color: '#dc2626' }}>
+                              {emp.totalDeductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="text-right" style={{ fontWeight: '700', background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '14px' }}>
+                              {emp.netWage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                             </td>
                           </tr>
                         ))
@@ -744,8 +862,8 @@ export default function WagesPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '20px' }}>
-              {recordType === 'income' ? '➕ เพิ่มเงินได้' : '➖ เพิ่มเงินหัก'}
+            <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px' }}>
+              {recordType === 'income' ? 'เพิ่มเงินได้' : 'เพิ่มเงินหัก'}
             </h2>
 
             {message && (
@@ -754,9 +872,10 @@ export default function WagesPage() {
                   padding: '12px',
                   marginBottom: '16px',
                   borderRadius: '8px',
-                  background: message.startsWith('✓') ? '#d1fae5' : '#fee2e2',
-                  color: message.startsWith('✓') ? '#065f46' : '#991b1b',
-                  fontSize: '14px'
+                  background: '#F5F5F5',
+                  color: 'var(--text-primary)',
+                  fontSize: '14px',
+                  fontWeight: '600'
                 }}
               >
                 {message}

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RESILIX - Factory Overview Dashboard</title>
+    <style>
+        :root {
+            --bg-main: #1a1a1a; /* พื้นหลังหลัก */
+            --bg-card: #2d2d2d; /* พื้นหลังการ์ด */
+            --bg-card-hover: #383838;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --border-color: #404040;
+            
+            /* สีสถานะ */
+            --color-success: #4caf50; /* 🟢 Normal */
+            --color-warning: #ffc107; /* 🟡 Warning */
+            --color-danger: #f44336; /* 🔴 Critical */
+            --color-maint: #2196f3; /* 🔧 Maintenance */
+            --color-downtime: #9e9e9e; /* ⏱️ Downtime */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            padding: 20px;
+        }
+
+        /* Utilities */
+        .text-success { color: var(--color-success); }
+        .text-warning { color: var(--color-warning); }
+        .text-danger { color: var(--color-danger); }
+        .text-maint { color: var(--color-maint); }
+        .text-muted { color: var(--text-secondary); font-size: 0.9em; }
+        
+        .flex { display: flex; }
+        .flex-between { justify-content: space-between; }
+        .flex-center { align-items: center; }
+        .gap-2 { gap: 10px; }
+        .mb-2 { margin-bottom: 15px; }
+
+        /* Header */
+        .header {
+            background-color: var(--bg-card);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .brand { font-size: 1.2em; font-weight: bold; }
+        .nav-icons span { margin-left: 15px; cursor: pointer; }
+
+        /* Main Layout Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2 คอลัมน์ */
+            gap: 20px;
+        }
+
+        /* Card Styles */
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        .full-width { grid-column: 1 / -1; }
+
+        /* Quick Stats Section */
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 15px;
+        }
+        .stat-box {
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            flex: 1;
+            border: 1px solid var(--border-color);
+        }
+        .stat-count { font-size: 1.5em; font-weight: bold; display: block; margin-bottom: 5px;}
+        .stat-label { font-size: 0.85em; color: var(--text-secondary); display: block; }
+        .stat-sublabel { font-size: 0.75em; color: var(--text-secondary); opacity: 0.7; }
+
+        /* Factory Map Section */
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .machine-box {
+            background-color: var(--bg-main);
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .machine-box:hover { background-color: var(--bg-card-hover); }
+        .machine-id { font-weight: bold; display: block; }
+        .machine-type { font-size: 0.8em; color: var(--text-secondary); }
+        .status-indicator { position: absolute; top: 5px; left: 5px; font-size: 0.8em; }
+        
+        .map-legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        /* Lists (Alerts & Schedule) */
+        .list-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .list-item:last-child { border-bottom: none; }
+        .item-title { font-weight: bold; margin-bottom: 4px; }
+        .item-detail { font-size: 0.9em; color: var(--text-secondary); margin-bottom: 4px;}
+        .item-meta { font-size: 0.85em; color: var(--text-secondary); opacity: 0.8; display: flex; align-items: center; gap: 5px;}
+
+        .view-all-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        .view-all-link:hover { text-decoration: underline; }
+
+        /* Schedule Specific */
+        .schedule-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+            font-size: 0.9em;
+        }
+        .btn-text { cursor: pointer; color: var(--text-secondary); }
+        .btn-text:hover { color: var(--text-primary); }
+
+        /* Value Summary Specific */
+        .value-block {
+            background-color: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .value-title { font-size: 0.9em; color: var(--text-secondary); margin-bottom: 10px; }
+        .value-amount { font-size: 1.4em; font-weight: bold; display: flex; align-items: center; gap: 10px;}
+        .value-trend { font-size: 0.85em; margin-top: 5px; }
+        .trend-down { color: var(--color-success); } /* Cost down is good */
+    </style>
+</head>
+<body>
+
+    <header class="header flex flex-between flex-center">
+        <div class="brand">
+            🏭 RESILIX - Factory Overview
+        </div>
+        <div class="nav-icons flex flex-center">
+            <span>🔔 3</span>
+            <span>👤 สมศักดิ์</span>
+            <span>⚙️</span>
+        </div>
+    </header>
+
+    <div class="dashboard-grid">
+        <div class="card full-width">
+            <div class="card-header">
+                <span>📊 QUICK STATS</span>
+                <span style="font-size: 0.9em; cursor: pointer;">วันนี้ ▼</span>
+            </div>
+            <div class="stats-container">
+                <div class="stat-box" style="border-color: var(--color-success);">
+                    <span class="stat-count text-success">🟢 24</span>
+                    <span class="stat-label">Normal</span>
+                    <span class="stat-sublabel">เครื่อง</span>
+                </div>
+                <div class="stat-box" style="border-color: var(--color-warning);">
+                    <span class="stat-count text-warning">🟡 3</span>
+                    <span class="stat-label">Warning</span>
+                    <span class="stat-sublabel">เครื่อง</span>
+                </div>
+                <div class="stat-box" style="border-color: var(--color-danger);">
+                    <span class="stat-count text-danger">🔴 1</span>
+                    <span class="stat-label">Critical</span>
+                    <span class="stat-sublabel">เครื่อง</span>
+                </div>
+                <div class="stat-box" style="border-color: var(--color-maint);">
+                    <span class="stat-count text-maint">🔧 2</span>
+                    <span class="stat-label">In Maint</span>
+                    <span class="stat-sublabel">กำลังซ่อม</span>
+                </div>
+                <div class="stat-box" style="border-color: var(--color-downtime);">
+                    <span class="stat-count" style="color: var(--color-downtime);">⏱️ 0</span>
+                    <span class="stat-label">Downtime</span>
+                    <span class="stat-sublabel">ชั่วโมง</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                🗺️ FACTORY MAP (Interactive)
+            </div>
+            <div class="map-grid">
+                <div class="machine-box" style="border-color: var(--color-success);">
+                    <span class="status-indicator">🟢</span><span class="machine-id">B1</span><span class="machine-type">Boiler</span>
+                </div>
+                <div class="machine-box" style="border-color: var(--color-warning);">
+                    <span class="status-indicator">🟡</span><span class="machine-id">B2</span><span class="machine-type">Boiler</span>
+                </div>
+                <div class="machine-box" style="border-color: var(--color-success);">
+                    <span class="status-indicator">🟢</span><span class="machine-id">B3</span><span class="machine-type">Boiler</span>
+                </div>
+                <div class="machine-box" style="border-color: var(--color-success);">
+                    <span class="status-indicator">🟢</span><span class="machine-id">P1</span><span class="machine-type">Pump</span>
+                </div>
+                <div class="machine-box" style="border-color: var(--color-success);">
+                    <span class="status-indicator">🟢</span><span class="machine-id">P2</span><span class="machine-type">Pump</span>
+                </div>
+                <div class="machine-box" style="border-color: var(--color-warning);">
+                    <span class="status-indicator">🟡</span><span class="machine-id">P3</span><span class="machine-type">Pump</span>
+                </div>
+                <div class="machine-box" style="border-color: var(--color-danger);">
+                    <span class="status-indicator">🔴</span><span class="machine-id">C1</span><span class="machine-type">Comp</span>
+                </div>
+                <div class="machine-box" style="border-color: var(--color-success);">
+                    <span class="status-indicator">🟢</span><span class="machine-id">C2</span><span class="machine-type">Comp</span>
+                </div>
+                <div class="machine-box" style="border-color: var(--color-maint);">
+                    <span class="status-indicator">🔧</span><span class="machine-id">C3</span><span class="machine-type">Comp</span>
+                </div>
+            </div>
+            <div class="map-legend">
+                <span>🟢 ปกติ</span>
+                <span>🟡 เตือน</span>
+                <span>🔴 วิกฤต</span>
+                <span>🔧 ซ่อม</span>
+            </div>
+            <div class="text-muted" style="text-align: center; margin-top: 5px;">(คลิกเครื่องเพื่อดูรายละเอียด)</div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                🚨 ACTIVE ALERTS
+            </div>
+            <div class="alert-list">
+                <div class="list-item">
+                    <div class="item-title text-danger">🔴 Compressor #2</div>
+                    <div class="item-detail">ความดันสูง - รอดำเนินการ</div>
+                    <div class="item-meta">⏱️ 15 นาทีที่แล้ว</div>
+                </div>
+                <div class="list-item">
+                    <div class="item-title text-warning">🟡 Pump #7</div>
+                    <div class="item-detail">Vibration สูง - กำลังวินิจฉัย</div>
+                    <div class="item-meta">⏱️ 32 นาทีที่แล้ว</div>
+                </div>
+                <div class="list-item">
+                    <div class="item-title text-warning">🟡 Motor #12</div>
+                    <div class="item-detail">อุณหภูมิสูง - นัดซ่อมแล้ว</div>
+                    <div class="item-meta">📅 14:00 วันนี้</div>
+                </div>
+            </div>
+            <a href="#" class="view-all-link">[ดูทั้งหมด →]</a>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                📅 TODAY'S SCHEDULE
+            </div>
+            <div class="schedule-list">
+                <div class="list-item">
+                    <div class="item-title">10:00 🔧 Motor #5 - เปลี่ยน bearing</div>
+                    <div class="item-detail">👷 สมชาย | 2 ชม.</div>
+                    <div class="item-meta text-success">🟢 กำลังดำเนินการ</div>
+                </div>
+                <div class="list-item">
+                    <div class="item-title">14:00 🔧 Pump #3 - เปลี่ยน seal</div>
+                    <div class="item-detail">👷 สมหมาย | 3 ชม.</div>
+                    <div class="item-meta text-warning">⏳ รอดำเนินการ</div>
+                </div>
+            </div>
+            <div class="schedule-actions">
+                <span class="btn-text">[+ เพิ่มงาน]</span>
+                <span class="btn-text">[ดูปฏิทิน →]</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                💰 VALUE SUMMARY (เดือนนี้)
+            </div>
+            
+            <div class="value-block">
+                <div class="value-title">Downtime ที่ป้องกันได้:</div>
+                <div class="value-amount">⏱️ 48 ชั่วโมง</div>
+                <div class="value-amount text-success">💵 ≈ 960,000 บาท</div>
+            </div>
+
+            <div class="value-block">
+                <div class="value-title">ต้นทุนซ่อมบำรุง:</div>
+                <div class="value-amount">🔧 125,000 บาท</div>
+                <div class="value-trend trend-down">📉 -18% จากเดือนก่อน</div>
+            </div>
+        </div>
+
+    </div> </body>
+</html>

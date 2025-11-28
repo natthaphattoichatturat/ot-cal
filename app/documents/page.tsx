@@ -22,8 +22,8 @@ const documents: DocumentType[] = [
     description: 'สลิปเงินเดือนพนักงานแต่ละคน พร้อมรายละเอียดค่าจ้าง OT เงินได้/เงินหัก และยอดสะสม YTD',
     dataSource: 'ข้อมูลค่าจ้างรายงวด + ยอดสะสม YTD (รายได้, ภาษี, SSO)',
     frequency: 'ทุกงวด (2 ครั้ง/เดือน)',
-    icon: '💵',
-    color: '#10b981'
+    icon: '',
+    color: '#000000'
   },
   {
     id: 'pnd1',
@@ -32,8 +32,8 @@ const documents: DocumentType[] = [
     description: 'แบบรายการภาษีเงินได้หัก ณ ที่จ่าย รวมยอดของพนักงานทั้งหมด',
     dataSource: '∑(รายได้รวม) และ ∑(ภาษีที่หัก) ของพนักงานทุกคนในเดือนนั้น',
     frequency: 'รายเดือน (ส่งภายใน 7 ของเดือนถัดไป)',
-    icon: '📝',
-    color: '#3b82f6'
+    icon: '',
+    color: '#000000'
   },
   {
     id: 'sso',
@@ -42,8 +42,8 @@ const documents: DocumentType[] = [
     description: 'แบบรายงานการส่งเงินสมทบประกันสังคม',
     dataSource: '∑(ค่าจ้างที่จ่ายจริง) และ ∑(SSO ที่หักสะสม) ครบในเดือนนั้น',
     frequency: 'รายเดือน (ส่งภายใน 15 ของเดือนถัดไป)',
-    icon: '🏛️',
-    color: '#8b5cf6'
+    icon: '',
+    color: '#000000'
   },
   {
     id: 'cert50',
@@ -52,8 +52,8 @@ const documents: DocumentType[] = [
     description: 'หนังสือรับรองการหักภาษี ณ ที่จ่าย สำหรับพนักงานแต่ละคน',
     dataSource: 'ยอดสะสมรายปี (YTD) ของ รายได้รวม และ ภาษีของแต่ละคน',
     frequency: 'รายปี (ออกให้พนักงานภายใน 15 ก.พ.)',
-    icon: '📄',
-    color: '#f59e0b'
+    icon: '',
+    color: '#000000'
   },
   {
     id: 'pnd1kor',
@@ -62,8 +62,8 @@ const documents: DocumentType[] = [
     description: 'แบบยื่นรายการภาษีเงินได้หัก ณ ที่จ่าย รายปี (สรุปรวมทั้งบริษัท)',
     dataSource: '∑(ยอดสะสมรายปีของรายได้) และ ∑(ภาษี) ของพนักงานทุกคน',
     frequency: 'รายปี (ยื่นภายในเดือน ก.พ.)',
-    icon: '📊',
-    color: '#ef4444'
+    icon: '',
+    color: '#000000'
   }
 ]
 
@@ -83,7 +83,7 @@ export default function DocumentsPage() {
     // TODO: Implement actual export functionality
     setTimeout(() => {
       const doc = documents.find(d => d.id === docId)
-      alert(`✅ กำลังสร้าง ${doc?.nameTh}...\n\n` +
+      alert(`กำลังสร้าง ${doc?.nameTh}...\n\n` +
         `งวด: ${selectedPeriod.month}/${selectedPeriod.year + 543} งวดที่ ${selectedPeriod.period}\n` +
         `พนักงาน: ${selectedEmployee === 'all' ? 'ทุกคน' : selectedEmployee}\n\n` +
         `(ฟังก์ชันนี้ยังไม่ได้เชื่อมต่อ API - กำลังพัฒนา)`)
@@ -97,7 +97,7 @@ export default function DocumentsPage() {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 className="page-title">📑 จัดการเอกสาร HR & Export PDF</h1>
+            <h1 className="page-title">จัดการเอกสาร HR & Export PDF</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
               Export เอกสารภาษี, ประกันสังคม, และสลิปเงินเดือน
             </p>
@@ -242,11 +242,11 @@ export default function DocumentsPage() {
             
             <div style={{ marginBottom: '16px', padding: '14px', background: 'white', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                <strong style={{ color: 'var(--text-primary)' }}>📊 ข้อมูลที่ใช้:</strong><br/>
+                <strong style={{ color: 'var(--text-primary)', fontWeight: '700' }}>ข้อมูลที่ใช้:</strong><br/>
                 <span style={{ fontSize: '13px' }}>{doc.dataSource}</span>
               </p>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-                <strong style={{ color: 'var(--text-primary)' }}>⏰ ความถี่:</strong><br/>
+                <strong style={{ color: 'var(--text-primary)', fontWeight: '700' }}>ความถี่:</strong><br/>
                 <span style={{ fontSize: '13px' }}>{doc.frequency}</span>
               </p>
             </div>
@@ -255,26 +255,24 @@ export default function DocumentsPage() {
               onClick={() => handleExport(doc.id)}
               disabled={exporting === doc.id}
               className="btn btn-primary"
-              style={{ 
-                width: '100%', 
-                background: doc.color,
-                border: `2px solid ${doc.color}`,
+              style={{
+                width: '100%',
                 opacity: exporting === doc.id ? 0.7 : 1,
                 cursor: exporting === doc.id ? 'wait' : 'pointer'
               }}
             >
-              {exporting === doc.id ? '⏳ กำลังสร้าง...' : '📥 Export PDF'}
+              {exporting === doc.id ? 'กำลังสร้าง...' : 'Export PDF'}
             </button>
           </div>
         ))}
       </div>
 
       {/* Detailed Info Box */}
-      <div className="card" style={{ marginTop: '24px', padding: '24px', background: '#f0fdf4', border: '2px solid #10b981' }}>
-        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#059669' }}>
-          📋 รายละเอียดข้อมูลในเอกสารแต่ละประเภท
+      <div className="card" style={{ marginTop: '24px', padding: '24px', background: 'var(--bg-surface)', border: '1px solid var(--border-light)' }}>
+        <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+          รายละเอียดข้อมูลในเอกสารแต่ละประเภท
         </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', fontSize: '13px', lineHeight: '1.8', color: '#065f46' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', fontSize: '13px', lineHeight: '1.8', color: 'var(--text-primary)' }}>
           <div>
             <strong>1. สลิปเงินเดือน:</strong>
             <ul style={{ marginLeft: '20px', marginTop: '8px', marginBottom: 0 }}>
