@@ -3,36 +3,36 @@
 @tailwind utilities;
 
 :root {
-  /* Professional Black & White Theme - เน้นสีขาว ดำ เทา */
-  --bg-page: #FAFAFA;
+  /* Professional Black & White Theme with subtle accent */
+  --bg-page: #FFFFFF;
   --bg-card: #FFFFFF;
-  --bg-surface: #F5F5F5;
+  --bg-surface: #FAFAFA;
 
-  /* Neutral theme - ขาว ดำ เทา */
-  --primary: #000000;
-  --primary-dark: #000000;
-  --primary-light: #F0F0F0;
-  --primary-hover: #333333;
+  /* Navy Blue Accent - เพิ่มสีน้ำเงินกรมเล็กน้อย */
+  --primary: #1e3a8a;
+  --primary-dark: #1e40af;
+  --primary-light: #eff6ff;
+  --primary-hover: #1e40af;
 
-  /* Text colors */
+  /* Text colors - ขาว ดำ */
   --text-primary: #000000;
-  --text-secondary: #404040;
-  --text-muted: #666666;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
   --text-white: #FFFFFF;
 
   /* Borders */
-  --border-light: #E5E5E5;
-  --border-default: #D4D4D4;
+  --border-light: #e5e7eb;
+  --border-default: #d1d5db;
 
-  /* Status colors - ลดความสดใส */
-  --status-success: #4A5568;
-  --status-success-bg: #F7F7F7;
-  --status-info: #4A5568;
-  --status-info-bg: #F7F7F7;
-  --status-warning: #666666;
-  --status-warning-bg: #F7F7F7;
-  --status-danger: #666666;
-  --status-danger-bg: #F7F7F7;
+  /* Status colors - ใช้น้ำเงินกรมเป็นหลัก */
+  --status-success: #1e3a8a;
+  --status-success-bg: #eff6ff;
+  --status-info: #1e40af;
+  --status-info-bg: #eff6ff;
+  --status-warning: #000000;
+  --status-warning-bg: #FAFAFA;
+  --status-danger: #000000;
+  --status-danger-bg: #FAFAFA;
 
   /* Day colors - จางมากๆ แทบมองไม่เห็น */
   --day-monday: #FFFEF5;

@@ -329,27 +329,26 @@ export default function WageDetailPage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button 
-              className="btn btn-primary"
+            <button
+              className="btn btn-secondary"
               onClick={() => {
                 setAdjustmentType('income')
                 setShowAddModal(true)
               }}
             >
-              ➕ เพิ่มเงินได้
+              เพิ่มเงินได้
             </button>
-            <button 
+            <button
               className="btn btn-secondary"
               onClick={() => {
                 setAdjustmentType('deduction')
                 setShowAddModal(true)
               }}
-              style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' }}
             >
-              ➖ เพิ่มเงินหัก
+              เพิ่มเงินหัก
             </button>
             <a href={`/wages?month=${month}&period=${period}`} className="btn btn-secondary">
-              ← กลับหน้ารายการ
+              กลับหน้ารายการ
             </a>
           </div>
         </div>
@@ -375,7 +374,7 @@ export default function WageDetailPage() {
           </div>
           <div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ประเภทพนักงาน</div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: employee.employment_type === 'รายเดือน' ? '#2563eb' : '#16a34a' }}>
+            <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
               {employee.employment_type || 'รายวัน'}
             </div>
           </div>
@@ -404,81 +403,81 @@ export default function WageDetailPage() {
 
       {/* สรุปวันทำงาน */}
       <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-primary)' }}>
-          📅 สรุปวันทำงาน (งวดที่ {currentPeriod})
+        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+          สรุปวันทำงาน (งวดที่ {currentPeriod})
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
-          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>วันทำงานปกติ</div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>{workDays}</div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>วัน</div>
           </div>
-          <div style={{ background: '#fef3c7', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#b45309', marginBottom: '4px' }}>ทำงานวันหยุด</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#b45309' }}>{holidayWorkDays}</div>
-            <div style={{ fontSize: '12px', color: '#b45309' }}>วัน</div>
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ทำงานวันหยุด</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>{holidayWorkDays}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>วัน</div>
           </div>
-          <div style={{ background: '#dbeafe', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#1e40af', marginBottom: '4px' }}>ทำกะดึก</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#1e40af' }}>{nightShiftDays}</div>
-            <div style={{ fontSize: '12px', color: '#1e40af' }}>วัน</div>
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ทำกะดึก</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>{nightShiftDays}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>วัน</div>
           </div>
-          <div style={{ background: '#fee2e2', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#dc2626', marginBottom: '4px' }}>วันลา</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#dc2626' }}>{periodWage.leave_days}</div>
-            <div style={{ fontSize: '12px', color: '#dc2626' }}>วัน</div>
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>วันลา</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>{periodWage.leave_days}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>วัน</div>
           </div>
-          <div style={{ background: '#fce7f3', padding: '16px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#be185d', marginBottom: '4px' }}>มาสาย</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#be185d' }}>{periodWage.late_minutes}</div>
-            <div style={{ fontSize: '12px', color: '#be185d' }}>นาที</div>
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>มาสาย</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>{periodWage.late_minutes}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>นาที</div>
           </div>
         </div>
       </div>
 
       {/* รายได้รวม */}
       <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#16a34a' }}>
-          💰 รายได้ (งวดที่ {currentPeriod})
+        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+          รายได้ (งวดที่ {currentPeriod})
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
+          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ค่าจ้างพื้นฐาน</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
               {periodWage.base_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
-          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
+          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ค่า OT ปกติ (×1.5)</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
               {periodWage.ot1_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
-          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
+          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ค่า OT พิเศษ (×2)</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
               {periodWage.ot2_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
-          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
+          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ค่า OT ขั้นสูง (×3)</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
               {periodWage.ot3_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
-          <div style={{ background: periodWage.attendance_bonus > 0 ? '#dcfce7' : 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '12px', color: periodWage.attendance_bonus > 0 ? '#16a34a' : 'var(--text-muted)', marginBottom: '4px' }}>
-              เบี้ยขยัน {periodWage.attendance_bonus > 0 ? '✓' : ''}
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: periodWage.attendance_bonus > 0 ? '700' : '400' }}>
+              เบี้ยขยัน
             </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: periodWage.attendance_bonus > 0 ? '#16a34a' : 'var(--text-primary)' }}>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
               {periodWage.attendance_bonus.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
-          <div style={{ background: periodWage.night_shift_allowance > 0 ? '#dbeafe' : 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '12px', color: periodWage.night_shift_allowance > 0 ? '#1e40af' : 'var(--text-muted)', marginBottom: '4px' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
               ค่ากะดึก (40฿/วัน)
             </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: periodWage.night_shift_allowance > 0 ? '#1e40af' : 'var(--text-primary)' }}>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
               {periodWage.night_shift_allowance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
@@ -486,32 +485,32 @@ export default function WageDetailPage() {
 
         {/* รายการเงินเพิ่มพิเศษ */}
         {incomeAdjustments.length > 0 && (
-          <div style={{ marginTop: '16px', padding: '16px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: '#16a34a', marginBottom: '12px' }}>
-              ➕ เงินเพิ่มพิเศษ
+          <div style={{ marginTop: '16px', padding: '16px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
+              เงินเพิ่มพิเศษ
             </div>
             {incomeAdjustments.map(adj => (
-              <div key={adj.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #bbf7d0' }}>
+              <div key={adj.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-light)' }}>
                 <div>
                   <div style={{ fontWeight: '500' }}>{adj.category}</div>
                   {adj.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{adj.description}</div>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontWeight: '600', color: '#16a34a' }}>
+                  <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
                     +{adj.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                   </span>
-                  <button 
+                  <button
                     onClick={() => handleDeleteAdjustment(adj.id)}
-                    style={{ padding: '4px 8px', fontSize: '12px', color: '#dc2626', background: 'white', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer' }}
+                    style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--text-primary)', background: 'white', border: '1px solid var(--border-light)', borderRadius: '4px', cursor: 'pointer' }}
                   >
                     ลบ
                   </button>
                 </div>
               </div>
             ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '8px', fontWeight: '600' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '8px', fontWeight: '700' }}>
               <span>รวมเงินเพิ่มพิเศษ</span>
-              <span style={{ color: '#16a34a' }}>
+              <span style={{ color: 'var(--text-primary)' }}>
                 +{periodWage.additional_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -519,10 +518,10 @@ export default function WageDetailPage() {
         )}
 
         {/* รวมรายได้ */}
-        <div style={{ marginTop: '16px', padding: '16px', background: '#dcfce7', borderRadius: '8px', border: '2px solid #16a34a' }}>
+        <div style={{ marginTop: '16px', padding: '16px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: '#16a34a' }}>รวมรายได้ทั้งหมด</div>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: '#16a34a' }}>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>รวมรายได้ทั้งหมด</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>
               {periodWage.total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
             </div>
           </div>
@@ -531,35 +530,35 @@ export default function WageDetailPage() {
 
       {/* เงินหัก */}
       <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#dc2626' }}>
-          📉 เงินหัก (งวดที่ {currentPeriod})
+        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+          เงินหัก (งวดที่ {currentPeriod})
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-          <div style={{ background: periodWage.late_deduction > 0 ? '#fef2f2' : 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '12px', color: periodWage.late_deduction > 0 ? '#dc2626' : 'var(--text-muted)', marginBottom: '4px' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: periodWage.late_deduction > 0 ? '700' : '400' }}>
               หักค่ามาสาย ({periodWage.late_minutes} นาที)
             </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: periodWage.late_deduction > 0 ? '#dc2626' : 'var(--text-primary)' }}>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
               -{periodWage.late_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
-          <div style={{ background: periodWage.leave_deduction > 0 ? '#fef2f2' : 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '12px', color: periodWage.leave_deduction > 0 ? '#dc2626' : 'var(--text-muted)', marginBottom: '4px' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: periodWage.leave_deduction > 0 ? '700' : '400' }}>
               หักค่าลา ({periodWage.leave_days} วัน)
             </div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: periodWage.leave_deduction > 0 ? '#dc2626' : 'var(--text-primary)' }}>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
               -{periodWage.leave_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
-          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
+          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ประกันสังคม (SSO)</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
               -{periodWage.sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
-          <div style={{ background: '#fef3c7', padding: '16px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '12px', color: '#b45309', marginBottom: '4px' }}>ภาษีเงินได้หัก ณ ที่จ่าย</div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#b45309' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>ภาษีเงินได้หัก ณ ที่จ่าย</div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
               -{periodWage.tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
@@ -567,32 +566,32 @@ export default function WageDetailPage() {
 
         {/* รายการเงินหักพิเศษ */}
         {deductionAdjustments.length > 0 && (
-          <div style={{ marginTop: '16px', padding: '16px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: '#dc2626', marginBottom: '12px' }}>
-              ➖ เงินหักพิเศษ
+          <div style={{ marginTop: '16px', padding: '16px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
+              เงินหักพิเศษ
             </div>
             {deductionAdjustments.map(adj => (
-              <div key={adj.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #fecaca' }}>
+              <div key={adj.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-light)' }}>
                 <div>
                   <div style={{ fontWeight: '500' }}>{adj.category}</div>
                   {adj.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{adj.description}</div>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontWeight: '600', color: '#dc2626' }}>
+                  <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
                     -{adj.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                   </span>
-                  <button 
+                  <button
                     onClick={() => handleDeleteAdjustment(adj.id)}
-                    style={{ padding: '4px 8px', fontSize: '12px', color: '#dc2626', background: 'white', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer' }}
+                    style={{ padding: '4px 8px', fontSize: '12px', color: 'var(--text-primary)', background: 'white', border: '1px solid var(--border-light)', borderRadius: '4px', cursor: 'pointer' }}
                   >
                     ลบ
                   </button>
                 </div>
               </div>
             ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '8px', fontWeight: '600' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '8px', fontWeight: '700' }}>
               <span>รวมเงินหักพิเศษ</span>
-              <span style={{ color: '#dc2626' }}>
+              <span style={{ color: 'var(--text-primary)' }}>
                 -{periodWage.additional_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -600,10 +599,10 @@ export default function WageDetailPage() {
         )}
 
         {/* รวมเงินหัก */}
-        <div style={{ marginTop: '16px', padding: '16px', background: '#fee2e2', borderRadius: '8px', border: '2px solid #dc2626' }}>
+        <div style={{ marginTop: '16px', padding: '16px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: '#dc2626' }}>รวมเงินหักทั้งหมด</div>
-            <div style={{ fontSize: '24px', fontWeight: '900', color: '#dc2626' }}>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>รวมเงินหักทั้งหมด</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>
               -{periodWage.total_deductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
             </div>
           </div>
@@ -613,8 +612,8 @@ export default function WageDetailPage() {
       {/* รายละเอียดการลา */}
       {leaveRecords.length > 0 && (
         <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-primary)' }}>
-            📋 รายละเอียดการลา
+          <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+            รายละเอียดการลา
           </h3>
           <div className="table-wrapper">
             <table className="data-table">
@@ -635,12 +634,14 @@ export default function WageDetailPage() {
                     <td className="text-center">{leave.leave_hours} ชม.</td>
                     <td>{leave.reason || '-'}</td>
                     <td>
-                      <span style={{ 
-                        padding: '4px 8px', 
-                        borderRadius: '4px', 
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
                         fontSize: '12px',
-                        background: leave.status === 'approved' ? '#dcfce7' : '#fef3c7',
-                        color: leave.status === 'approved' ? '#16a34a' : '#b45309'
+                        background: 'var(--bg-surface)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--border-light)',
+                        fontWeight: '700'
                       }}>
                         {leave.status === 'approved' ? 'อนุมัติ' : leave.status}
                       </span>
@@ -654,15 +655,15 @@ export default function WageDetailPage() {
       )}
 
       {/* เงินสุทธิ */}
-      <div className="card" style={{ marginBottom: '24px', padding: '24px', background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)' }}>
-        <div style={{ textAlign: 'center', color: 'white' }}>
-          <div style={{ fontSize: '16px', marginBottom: '8px', opacity: 0.9 }}>💰 เงินสุทธิที่ได้รับ</div>
-          <div style={{ fontSize: '48px', fontWeight: '900' }}>
+      <div className="card" style={{ marginBottom: '24px', padding: '24px', background: 'var(--bg-surface)', border: '1px solid var(--border-light)' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '16px', marginBottom: '8px', color: 'var(--text-muted)', fontWeight: '700' }}>เงินสุทธิที่ได้รับ</div>
+          <div style={{ fontSize: '48px', fontWeight: '700', color: 'var(--text-primary)' }}>
             {periodWage.net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
           </div>
-          <div style={{ fontSize: '18px', opacity: 0.9 }}>บาท</div>
-          <div style={{ marginTop: '16px', fontSize: '13px', opacity: 0.8 }}>
-            รายได้ {periodWage.total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} - 
+          <div style={{ fontSize: '18px', color: 'var(--text-muted)' }}>บาท</div>
+          <div style={{ marginTop: '16px', fontSize: '13px', color: 'var(--text-muted)' }}>
+            รายได้ {periodWage.total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} -
             เงินหัก {periodWage.total_deductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
           </div>
         </div>
@@ -670,31 +671,31 @@ export default function WageDetailPage() {
 
       {/* ชั่วโมง OT */}
       <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-primary)' }}>
-          ⏰ จำนวนชั่วโมง OT
+        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+          จำนวนชั่วโมง OT
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
-          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
+          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>OT ปกติ (×1.5)</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
               {dailyWages.reduce((sum, dw) => sum + dw.ot_normal_hours, 0).toFixed(2)} ชม.
             </div>
           </div>
-          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
+          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>OT พิเศษ (×2)</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
               {dailyWages.reduce((sum, dw) => sum + dw.ot_special_hours, 0).toFixed(2)} ชม.
             </div>
           </div>
-          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px' }}>
+          <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>OT ขั้นสูง (×3)</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
               {dailyWages.reduce((sum, dw) => sum + dw.ot_premium_hours, 0).toFixed(2)} ชม.
             </div>
           </div>
-          <div style={{ background: 'var(--primary-light)', padding: '16px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--primary)', marginBottom: '4px', fontWeight: '600' }}>รวม OT ทั้งหมด</div>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--primary)' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '700' }}>รวม OT ทั้งหมด</div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
               {dailyWages.reduce((sum, dw) => sum + dw.ot_normal_hours + dw.ot_special_hours + dw.ot_premium_hours, 0).toFixed(2)} ชม.
             </div>
           </div>
@@ -779,12 +780,12 @@ export default function WageDetailPage() {
       {/* ประกันสังคม */}
       {sso && (
         <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--text-primary)' }}>
-            🏥 ประกันสังคม (SSO) - {thaiMonths[monthNum - 1]} {year + 543}
+          <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+            ประกันสังคม (SSO) - {thaiMonths[monthNum - 1]} {year + 543}
           </h3>
-          <div style={{ background: '#fef3c7', padding: '12px', borderRadius: '6px', marginBottom: '16px', border: '1px solid #f59e0b' }}>
-            <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: 0 }}>
-              ⚠️ ประกันสังคมคำนวณแบบรายเดือน (2 งวดรวมกัน) โดยหักสูงสุดไม่เกิน 750 บาท/เดือน
+          <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '6px', marginBottom: '16px', border: '1px solid var(--border-light)' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: 0, fontWeight: '700' }}>
+              ประกันสังคมคำนวณแบบรายเดือน (2 งวดรวมกัน) โดยหักสูงสุดไม่เกิน 750 บาท/เดือน
             </p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
@@ -812,21 +813,21 @@ export default function WageDetailPage() {
                 {sso.sso_base.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
               </div>
             </div>
-            <div style={{ background: 'var(--surface-bg)', padding: '12px', borderRadius: '6px' }}>
+            <div style={{ background: 'var(--surface-bg)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>SSO งวดที่ 1</div>
               <div style={{ fontSize: '15px', fontWeight: '600' }}>
                 {sso.period1_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
               </div>
             </div>
-            <div style={{ background: 'var(--surface-bg)', padding: '12px', borderRadius: '6px' }}>
+            <div style={{ background: 'var(--surface-bg)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>SSO งวดที่ 2</div>
               <div style={{ fontSize: '15px', fontWeight: '600' }}>
                 {sso.period2_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
               </div>
             </div>
-            <div style={{ background: '#fee2e2', padding: '12px', borderRadius: '6px' }}>
-              <div style={{ fontSize: '12px', color: '#ef4444', marginBottom: '4px', fontWeight: '600' }}>SSO รวมทั้งเดือน</div>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: '#ef4444' }}>
+            <div style={{ background: 'var(--bg-surface)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '700' }}>SSO รวมทั้งเดือน</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {sso.total_monthly_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
               </div>
             </div>
@@ -843,43 +844,43 @@ export default function WageDetailPage() {
       {/* YTD Summary */}
       {ytd && (
         <div className="card" style={{ marginTop: '24px', marginBottom: '24px', padding: '24px' }}>
-          <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color: '#1e3a8a', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-            📊 ยอดสะสมรายปี {year + 543}
+          <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
+            ยอดสะสมรายปี {year + 543}
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '14px', color: '#64748b' }}>1. เงินเดือนสะสมทั้งปี</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>1. เงินเดือนสะสมทั้งปี</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {ytd.ytd_gross_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '14px', color: '#64748b' }}>2. ภาษีเงินได้สะสมทั้งปี</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>2. ภาษีเงินได้สะสมทั้งปี</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {ytd.ytd_tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '14px', color: '#64748b' }}>3. ประกันสังคมสะสมทั้งปี</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>3. ประกันสังคมสะสมทั้งปี</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {ytd.ytd_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #dbeafe' }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e40af' }}>4. รวมเงินได้สะสมทั้งปี</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#1e3a8a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>4. รวมเงินได้สะสมทั้งปี</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {ytd.ytd_total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fee2e2' }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>5. รวมหักสะสมทั้งปี</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#7f1d1d' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>5. รวมหักสะสมทั้งปี</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {ytd.ytd_total_deductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: '#1e3a8a', borderRadius: '8px', color: 'white' }}>
-              <div style={{ fontSize: '16px', fontWeight: '700' }}>6. เงินได้สุทธิสะสมทั้งปี</div>
-              <div style={{ fontSize: '20px', fontWeight: '900' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>6. เงินได้สุทธิสะสมทั้งปี</div>
+              <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {ytd.ytd_net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
@@ -890,48 +891,48 @@ export default function WageDetailPage() {
       {/* All-Time Summary */}
       {allTimeData && (
         <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
-          <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color: '#312e81', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-            🌟 ยอดสะสมทั้งหมด (ตั้งแต่เริ่มทำงาน)
+          <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
+            ยอดสะสมทั้งหมด (ตั้งแต่เริ่มทำงาน)
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '14px', color: '#64748b' }}>1. เงินเดือนสะสมทั้งหมด</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>1. เงินเดือนสะสมทั้งหมด</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {allTimeData.total_gross_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '14px', color: '#64748b' }}>2. ภาษีเงินได้สะสมทั้งหมด</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>2. ภาษีเงินได้สะสมทั้งหมด</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {allTimeData.total_tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '14px', color: '#64748b' }}>3. ประกันสังคมสะสมทั้งหมด</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>3. ประกันสังคมสะสมทั้งหมด</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {allTimeData.total_sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#eef2ff', borderRadius: '8px', border: '1px solid #e0e7ff' }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#3730a3' }}>4. รวมเงินได้สะสมทั้งหมด</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#312e81' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>4. รวมเงินได้สะสมทั้งหมด</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {allTimeData.total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fee2e2' }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#991b1b' }}>5. รวมหักสะสมทั้งหมด</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#7f1d1d' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>5. รวมหักสะสมทั้งหมด</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {allTimeData.total_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: '#312e81', borderRadius: '8px', color: 'white' }}>
-              <div style={{ fontSize: '16px', fontWeight: '700' }}>6. เงินได้สุทธิสะสมทั้งหมด</div>
-              <div style={{ fontSize: '20px', fontWeight: '900' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>6. เงินได้สุทธิสะสมทั้งหมด</div>
+              <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {allTimeData.total_net_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
-            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '12px', background: '#f1f5f9', borderRadius: '8px', fontSize: '14px', color: '#475569' }}>
-              📌 ทำงานมาแล้ว: <strong style={{ color: '#0f172a' }}>{allTimeData.total_periods} งวด</strong>
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', fontSize: '14px', color: 'var(--text-muted)', border: '1px solid var(--border-light)' }}>
+              ทำงานมาแล้ว: <strong style={{ color: 'var(--text-primary)' }}>{allTimeData.total_periods} งวด</strong>
             </div>
           </div>
         </div>
@@ -958,20 +959,21 @@ export default function WageDetailPage() {
             width: '90%',
             maxWidth: '500px',
             maxHeight: '90vh',
-            overflow: 'auto'
+            overflow: 'auto',
+            border: '1px solid var(--border-light)'
           }}>
-            <h3 style={{ 
-              fontSize: '18px', 
-              fontWeight: '700', 
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '700',
               marginBottom: '20px',
-              color: adjustmentType === 'income' ? '#16a34a' : '#dc2626'
+              color: 'var(--text-primary)'
             }}>
-              {adjustmentType === 'income' ? '➕ เพิ่มเงินได้' : '➖ เพิ่มเงินหัก'}
+              {adjustmentType === 'income' ? 'เพิ่มเงินได้' : 'เพิ่มเงินหัก'}
             </h3>
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>
-                ประเภท <span style={{ color: '#dc2626' }}>*</span>
+                ประเภท <span style={{ color: 'var(--text-primary)' }}>*</span>
               </label>
               <select
                 value={adjustmentCategory}
@@ -980,7 +982,7 @@ export default function WageDetailPage() {
                   width: '100%',
                   padding: '10px 12px',
                   borderRadius: '6px',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--border-light)',
                   fontSize: '14px'
                 }}
               >
@@ -993,7 +995,7 @@ export default function WageDetailPage() {
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>
-                จำนวนเงิน (บาท) <span style={{ color: '#dc2626' }}>*</span>
+                จำนวนเงิน (บาท) <span style={{ color: 'var(--text-primary)' }}>*</span>
               </label>
               <input
                 type="number"
@@ -1004,7 +1006,7 @@ export default function WageDetailPage() {
                   width: '100%',
                   padding: '10px 12px',
                   borderRadius: '6px',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--border-light)',
                   fontSize: '14px'
                 }}
               />
@@ -1023,7 +1025,7 @@ export default function WageDetailPage() {
                   width: '100%',
                   padding: '10px 12px',
                   borderRadius: '6px',
-                  border: '1px solid #d1d5db',
+                  border: '1px solid var(--border-light)',
                   fontSize: '14px',
                   resize: 'vertical'
                 }}
@@ -1047,10 +1049,6 @@ export default function WageDetailPage() {
                 onClick={handleAddAdjustment}
                 className="btn btn-primary"
                 disabled={saving}
-                style={{ 
-                  background: adjustmentType === 'income' ? '#16a34a' : '#dc2626',
-                  borderColor: adjustmentType === 'income' ? '#16a34a' : '#dc2626'
-                }}
               >
                 {saving ? 'กำลังบันทึก...' : 'บันทึก'}
               </button>
