@@ -391,13 +391,13 @@ export default function Home() {
             <a href="/employees" className="btn btn-secondary">
               {t('nav.employees')}
             </a>
+            <a href="/dashboard" className="btn btn-secondary">
+              {t('nav.dashboard')}
+            </a>
             <a href="/leave" className="btn btn-secondary">
               {t('nav.leave')}
             </a>
             <a href="/guide/webapp" className="btn btn-secondary">
-              {t('nav.guide')}
-            </a>
-            <a href="/guide/line" className="btn btn-secondary">
               {t('nav.guide')}
             </a>
           </div>
