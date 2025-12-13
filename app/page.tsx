@@ -14,6 +14,10 @@ interface AttendanceData {
       otNormalHours: number
       otSpecialHours: number
       otPremiumHours: number
+      otHoursMultiplied: number
+      otNormalHoursMultiplied: number
+      otSpecialHoursMultiplied: number
+      otPremiumHoursMultiplied: number
       actualHours: number
       isHoliday: boolean
       late: boolean
@@ -283,6 +287,19 @@ export default function Home() {
               <tr>
                 <th style={{ minWidth: '120px' }}>{t('home.employeeId')}</th>
                 <th style={{ minWidth: '180px' }}>{t('home.employeeName')}</th>
+
+                {/* 8 คอลัมน์สรุป */}
+                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd', fontWeight: '700' }}>รวม OT</th>
+                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT ปกติ</th>
+                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT พิเศษ</th>
+                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT ขั้นสูง</th>
+
+                <th className="text-center" style={{ minWidth: '100px', background: '#fff3e0', fontWeight: '700' }}>รวม OT (คำนวณ)</th>
+                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT ปกติ (×1.5)</th>
+                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT พิเศษ (×2)</th>
+                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT ขั้นสูง (×3)</th>
+
+                {/* คอลัมน์วัน */}
                 {dates.map(date => {
                   const day = parseInt(date.split('-')[2])
                   const dateObj = new Date(date)
@@ -294,16 +311,12 @@ export default function Home() {
                     </th>
                   )
                 })}
-                <th className="text-center" style={{ minWidth: '90px' }}>{t('home.totalOT')}</th>
-                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>{t('home.normalOT')}</th>
-                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>{t('home.specialOT')}</th>
-                <th className="text-center" style={{ minWidth: '100px', background: 'var(--surface-bg)' }}>{t('home.premiumOT')}</th>
               </tr>
             </thead>
             <tbody>
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={dates.length + 6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={dates.length + 10} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     {searchQuery ? t('home.noData') : t('home.noData')}
                   </td>
                 </tr>
@@ -314,12 +327,22 @@ export default function Home() {
                   let totalSpecialOT = 0
                   let totalPremiumOT = 0
 
+                  let totalOTMultiplied = 0
+                  let totalNormalOTMultiplied = 0
+                  let totalSpecialOTMultiplied = 0
+                  let totalPremiumOTMultiplied = 0
+
                   dates.forEach(date => {
                     if (employee.attendance[date]) {
                       totalOT += employee.attendance[date].otHours
                       totalNormalOT += employee.attendance[date].otNormalHours || 0
                       totalSpecialOT += employee.attendance[date].otSpecialHours || 0
                       totalPremiumOT += employee.attendance[date].otPremiumHours || 0
+
+                      totalOTMultiplied += employee.attendance[date].otHoursMultiplied || 0
+                      totalNormalOTMultiplied += employee.attendance[date].otNormalHoursMultiplied || 0
+                      totalSpecialOTMultiplied += employee.attendance[date].otSpecialHoursMultiplied || 0
+                      totalPremiumOTMultiplied += employee.attendance[date].otPremiumHoursMultiplied || 0
                     }
                   })
 
@@ -327,6 +350,35 @@ export default function Home() {
                     <tr key={employee.employeeId}>
                       <td>{employee.employeeId}</td>
                       <td className="employee-name">{employee.name}</td>
+
+                      {/* 8 คอลัมน์สรุป */}
+                      <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                        {totalOT.toFixed(2)}
+                      </td>
+                      <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                        {totalNormalOT.toFixed(2)}
+                      </td>
+                      <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                        {totalSpecialOT.toFixed(2)}
+                      </td>
+                      <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                        {totalPremiumOT.toFixed(2)}
+                      </td>
+
+                      <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                        {totalOTMultiplied.toFixed(2)}
+                      </td>
+                      <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                        {totalNormalOTMultiplied.toFixed(2)}
+                      </td>
+                      <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                        {totalSpecialOTMultiplied.toFixed(2)}
+                      </td>
+                      <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                        {totalPremiumOTMultiplied.toFixed(2)}
+                      </td>
+
+                      {/* คอลัมน์วัน */}
                       {dates.map(date => {
                         const att = employee.attendance[date]
                         const dayColor = getDayColor(date)
@@ -345,18 +397,6 @@ export default function Home() {
                           </td>
                         )
                       })}
-                      <td className="text-center" style={{ fontWeight: '700', fontSize: '15px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
-                        {totalOT.toFixed(2)}
-                      </td>
-                      <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
-                        {totalNormalOT.toFixed(2)}
-                      </td>
-                      <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
-                        {totalSpecialOT.toFixed(2)}
-                      </td>
-                      <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
-                        {totalPremiumOT.toFixed(2)}
-                      </td>
                     </tr>
                   )
                 })

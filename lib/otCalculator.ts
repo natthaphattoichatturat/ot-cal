@@ -14,10 +14,14 @@ interface WorkSession {
   checkInTime: string
   checkOutTime: string
   actualHours: number
-  otHours: number
-  otNormalHours: number // OT ปกติที่คูณ 1.5
-  otSpecialHours: number // OT พิเศษที่คูณ 2 (8 ชม.แรกในวันหยุด - รายวัน) หรือ x1 (รายเดือน)
-  otPremiumHours: number // OT ขั้นสูงที่คูณ 3 (เกิน 8 ชม.ในวันหยุด)
+  otHours: number // รวมชั่วโมง OT ทั้งหมด (จริง ไม่คูณ)
+  otNormalHours: number // OT ปกติ (ชั่วโมงจริง ไม่คูณ)
+  otSpecialHours: number // OT พิเศษ (ชั่วโมงจริง ไม่คูณ)
+  otPremiumHours: number // OT ขั้นสูง (ชั่วโมงจริง ไม่คูณ)
+  otNormalHoursMultiplied: number // OT ปกติที่คำนวณแล้ว (×1.5)
+  otSpecialHoursMultiplied: number // OT พิเศษที่คำนวณแล้ว (รายวัน ×2, รายเดือน ×1)
+  otPremiumHoursMultiplied: number // OT ขั้นสูงที่คำนวณแล้ว (×3)
+  otHoursMultiplied: number // รวม OT ที่คำนวณแล้ว
   isHoliday: boolean
   shift: 1 | 2 // 1 = 8:00-17:00, 2 = 20:00-05:00
   late: boolean
@@ -78,7 +82,20 @@ function calculateShift1OT(
   checkInDate: Date,
   isHoliday: boolean,
   employmentType: 'รายวัน' | 'รายเดือน' = 'รายวัน'
-): { actualHours: number; otHours: number; otNormalHours: number; otSpecialHours: number; otPremiumHours: number; allowLateNextDay: boolean; late: boolean; lateHours: number } {
+): {
+  actualHours: number;
+  otHours: number;
+  otNormalHours: number;
+  otSpecialHours: number;
+  otPremiumHours: number;
+  otNormalHoursMultiplied: number;
+  otSpecialHoursMultiplied: number;
+  otPremiumHoursMultiplied: number;
+  otHoursMultiplied: number;
+  allowLateNextDay: boolean;
+  late: boolean;
+  lateHours: number;
+} {
   const scheduledIn = 480 // 8:00
   const scheduledOut = 1020 // 17:00
   const otStart = 360 // 6:00
@@ -167,53 +184,70 @@ function calculateShift1OT(
     actualHours = (morningOT + nightOT) / 60
   }
 
-  // Calculate OT hours based on holiday status and employment type
-  let otHours = 0
-  let otNormalHours = 0
-  let otSpecialHours = 0
-  let otPremiumHours = 0
+  // Calculate OT hours - เก็บชั่วโมงจริงและชั่วโมงที่คำนวณแล้วแยกกัน
+  let otHours = 0 // รวมชั่วโมงจริง (ไม่คูณ)
+  let otNormalHours = 0 // ชั่วโมงจริง OT ปกติ
+  let otSpecialHours = 0 // ชั่วโมงจริง OT พิเศษ
+  let otPremiumHours = 0 // ชั่วโมงจริง OT ขั้นสูง
+
+  let otNormalHoursMultiplied = 0 // ชั่วโมงที่คำนวณแล้ว (×1.5)
+  let otSpecialHoursMultiplied = 0 // ชั่วโมงที่คำนวณแล้ว (×2 หรือ ×1)
+  let otPremiumHoursMultiplied = 0 // ชั่วโมงที่คำนวณแล้ว (×3)
+  let otHoursMultiplied = 0 // รวมชั่วโมงที่คำนวณแล้ว
 
   if (isHoliday) {
     // วันหยุด/อาทิตย์: คำนวณ OT แบบพิเศษ
     const totalMinutes = workMinutes
-    
+
     if (totalMinutes <= 480) {
       // ทำงานไม่เกิน 8 ชม.
-      // ปัดลงเป็น .0 หรือ .5 เท่านั้น (เช่น 7.12 → 7.0, 7.68 → 7.5)
+      // ปัดลงเป็น .0 หรือ .5 เท่านั้น
       otSpecialHours = roundDownToHalfHourInHours(totalMinutes / 60)
+      otHours = otSpecialHours
+
+      // คำนวณชั่วโมงที่คูณแล้ว
       if (employmentType === 'รายวัน') {
-        // พนักงานรายวัน: 8 ชม.แรก × 2
-        otHours = otSpecialHours * 2
+        otSpecialHoursMultiplied = otSpecialHours * 2
       } else {
-        // พนักงานรายเดือน: 8 ชม.แรก × 1
-        otHours = otSpecialHours * 1
+        otSpecialHoursMultiplied = otSpecialHours * 1
       }
+      otHoursMultiplied = otSpecialHoursMultiplied
     } else {
       // ทำงานเกิน 8 ชม.
-      otSpecialHours = 8 // 8 ชั่วโมงเต็ม (ไม่ต้องปัด)
-      // ปัดลงเป็น .0 หรือ .5 เท่านั้น (เช่น 3.12 → 3.0, 3.68 → 3.5)
+      otSpecialHours = 8 // 8 ชั่วโมงเต็ม
       otPremiumHours = roundDownToHalfHourInHours((totalMinutes - 480) / 60)
-      
+      otHours = otSpecialHours + otPremiumHours
+
+      // คำนวณชั่วโมงที่คูณแล้ว
       if (employmentType === 'รายวัน') {
-        // พนักงานรายวัน: 8 ชม.แรก × 2, ที่เกิน × 3
-        otHours = (otSpecialHours * 2) + (otPremiumHours * 3)
+        otSpecialHoursMultiplied = otSpecialHours * 2
       } else {
-        // พนักงานรายเดือน: 8 ชม.แรก × 1, ที่เกิน × 3
-        otHours = (otSpecialHours * 1) + (otPremiumHours * 3)
+        otSpecialHoursMultiplied = otSpecialHours * 1
       }
+      otPremiumHoursMultiplied = otPremiumHours * 3
+      otHoursMultiplied = otSpecialHoursMultiplied + otPremiumHoursMultiplied
     }
   } else {
-    // วันธรรมดา: OT ปกติ × 1.5
-    otNormalHours = actualHours
-    otHours = actualHours * 1.5
+    // วันธรรมดา: OT ปกติ
+    // ปัดลงเป็น .0 หรือ .5
+    otNormalHours = roundDownToHalfHourInHours(actualHours)
+    otHours = otNormalHours
+
+    // คำนวณชั่วโมงที่คูณแล้ว (×1.5)
+    otNormalHoursMultiplied = otNormalHours * 1.5
+    otHoursMultiplied = otNormalHoursMultiplied
   }
 
   return {
     actualHours: Math.round(actualHours * 100) / 100,
     otHours: Math.round(otHours * 100) / 100,
     otNormalHours: Math.round(otNormalHours * 100) / 100,
-    otSpecialHours: otSpecialHours, // ปัดไว้แล้วด้วย roundDownToHalfHourInHours
-    otPremiumHours: otPremiumHours, // ปัดไว้แล้วด้วย roundDownToHalfHourInHours
+    otSpecialHours: Math.round(otSpecialHours * 100) / 100,
+    otPremiumHours: Math.round(otPremiumHours * 100) / 100,
+    otNormalHoursMultiplied: Math.round(otNormalHoursMultiplied * 100) / 100,
+    otSpecialHoursMultiplied: Math.round(otSpecialHoursMultiplied * 100) / 100,
+    otPremiumHoursMultiplied: Math.round(otPremiumHoursMultiplied * 100) / 100,
+    otHoursMultiplied: Math.round(otHoursMultiplied * 100) / 100,
     allowLateNextDay,
     late,
     lateHours: Math.round(lateHours * 100) / 100
@@ -230,7 +264,20 @@ function calculateShift2OT(
   checkInDate: Date,
   isHoliday: boolean,
   employmentType: 'รายวัน' | 'รายเดือน' = 'รายวัน'
-): { actualHours: number; otHours: number; otNormalHours: number; otSpecialHours: number; otPremiumHours: number; allowLateNextDay: boolean; late: boolean; lateHours: number } {
+): {
+  actualHours: number;
+  otHours: number;
+  otNormalHours: number;
+  otSpecialHours: number;
+  otPremiumHours: number;
+  otNormalHoursMultiplied: number;
+  otSpecialHoursMultiplied: number;
+  otPremiumHoursMultiplied: number;
+  otHoursMultiplied: number;
+  allowLateNextDay: boolean;
+  late: boolean;
+  lateHours: number;
+} {
   const scheduledIn = 1200 // 20:00
   const scheduledOut = 300 // 5:00 next day
   const otStart = 1050 // 17:30
@@ -295,53 +342,70 @@ function calculateShift2OT(
     actualHours = (eveningOT + morningOT) / 60
   }
 
-  // Calculate OT hours based on holiday status and employment type
-  let otHours = 0
-  let otNormalHours = 0
-  let otSpecialHours = 0
-  let otPremiumHours = 0
+  // Calculate OT hours - เก็บชั่วโมงจริงและชั่วโมงที่คำนวณแล้วแยกกัน
+  let otHours = 0 // รวมชั่วโมงจริง (ไม่คูณ)
+  let otNormalHours = 0 // ชั่วโมงจริง OT ปกติ
+  let otSpecialHours = 0 // ชั่วโมงจริง OT พิเศษ
+  let otPremiumHours = 0 // ชั่วโมงจริง OT ขั้นสูง
+
+  let otNormalHoursMultiplied = 0 // ชั่วโมงที่คำนวณแล้ว (×1.5)
+  let otSpecialHoursMultiplied = 0 // ชั่วโมงที่คำนวณแล้ว (×2 หรือ ×1)
+  let otPremiumHoursMultiplied = 0 // ชั่วโมงที่คำนวณแล้ว (×3)
+  let otHoursMultiplied = 0 // รวมชั่วโมงที่คำนวณแล้ว
 
   if (isHoliday) {
     // วันหยุด/อาทิตย์: คำนวณ OT แบบพิเศษ
     const totalMinutes = workMinutes
-    
+
     if (totalMinutes <= 480) {
       // ทำงานไม่เกิน 8 ชม.
-      // ปัดลงเป็น .0 หรือ .5 เท่านั้น (เช่น 7.12 → 7.0, 7.68 → 7.5)
+      // ปัดลงเป็น .0 หรือ .5 เท่านั้น
       otSpecialHours = roundDownToHalfHourInHours(totalMinutes / 60)
+      otHours = otSpecialHours
+
+      // คำนวณชั่วโมงที่คูณแล้ว
       if (employmentType === 'รายวัน') {
-        // พนักงานรายวัน: 8 ชม.แรก × 2
-        otHours = otSpecialHours * 2
+        otSpecialHoursMultiplied = otSpecialHours * 2
       } else {
-        // พนักงานรายเดือน: 8 ชม.แรก × 1
-        otHours = otSpecialHours * 1
+        otSpecialHoursMultiplied = otSpecialHours * 1
       }
+      otHoursMultiplied = otSpecialHoursMultiplied
     } else {
       // ทำงานเกิน 8 ชม.
-      otSpecialHours = 8 // 8 ชั่วโมงเต็ม (ไม่ต้องปัด)
-      // ปัดลงเป็น .0 หรือ .5 เท่านั้น (เช่น 3.12 → 3.0, 3.68 → 3.5)
+      otSpecialHours = 8 // 8 ชั่วโมงเต็ม
       otPremiumHours = roundDownToHalfHourInHours((totalMinutes - 480) / 60)
-      
+      otHours = otSpecialHours + otPremiumHours
+
+      // คำนวณชั่วโมงที่คูณแล้ว
       if (employmentType === 'รายวัน') {
-        // พนักงานรายวัน: 8 ชม.แรก × 2, ที่เกิน × 3
-        otHours = (otSpecialHours * 2) + (otPremiumHours * 3)
+        otSpecialHoursMultiplied = otSpecialHours * 2
       } else {
-        // พนักงานรายเดือน: 8 ชม.แรก × 1, ที่เกิน × 3
-        otHours = (otSpecialHours * 1) + (otPremiumHours * 3)
+        otSpecialHoursMultiplied = otSpecialHours * 1
       }
+      otPremiumHoursMultiplied = otPremiumHours * 3
+      otHoursMultiplied = otSpecialHoursMultiplied + otPremiumHoursMultiplied
     }
   } else {
-    // วันธรรมดา: OT ปกติ × 1.5
-    otNormalHours = actualHours
-    otHours = actualHours * 1.5
+    // วันธรรมดา: OT ปกติ
+    // ปัดลงเป็น .0 หรือ .5
+    otNormalHours = roundDownToHalfHourInHours(actualHours)
+    otHours = otNormalHours
+
+    // คำนวณชั่วโมงที่คูณแล้ว (×1.5)
+    otNormalHoursMultiplied = otNormalHours * 1.5
+    otHoursMultiplied = otNormalHoursMultiplied
   }
 
   return {
     actualHours: Math.round(actualHours * 100) / 100,
     otHours: Math.round(otHours * 100) / 100,
     otNormalHours: Math.round(otNormalHours * 100) / 100,
-    otSpecialHours: otSpecialHours, // ปัดไว้แล้วด้วย roundDownToHalfHourInHours
-    otPremiumHours: otPremiumHours, // ปัดไว้แล้วด้วย roundDownToHalfHourInHours
+    otSpecialHours: Math.round(otSpecialHours * 100) / 100,
+    otPremiumHours: Math.round(otPremiumHours * 100) / 100,
+    otNormalHoursMultiplied: Math.round(otNormalHoursMultiplied * 100) / 100,
+    otSpecialHoursMultiplied: Math.round(otSpecialHoursMultiplied * 100) / 100,
+    otPremiumHoursMultiplied: Math.round(otPremiumHoursMultiplied * 100) / 100,
+    otHoursMultiplied: Math.round(otHoursMultiplied * 100) / 100,
     allowLateNextDay,
     late,
     lateHours: Math.round(lateHours * 100) / 100
@@ -501,6 +565,10 @@ export function calculateOTFromScans(
         otNormalHours: result.otNormalHours,
         otSpecialHours: result.otSpecialHours,
         otPremiumHours: result.otPremiumHours,
+        otNormalHoursMultiplied: result.otNormalHoursMultiplied,
+        otSpecialHoursMultiplied: result.otSpecialHoursMultiplied,
+        otPremiumHoursMultiplied: result.otPremiumHoursMultiplied,
+        otHoursMultiplied: result.otHoursMultiplied,
         isHoliday,
         shift,
         late: result.late,

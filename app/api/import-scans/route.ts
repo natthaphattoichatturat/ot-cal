@@ -231,13 +231,19 @@ export async function POST(request: NextRequest) {
           // Merge with existing record for same employee + date
           const existing = attendanceMap.get(key)
 
-          // Sum up hours
+          // Sum up hours (ชั่วโมงจริง)
           existing.actual_hours += session.actualHours
           existing.ot_hours += session.otHours
           existing.ot_normal_hours += session.otNormalHours
           existing.ot_special_hours += session.otSpecialHours
           existing.ot_premium_hours += session.otPremiumHours
           existing.late_hours += session.lateHours
+
+          // Sum up multiplied hours (ชั่วโมงที่คำนวณแล้ว)
+          existing.ot_normal_hours_multiplied += session.otNormalHoursMultiplied
+          existing.ot_special_hours_multiplied += session.otSpecialHoursMultiplied
+          existing.ot_premium_hours_multiplied += session.otPremiumHoursMultiplied
+          existing.ot_hours_multiplied += session.otHoursMultiplied
 
           // Keep earliest check-in and latest check-out
           if (session.checkInTime < existing.check_in_time) {
@@ -268,6 +274,10 @@ export async function POST(request: NextRequest) {
             ot_normal_hours: session.otNormalHours,
             ot_special_hours: session.otSpecialHours,
             ot_premium_hours: session.otPremiumHours,
+            ot_normal_hours_multiplied: session.otNormalHoursMultiplied,
+            ot_special_hours_multiplied: session.otSpecialHoursMultiplied,
+            ot_premium_hours_multiplied: session.otPremiumHoursMultiplied,
+            ot_hours_multiplied: session.otHoursMultiplied,
             is_holiday: session.isHoliday,
             late: session.late,
             late_hours: session.lateHours,
