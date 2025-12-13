@@ -279,14 +279,14 @@ async function executeSQL(sqlQuery: string): Promise<any[]> {
 
     // Default: try to use rpc if available, otherwise return empty
     try {
-      const { data, error } = await supabase.rpc('execute_raw_query', { query_text: cleanQuery })
-      
-      if (error) {
+    const { data, error } = await supabase.rpc('execute_raw_query', { query_text: cleanQuery })
+
+    if (error) {
         console.log('RPC not available, using fallback')
-        return []
-      }
-      
-      return data || []
+      return []
+    }
+
+    return data || []
     } catch {
       return []
     }

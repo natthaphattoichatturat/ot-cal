@@ -30,10 +30,10 @@ export async function POST(request: NextRequest) {
 
     // Search by employee_id (primary method)
     const { data: employeeRecord } = await supabase
-      .from('employees')
-      .select('*')
-      .eq('employee_id', employeeId)
-      .single()
+        .from('employees')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .single()
 
     // If employee found, update with Employee LINE ID
     if (employeeRecord) {

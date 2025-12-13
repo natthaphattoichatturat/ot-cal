@@ -80,19 +80,19 @@ export async function POST(request: NextRequest) {
       .eq('department', 'admin_etec')
       .not('line_id_hr', 'is', null)
 
-    const leaveTypeMap: any = {
-      'sick': 'ลาป่วย',
-      'vacation': 'ลาพักร้อน',
-      'personal': 'ลากิจ',
-      'other': 'อื่นๆ'
-    }
+      const leaveTypeMap: any = {
+        'sick': 'ลาป่วย',
+        'vacation': 'ลาพักร้อน',
+        'personal': 'ลากิจ',
+        'other': 'อื่นๆ'
+      }
 
-    const leaveTypeColor: any = {
-      'sick': '#EF4444',
-      'vacation': '#3B82F6',
-      'personal': '#F59E0B',
-      'other': '#6B7280'
-    }
+      const leaveTypeColor: any = {
+        'sick': '#EF4444',
+        'vacation': '#3B82F6',
+        'personal': '#F59E0B',
+        'other': '#6B7280'
+      }
 
     // Send approval request to department heads via Employee LINE OA
     if (!headError && departmentHeads && departmentHeads.length > 0) {

@@ -6,9 +6,17 @@
 export interface DailyAttendanceV2 {
   work_date: string
   actual_hours: number
-  ot_normal_hours: number // OT ปกติ x1.5
-  ot_special_hours: number // OT วันหยุด 8 ชม.แรก (x2 รายวัน, x1 รายเดือน)
-  ot_premium_hours: number // OT วันหยุดเกิน 8 ชม. x3
+
+  // ชั่วโมง OT จริง (ยังไม่คูณ multiplier)
+  ot_normal_hours: number // OT ปกติ (ชั่วโมงจริง)
+  ot_special_hours: number // OT วันหยุด 8 ชม.แรก (ชั่วโมงจริง)
+  ot_premium_hours: number // OT วันหยุดเกิน 8 ชม. (ชั่วโมงจริง)
+
+  // ชั่วโมง OT ที่คูณ multiplier แล้ว (ใช้ตัวนี้ในการคำนวณค่าจ้าง)
+  ot_normal_hours_multiplied?: number // OT ปกติ × 1.5
+  ot_special_hours_multiplied?: number // OT พิเศษ (รายวัน ×2, รายเดือน ×1)
+  ot_premium_hours_multiplied?: number // OT ขั้นสูง × 3
+
   scheduled_in_time?: string
   check_in_time?: string
   check_out_time?: string
@@ -30,8 +38,9 @@ export interface EmployeeInfoV2 {
 
 export interface LeaveRecord {
   leave_date: string
-  leave_type: string
+  leave_type: string // 'ลากิจ', 'ลาป่วย', 'ลาพักร้อน', 'ลาคลอด', etc.
   leave_hours: number
+  is_paid?: boolean // true = ไม่หักเงิน, false/undefined = หักเงิน
 }
 
 export interface WageAdjustment {
@@ -115,7 +124,9 @@ export function calculatePeriodWageV2(
   // วันที่ทำงานในวันหยุด/อาทิตย์
   const holidayWorkDays = attendances.filter(att => att.is_holiday && att.actual_hours > 0).length
   
-  // วันลา
+  // วันลา (แยกเป็น paid และ unpaid)
+  const paidLeaveDays = leaveRecords.filter(leave => leave.is_paid === true).length
+  const unpaidLeaveDays = leaveRecords.filter(leave => leave.is_paid !== true).length
   const leaveDays = leaveRecords.length
   
   // วันขาดงาน (วันที่ไม่มาทำงาน ไม่ลา ไม่ใช่วันหยุด)
@@ -132,36 +143,35 @@ export function calculatePeriodWageV2(
   }
   
   // ========== คำนวณ OT ==========
-  let ot1_hours = 0
-  let ot2_hours = 0
-  let ot3_hours = 0
-  
+  // รวมชั่วโมง OT (ใช้ multiplied fields ที่คูณไว้แล้ว)
+  let ot1_hours = 0 // ชั่วโมง OT ที่คูณ 1.5 แล้ว
+  let ot2_hours = 0 // ชั่วโมง OT ที่คูณ multiplier แล้ว (รายวัน ×2, รายเดือน ×1)
+  let ot3_hours = 0 // ชั่วโมง OT ที่คูณ 3 แล้ว
+
   attendances.forEach(att => {
-    ot1_hours += att.ot_normal_hours || 0
-    ot2_hours += att.ot_special_hours || 0
-    ot3_hours += att.ot_premium_hours || 0
+    // ใช้ multiplied fields (ถ้ามี) หรือคูณเอง (ถ้าไม่มี - backward compatibility)
+    ot1_hours += att.ot_normal_hours_multiplied ?? (att.ot_normal_hours || 0)
+    ot2_hours += att.ot_special_hours_multiplied ?? (att.ot_special_hours || 0)
+    ot3_hours += att.ot_premium_hours_multiplied ?? (att.ot_premium_hours || 0)
   })
-  
-  // คำนวณค่า OT
-  // OT1: ปกติ x1.5 (คูณไว้แล้วใน ot_hours)
+
+  // คำนวณค่า OT (คูณกับ perhr_salary เท่านั้น เพราะ multiplier คูณไว้แล้ว)
   const ot1_wage = ot1_hours * employee.perhr_salary
-  
-  // OT2: วันหยุด 8 ชม.แรก (คูณไว้แล้วใน ot_hours)
   const ot2_wage = ot2_hours * employee.perhr_salary
-  
-  // OT3: วันหยุดเกิน 8 ชม. (คูณไว้แล้วใน ot_hours)
   const ot3_wage = ot3_hours * employee.perhr_salary
-  
+
   const total_ot_wage = ot1_wage + ot2_wage + ot3_wage
   
   // ========== คำนวณค่ากะ ==========
-  // นับจำนวนวันที่ทำกะดึก (check_in_time >= 19:00)
+  // นับจำนวนวันที่ทำกะดึก (check_in_time >= 20:00 และ < 06:00)
+  // กะกลางคืน: 20:00 - 05:30
   const nightShiftDays = attendances.filter(att => {
     if (!att.check_in_time) return false
     const checkInHour = parseInt(att.check_in_time.split(':')[0])
-    return checkInHour >= 19 || checkInHour < 6
+    // เข้ากะตั้งแต่ 20:00 ถึง 05:59 น.
+    return checkInHour >= 20 || checkInHour < 6
   }).length
-  
+
   const nightShiftAllowance = nightShiftDays * 40 // 40 บาทต่อวัน
   
   // ========== เบี้ยขยัน ==========
@@ -185,11 +195,15 @@ export function calculatePeriodWageV2(
   const lateDeduction = (lateMinutes / 60) * employee.perhr_salary
   
   // ========== หักค่าลา (สำหรับรายเดือน) ==========
+  // หักเฉพาะ unpaid leave (ลากิจ, ลาคลอด, ลาไม่รับค่าจ้าง)
+  // ไม่หัก paid leave (ลาป่วย, ลาพักร้อน)
   let leaveDeduction = 0
-  if (!isDaily && leaveDays > 0) {
+  if (!isDaily && unpaidLeaveDays > 0) {
     // คำนวณค่าแรงต่อวัน = เงินเดือน / 15
     const dailyRate = employee.monthly_salary / 15
-    leaveDeduction = leaveDays * dailyRate
+    leaveDeduction = unpaidLeaveDays * dailyRate
+
+    console.log(`[Leave Deduction] Employee: ${employee.employee_id}, Unpaid days: ${unpaidLeaveDays}, Daily rate: ${dailyRate}, Deduction: ${leaveDeduction}`)
   }
   
   // ========== เงินหักจาก adjustments ==========

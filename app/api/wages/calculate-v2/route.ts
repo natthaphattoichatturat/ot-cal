@@ -92,9 +92,17 @@ export async function POST(request: NextRequest) {
           const dailyAttendances: DailyAttendanceV2[] = attendances.map(att => ({
             work_date: att.work_date,
             actual_hours: att.actual_hours || 0,
+
+            // ชั่วโมง OT จริง (ยังไม่คูณ)
             ot_normal_hours: att.ot_normal_hours || 0,
             ot_special_hours: att.ot_special_hours || 0,
             ot_premium_hours: att.ot_premium_hours || 0,
+
+            // ชั่วโมง OT ที่คูณแล้ว (ใช้ในการคำนวณค่าจ้าง)
+            ot_normal_hours_multiplied: att.ot_normal_hours_multiplied || undefined,
+            ot_special_hours_multiplied: att.ot_special_hours_multiplied || undefined,
+            ot_premium_hours_multiplied: att.ot_premium_hours_multiplied || undefined,
+
             scheduled_in_time: att.scheduled_in_time,
             check_in_time: att.check_in_time,
             check_out_time: att.check_out_time,
@@ -113,11 +121,20 @@ export async function POST(request: NextRequest) {
             .lte('leave_date', endDate)
             .eq('status', 'approved')
 
-          const leaveRecords: LeaveRecord[] = (leaves || []).map(leave => ({
-            leave_date: leave.leave_date,
-            leave_type: leave.leave_type,
-            leave_hours: leave.leave_hours || 8
-          }))
+          const leaveRecords: LeaveRecord[] = (leaves || []).map(leave => {
+            // กำหนด is_paid ตามประเภทการลา
+            // ลาป่วย, ลาพักร้อน = ไม่หักเงิน (paid leave)
+            // ลากิจ, ลาคลอด = หักเงิน (unpaid leave)
+            const paidLeaveTypes = ['ลาป่วย', 'ลาพักร้อน', 'sick_leave', 'annual_leave']
+            const isPaid = paidLeaveTypes.includes(leave.leave_type?.toLowerCase() || '')
+
+            return {
+              leave_date: leave.leave_date,
+              leave_type: leave.leave_type,
+              leave_hours: leave.leave_hours || 8,
+              is_paid: isPaid
+            }
+          })
 
           // Get wage adjustments
           const { data: adjustments } = await supabase
@@ -163,9 +180,17 @@ export async function POST(request: NextRequest) {
           const otherDailyAttendances: DailyAttendanceV2[] = (otherAttendances || []).map(att => ({
             work_date: att.work_date,
             actual_hours: att.actual_hours || 0,
+
+            // ชั่วโมง OT จริง (ยังไม่คูณ)
             ot_normal_hours: att.ot_normal_hours || 0,
             ot_special_hours: att.ot_special_hours || 0,
             ot_premium_hours: att.ot_premium_hours || 0,
+
+            // ชั่วโมง OT ที่คูณแล้ว (ใช้ในการคำนวณค่าจ้าง)
+            ot_normal_hours_multiplied: att.ot_normal_hours_multiplied || undefined,
+            ot_special_hours_multiplied: att.ot_special_hours_multiplied || undefined,
+            ot_premium_hours_multiplied: att.ot_premium_hours_multiplied || undefined,
+
             scheduled_in_time: att.scheduled_in_time,
             check_in_time: att.check_in_time,
             check_out_time: att.check_out_time,
@@ -183,11 +208,18 @@ export async function POST(request: NextRequest) {
             .lte('leave_date', otherEnd)
             .eq('status', 'approved')
 
-          const otherLeaveRecords: LeaveRecord[] = (otherLeaves || []).map(leave => ({
-            leave_date: leave.leave_date,
-            leave_type: leave.leave_type,
-            leave_hours: leave.leave_hours || 8
-          }))
+          const otherLeaveRecords: LeaveRecord[] = (otherLeaves || []).map(leave => {
+            // กำหนด is_paid ตามประเภทการลา
+            const paidLeaveTypes = ['ลาป่วย', 'ลาพักร้อน', 'sick_leave', 'annual_leave']
+            const isPaid = paidLeaveTypes.includes(leave.leave_type?.toLowerCase() || '')
+
+            return {
+              leave_date: leave.leave_date,
+              leave_type: leave.leave_type,
+              leave_hours: leave.leave_hours || 8,
+              is_paid: isPaid
+            }
+          })
 
           const { data: otherAdjustments } = await supabase
             .from('wage_adjustments')
