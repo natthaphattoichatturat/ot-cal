@@ -57,7 +57,7 @@ interface MasterItem {
 
 export default function WagesPage() {
   const { t } = useLanguage()
-  const [activeTab, setActiveTab] = useState<'daily' | 'summary'>('daily')
+  const [activeTab, setActiveTab] = useState<'daily' | 'summary'>('summary') // เปลี่ยนเป็น summary เป็นค่าเริ่มต้น
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedPeriod, setSelectedPeriod] = useState<1 | 2>(1)
@@ -86,7 +86,12 @@ export default function WagesPage() {
   const [masterItems, setMasterItems] = useState<MasterItem[]>([])
   const [savingRecord, setSavingRecord] = useState(false)
   const [message, setMessage] = useState('')
-  
+
+  // Employee search state
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('')
+  const [filteredEmployeesForSelection, setFilteredEmployeesForSelection] = useState<EmployeeWage[]>([])
+  const [searchingEmployees, setSearchingEmployees] = useState(false)
+
   // Calculate wages state
   const [calculating, setCalculating] = useState(false)
   const [calculateMessage, setCalculateMessage] = useState('')
@@ -112,61 +117,80 @@ export default function WagesPage() {
     filterData()
   }, [searchQuery, dailyWageData, employeeWages])
 
+  // Real-time employee search for popup
+  useEffect(() => {
+    const searchEmployees = async () => {
+      if (!employeeSearchQuery.trim()) {
+        setFilteredEmployeesForSelection(employeeWages)
+        return
+      }
+
+      setSearchingEmployees(true)
+      try {
+        const searchQuery = employeeSearchQuery.trim()
+        let searchBy = 'name'
+        let searchValue = searchQuery
+
+        // Check if it's an employee ID (numeric or starts with letter)
+        if (/^\d/.test(searchQuery) || /^[A-Za-z]/.test(searchQuery)) {
+          searchBy = 'employee_id'
+        }
+
+        const res = await fetch(`/api/employees?search=${encodeURIComponent(searchValue)}&searchBy=${searchBy}&status=active`)
+        const data = await res.json()
+
+        if (data.success) {
+          // Map to EmployeeWage format for consistency
+          const mappedEmployees = (data.data || []).map((emp: any) => ({
+            employeeId: emp.employee_id,
+            name: emp.name,
+            department: emp.department || 'ไม่ระบุ',
+            employmentType: emp.employment_type || 'รายวัน',
+            totalBaseWage: 0,
+            totalOt1Wage: 0,
+            totalOt2Wage: 0,
+            totalOt3Wage: 0,
+            grossWage: 0,
+            attendanceBonus: 0,
+            nightShiftAllowance: 0,
+            additionalIncome: 0,
+            totalIncome: 0,
+            lateMinutes: 0,
+            lateDeduction: 0,
+            leaveDays: 0,
+            leaveDeduction: 0,
+            additionalDeduction: 0,
+            sso: 0,
+            tax: 0,
+            totalDeductions: 0,
+            netWage: 0
+          }))
+          setFilteredEmployeesForSelection(mappedEmployees)
+        } else {
+          setFilteredEmployeesForSelection([])
+        }
+      } catch (error) {
+        console.error('Error searching employees:', error)
+        setFilteredEmployeesForSelection([])
+      } finally {
+        setSearchingEmployees(false)
+      }
+    }
+
+    const timeoutId = setTimeout(searchEmployees, 300) // Debounce 300ms
+    return () => clearTimeout(timeoutId)
+  }, [employeeSearchQuery, employeeWages])
+
   const fetchWageData = async () => {
     setLoading(true)
     try {
       const monthStr = `${selectedYear}-${selectedMonth}`
 
-      if (activeTab === 'daily') {
-        // Fetch attendance data และแปลงเป็น wage data
-        const res = await fetch(`/api/attendance?month=${monthStr}&period=${selectedPeriod}`)
-        const data = await res.json()
-
-        if (data.success) {
-          // แปลงข้อมูลให้อยู่ในรูปแบบที่ต้องการ
-          const wageData: DailyWageData[] = data.data.map((emp: any) => {
-            const wages: { [date: string]: any } = {}
-
-            Object.keys(emp.attendance || {}).forEach(date => {
-              const att = emp.attendance[date]
-              const perhrSalary = emp.perhr_salary || 0
-
-              // คำนวณค่าจ้างแต่ละประเภท
-              // OT Normal: ชั่วโมง × อัตรา × 1.5
-              // OT Special: ชั่วโมง × อัตรา × 2
-              // OT Premium: ชั่วโมง × อัตรา × 3
-              wages[date] = {
-                base_wage: (att.actualHours > 0 ? 8 : 0) * perhrSalary,
-                ot1_wage: (att.otNormalHours || 0) * perhrSalary * 1.5,
-                ot2_wage: (att.otSpecialHours || 0) * perhrSalary * 2,
-                ot3_wage: (att.otPremiumHours || 0) * perhrSalary * 3,
-                daily_total_wage: 0
-              }
-
-              wages[date].daily_total_wage =
-                wages[date].base_wage +
-                wages[date].ot1_wage +
-                wages[date].ot2_wage +
-                wages[date].ot3_wage
-            })
-
-            return {
-              employeeId: emp.employeeId,
-              name: emp.name,
-              department: emp.department,
-              wages
-            }
-          })
-
-          setDailyWageData(wageData)
-        }
-      } else {
-        // Fetch employee summary
-        const res = await fetch(`/api/wages/summary?month=${monthStr}&period=${selectedPeriod}`)
-        const data = await res.json()
-        if (data.success) {
-          setEmployeeWages(data.data)
-        }
+      // ลบแท็บ daily ออกแล้ว ดึงแค่ summary เท่านั้น
+      const res = await fetch(`/api/wages/summary?month=${monthStr}&period=${selectedPeriod}`)
+      const data = await res.json()
+      if (data.success) {
+        setEmployeeWages(data.data)
       }
     } catch (error) {
       console.error('Error fetching wage data:', error)
@@ -178,26 +202,15 @@ export default function WagesPage() {
   const filterData = () => {
     const query = searchQuery.toLowerCase().trim()
 
-    if (activeTab === 'daily') {
-      if (!query) {
-        setFilteredDailyWages(dailyWageData)
-      } else {
-        const filtered = dailyWageData.filter(emp =>
-          emp.employeeId.toLowerCase().includes(query) ||
-          emp.name.toLowerCase().includes(query)
-        )
-        setFilteredDailyWages(filtered)
-      }
+    // ลบแท็บ daily แล้ว filter แค่ employeeWages
+    if (!query) {
+      setFilteredEmployees(employeeWages)
     } else {
-      if (!query) {
-        setFilteredEmployees(employeeWages)
-      } else {
-        const filtered = employeeWages.filter(emp =>
-          emp.employeeId.toLowerCase().includes(query) ||
-          emp.name.toLowerCase().includes(query)
-        )
-        setFilteredEmployees(filtered)
-      }
+      const filtered = employeeWages.filter(emp =>
+        emp.employeeId.toLowerCase().includes(query) ||
+        emp.name.toLowerCase().includes(query)
+      )
+      setFilteredEmployees(filtered)
     }
     setCurrentPage(1)
   }
@@ -373,6 +386,7 @@ export default function WagesPage() {
     setAmount('')
     setNotes('')
     setMessage('')
+    setEmployeeSearchQuery('') // Reset search when opening popup
     fetchMasterItems(type)
   }
 
@@ -383,6 +397,7 @@ export default function WagesPage() {
     setAmount('')
     setNotes('')
     setMessage('')
+    setEmployeeSearchQuery('') // Reset search when closing popup
   }
 
   const toggleEmployee = (employeeId: string) => {
@@ -565,6 +580,9 @@ export default function WagesPage() {
             >
               {t('wages.addDeduction')}
             </button>
+            <a href="/wages/logs" className="btn btn-primary">
+              ประวัติการปรับเงิน
+            </a>
             <a href="/" className="btn btn-secondary">
               ← {t('common.back')}
             </a>
@@ -572,43 +590,12 @@ export default function WagesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* ลบแท็บ dailySalary ออก เหลือแค่ summary */}
       <div className="card" style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', borderBottom: '2px solid var(--border-light)' }}>
-          <button
-            onClick={() => setActiveTab('daily')}
-            style={{
-              flex: 1,
-              padding: '16px 24px',
-              background: activeTab === 'daily' ? 'var(--primary-light)' : 'transparent',
-              color: activeTab === 'daily' ? 'var(--primary)' : 'var(--text-secondary)',
-              border: 'none',
-              borderBottom: activeTab === 'daily' ? '3px solid var(--primary)' : 'none',
-              fontWeight: activeTab === 'daily' ? '700' : '500',
-              fontSize: '15px',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            {t('wages.dailySalary')}
-          </button>
-          <button
-            onClick={() => setActiveTab('summary')}
-            style={{
-              flex: 1,
-              padding: '16px 24px',
-              background: activeTab === 'summary' ? 'var(--primary-light)' : 'transparent',
-              color: activeTab === 'summary' ? 'var(--primary)' : 'var(--text-secondary)',
-              border: 'none',
-              borderBottom: activeTab === 'summary' ? '3px solid var(--primary)' : 'none',
-              fontWeight: activeTab === 'summary' ? '700' : '500',
-              fontSize: '15px',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
+        <div style={{ borderBottom: '2px solid var(--border-light)', padding: '16px 24px' }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
             {t('wages.detailTitle')}
-          </button>
+          </h2>
         </div>
       </div>
 
@@ -950,6 +937,33 @@ export default function WagesPage() {
                 </button>
               </div>
 
+              {/* Search Box สำหรับค้นหาพนักงาน */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={employeeSearchQuery}
+                    onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                    placeholder="ค้นหาพนักงาน (ชื่อหรือรหัส)..."
+                    style={{ flex: 1, padding: '8px 12px', fontSize: '14px' }}
+                  />
+                  {employeeSearchQuery && (
+                    <button
+                      onClick={() => setEmployeeSearchQuery('')}
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      ล้าง
+                    </button>
+                  )}
+                </div>
+                {(employeeSearchQuery || searchingEmployees) && (
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    {searchingEmployees ? 'กำลังค้นหา...' : `พบ ${filteredEmployeesForSelection.length} คน`}
+                  </div>
+                )}
+              </div>
+
               <div
                 style={{
                   maxHeight: '200px',
@@ -959,30 +973,36 @@ export default function WagesPage() {
                   padding: '12px'
                 }}
               >
-                {filteredEmployees.map(emp => (
-                  <label
-                    key={emp.employeeId}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '8px',
-                      marginBottom: '4px',
-                      background: selectedEmployees.includes(emp.employeeId) ? 'var(--primary-light)' : 'transparent',
-                      borderRadius: '6px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedEmployees.includes(emp.employeeId)}
-                      onChange={() => toggleEmployee(emp.employeeId)}
-                      style={{ marginRight: '8px' }}
-                    />
-                    <span style={{ fontSize: '14px' }}>
-                      <strong>{emp.employeeId}</strong> - {emp.name} ({emp.department})
-                    </span>
-                  </label>
-                ))}
+                {filteredEmployeesForSelection.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                    ไม่พบพนักงานที่ค้นหา
+                  </div>
+                ) : (
+                  filteredEmployeesForSelection.map(emp => (
+                    <label
+                      key={emp.employeeId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '8px',
+                        marginBottom: '4px',
+                        background: selectedEmployees.includes(emp.employeeId) ? 'var(--primary-light)' : 'transparent',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedEmployees.includes(emp.employeeId)}
+                        onChange={() => toggleEmployee(emp.employeeId)}
+                        style={{ marginRight: '8px' }}
+                      />
+                      <span style={{ fontSize: '14px' }}>
+                        <strong>{emp.employeeId}</strong> - {emp.name} ({emp.department})
+                      </span>
+                    </label>
+                  ))
+                )}
               </div>
 
               <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>

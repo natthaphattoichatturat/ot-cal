@@ -22,6 +22,8 @@ export interface EmployeeInfo {
   department: string
   perhr_salary: number
   perday_salary: number
+  monthly_salary?: number
+  employment_type?: 'รายวัน' | 'รายเดือน'
 }
 
 export interface DailyWageCalculation {
@@ -158,14 +160,29 @@ export function calculatePeriodWage(
   dailyWages: DailyWageCalculation[],
   hasAttendanceBonus: boolean
 ): PeriodWageCalculation {
-  // สรุปค่าจ้างแต่ละประเภท
-  const totalBaseWage = dailyWages.reduce((sum, dw) => sum + dw.base_wage, 0)
-  const totalOt1Wage = dailyWages.reduce((sum, dw) => sum + dw.ot1_wage, 0)
-  const totalOt2Wage = dailyWages.reduce((sum, dw) => sum + dw.ot2_wage, 0)
-  const totalOt3Wage = dailyWages.reduce((sum, dw) => sum + dw.ot3_wage, 0)
+  const employmentType = employee.employment_type || 'รายวัน'
 
-  // รวมค่าจ้าง (ไม่รวมเบี้ยขยัน)
-  const grossWage = totalBaseWage + totalOt1Wage + totalOt2Wage + totalOt3Wage
+  let totalBaseWage: number
+  let totalOt1Wage: number
+  let totalOt2Wage: number
+  let totalOt3Wage: number
+  let grossWage: number
+
+  if (employmentType === 'รายเดือน') {
+    // สำหรับพนักงานรายเดือน: รับเงินเดือนเต็ม + OT เท่านั้น
+    totalBaseWage = employee.monthly_salary || 0
+    totalOt1Wage = dailyWages.reduce((sum, dw) => sum + dw.ot1_wage, 0)
+    totalOt2Wage = dailyWages.reduce((sum, dw) => sum + dw.ot2_wage, 0)
+    totalOt3Wage = dailyWages.reduce((sum, dw) => sum + dw.ot3_wage, 0)
+    grossWage = totalBaseWage + totalOt1Wage + totalOt2Wage + totalOt3Wage
+  } else {
+    // สำหรับพนักงานรายวัน: คำนวณจากชั่วโมงทำงานปกติ
+    totalBaseWage = dailyWages.reduce((sum, dw) => sum + dw.base_wage, 0)
+    totalOt1Wage = dailyWages.reduce((sum, dw) => sum + dw.ot1_wage, 0)
+    totalOt2Wage = dailyWages.reduce((sum, dw) => sum + dw.ot2_wage, 0)
+    totalOt3Wage = dailyWages.reduce((sum, dw) => sum + dw.ot3_wage, 0)
+    grossWage = totalBaseWage + totalOt1Wage + totalOt2Wage + totalOt3Wage
+  }
 
   // เบี้ยขยัน
   const attendanceBonus = hasAttendanceBonus ? 300 : 0

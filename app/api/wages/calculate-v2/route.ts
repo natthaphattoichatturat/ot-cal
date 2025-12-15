@@ -299,6 +299,134 @@ export async function POST(request: NextRequest) {
           }
 
           wageDetails.push(wageDetail)
+
+          // สร้าง auto adjustment logs
+          const calculationRunId = `calc_${Date.now()}_${employee.employee_id}`
+          const autoLogs = []
+
+          // หักเงินมาสาย
+          if (periodWage.late_deduction > 0) {
+            autoLogs.push({
+              employee_id: employee.employee_id,
+              year,
+              month,
+              period,
+              adjustment_type: 'deduction',
+              category: 'หักเงินมาสาย',
+              amount: periodWage.late_deduction,
+              details: {
+                late_minutes: periodWage.late_minutes,
+                per_minute_rate: (employee.perhr_salary || 0) / 60
+              },
+              calculation_run_id: calculationRunId
+            })
+          }
+
+          // เบี้ยขยัน
+          if (periodWage.attendance_bonus > 0) {
+            autoLogs.push({
+              employee_id: employee.employee_id,
+              year,
+              month,
+              period,
+              adjustment_type: 'income',
+              category: 'เบี้ยขยัน',
+              amount: periodWage.attendance_bonus,
+              details: {
+                bonus_type: 'attendance',
+                qualified: true
+              },
+              calculation_run_id: calculationRunId
+            })
+          }
+
+          // ค่ากะดึก
+          if (periodWage.night_shift_allowance > 0) {
+            autoLogs.push({
+              employee_id: employee.employee_id,
+              year,
+              month,
+              period,
+              adjustment_type: 'income',
+              category: 'ค่ากะดึก',
+              amount: periodWage.night_shift_allowance,
+              details: {
+                night_shift_days: periodWage.night_shift_days,
+                rate_per_day: 40
+              },
+              calculation_run_id: calculationRunId
+            })
+          }
+
+          // ประกันสังคม (SSO)
+          if (periodWage.sso > 0) {
+            autoLogs.push({
+              employee_id: employee.employee_id,
+              year,
+              month,
+              period,
+              adjustment_type: 'deduction',
+              category: 'ประกันสังคม (SSO)',
+              amount: periodWage.sso,
+              details: {
+                income: periodWage.total_income,
+                sso_rate: 0.05,
+                max_sso: 750,
+                period1_income: period1Income,
+                period2_income: period2Income
+              },
+              calculation_run_id: calculationRunId
+            })
+          }
+
+          // ภาษีหัก ณ ที่จ่าย
+          if (periodWage.tax > 0) {
+            autoLogs.push({
+              employee_id: employee.employee_id,
+              year,
+              month,
+              period,
+              adjustment_type: 'deduction',
+              category: 'ภาษีหัก ณ ที่จ่าย',
+              amount: periodWage.tax,
+              details: {
+                taxable_income: periodWage.total_income,
+                tax_rate: 0
+              },
+              calculation_run_id: calculationRunId
+            })
+          }
+
+          // หักเงินค่าลา (ถ้ามี)
+          if (periodWage.leave_deduction > 0) {
+            autoLogs.push({
+              employee_id: employee.employee_id,
+              year,
+              month,
+              period,
+              adjustment_type: 'deduction',
+              category: 'หักเงินค่าลา',
+              amount: periodWage.leave_deduction,
+              details: {
+                leave_days: periodWage.leave_days,
+                employment_type: periodWage.employment_type
+              },
+              calculation_run_id: calculationRunId
+            })
+          }
+
+          // บันทึก auto logs ถ้ามี
+          if (autoLogs.length > 0) {
+            const { error: autoLogError } = await supabase
+              .from('auto_adjustment_logs')
+              .upsert(autoLogs, {
+                onConflict: 'employee_id,year,month,period,category'
+              })
+
+            if (autoLogError) {
+              console.error(`Error saving auto logs for ${employee.employee_id}:`, autoLogError)
+            }
+          }
         } catch (err) {
           console.error(`Error processing employee ${employee.employee_id}:`, err)
           continue

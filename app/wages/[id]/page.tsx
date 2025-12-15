@@ -15,51 +15,59 @@ interface EmployeeInfo {
   employment_type: string
 }
 
-interface DailyWage {
-  work_date: string
-  base_wage: number
-  ot1_wage: number
-  ot2_wage: number
-  ot3_wage: number
-  daily_total_wage: number
-  ot_normal_hours: number
-  ot_special_hours: number
-  ot_premium_hours: number
-}
+// ลบ DailyWage interface เพราะ API V2 ไม่ส่ง dailyWages แล้ว
 
 interface WageBreakdown {
+  // ข้อมูลพนักงาน
+  employment_type: string
+  perday_salary: number
+  perhr_salary: number
+  monthly_salary: number
+
+  // วันทำงาน
+  total_days: number
+  work_days: number
+  holiday_work_days: number
+  leave_days: number
+  absent_days: number
+
   // รายได้
   base_wage: number
+  ot1_hours: number
+  ot2_hours: number
+  ot3_hours: number
   ot1_wage: number
   ot2_wage: number
   ot3_wage: number
-  attendance_bonus: number
+  total_ot_wage: number
+  night_shift_days: number
   night_shift_allowance: number
+  attendance_bonus: number
   additional_income: number
   gross_income: number
-  
+
   // เงินหัก
   late_minutes: number
   late_deduction: number
-  leave_days: number
   leave_deduction: number
   additional_deduction: number
   sso: number
   tax: number
-  
+
   // รวม
   total_income: number
-  total_deductions: number
+  total_deduction: number
   net_wage: number
 }
 
 interface LeaveRecord {
-  id: number
+  id?: number
   leave_date: string
   leave_type: string
   leave_hours: number
-  reason: string
-  status: string
+  is_paid?: boolean
+  reason?: string
+  status?: string
 }
 
 interface Adjustment {
@@ -132,7 +140,6 @@ export default function WageDetailPage() {
 
   const [loading, setLoading] = useState(true)
   const [employee, setEmployee] = useState<EmployeeInfo | null>(null)
-  const [dailyWages, setDailyWages] = useState<DailyWage[]>([])
   const [periodWage, setPeriodWage] = useState<WageBreakdown | null>(null)
   const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([])
   const [adjustments, setAdjustments] = useState<Adjustment[]>([])
@@ -143,10 +150,6 @@ export default function WageDetailPage() {
   const [workDays, setWorkDays] = useState(0)
   const [holidayWorkDays, setHolidayWorkDays] = useState(0)
   const [nightShiftDays, setNightShiftDays] = useState(0)
-
-  // State สำหรับเลือกดูรายวัน
-  const [selectedDates, setSelectedDates] = useState<string[]>([])
-  const [showDailyDetail, setShowDailyDetail] = useState(false)
 
   // State สำหรับเพิ่มเงินได้/หัก
   const [showAddModal, setShowAddModal] = useState(false)
@@ -172,16 +175,17 @@ export default function WageDetailPage() {
 
       if (data.success) {
         setEmployee(data.data.employee)
-        setDailyWages(data.data.dailyWages)
         setPeriodWage(data.data.periodWage)
         setLeaveRecords(data.data.leaveRecords || [])
         setAdjustments(data.data.adjustments || [])
         setSSO(data.data.sso)
         setYTD(data.data.ytd)
         setCurrentPeriod(data.data.currentPeriod)
-        setWorkDays(data.data.workDays || 0)
-        setHolidayWorkDays(data.data.holidayWorkDays || 0)
-        setNightShiftDays(data.data.nightShiftDays || 0)
+
+        // ใช้ข้อมูลจาก periodWage V2
+        setWorkDays(data.data.periodWage?.work_days || 0)
+        setHolidayWorkDays(data.data.periodWage?.holiday_work_days || 0)
+        setNightShiftDays(data.data.periodWage?.night_shift_days || 0)
       }
     } catch (error) {
       console.error('Error fetching wage detail:', error)
@@ -203,17 +207,7 @@ export default function WageDetailPage() {
     }
   }
 
-  const toggleDate = (date: string) => {
-    if (selectedDates.includes(date)) {
-      setSelectedDates(selectedDates.filter(d => d !== date))
-    } else {
-      setSelectedDates([...selectedDates, date])
-    }
-  }
-
-  const getSelectedDailyWages = () => {
-    return dailyWages.filter(dw => selectedDates.includes(dw.work_date))
-  }
+  // ลบ toggleDate function เพราะไม่มี dailyWages แล้ว
 
   const handleAddAdjustment = async () => {
     if (!adjustmentCategory || !adjustmentAmount) {
@@ -601,7 +595,7 @@ export default function WageDetailPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>รวมเงินหักทั้งหมด</div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>
-              -{periodWage.total_deductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
+              -{periodWage.total_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿
             </div>
           </div>
         </div>
@@ -620,16 +614,29 @@ export default function WageDetailPage() {
                   <th>วันที่</th>
                   <th>ประเภทการลา</th>
                   <th>จำนวนชั่วโมง</th>
+                  <th>การหักเงิน</th>
                   <th>เหตุผล</th>
                   <th>สถานะ</th>
                 </tr>
               </thead>
               <tbody>
-                {leaveRecords.map(leave => (
-                  <tr key={leave.id}>
+                {leaveRecords.map((leave, index) => (
+                  <tr key={leave.id || index}>
                     <td>{format(new Date(leave.leave_date), 'dd/MM/yyyy')}</td>
                     <td>{leave.leave_type}</td>
                     <td className="text-center">{leave.leave_hours} ชม.</td>
+                    <td>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        background: leave.is_paid ? 'var(--success-light)' : 'var(--warning-light)',
+                        color: leave.is_paid ? 'var(--success-dark)' : 'var(--warning-dark)',
+                        fontWeight: '600'
+                      }}>
+                        {leave.is_paid ? '✓ ไม่หักเงิน' : '✗ หักเงิน'}
+                      </span>
+                    </td>
                     <td>{leave.reason || '-'}</td>
                     <td>
                       <span style={{
@@ -662,7 +669,7 @@ export default function WageDetailPage() {
           <div style={{ fontSize: '18px', color: 'var(--text-muted)' }}>บาท</div>
           <div style={{ marginTop: '16px', fontSize: '13px', color: 'var(--text-muted)' }}>
             รายได้ {periodWage.total_income.toLocaleString('th-TH', { minimumFractionDigits: 2 })} -
-            เงินหัก {periodWage.total_deductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+            เงินหัก {periodWage.total_deduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
           </div>
         </div>
       </div>
@@ -676,103 +683,30 @@ export default function WageDetailPage() {
           <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>OT ปกติ (×1.5)</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
-              {dailyWages.reduce((sum, dw) => sum + dw.ot_normal_hours, 0).toFixed(2)} ชม.
+              {periodWage?.ot1_hours?.toFixed(2) || '0.00'} ชม.
             </div>
           </div>
           <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>OT พิเศษ (×2)</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>OT พิเศษ (รายวัน ×2, รายเดือน ×1)</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
-              {dailyWages.reduce((sum, dw) => sum + dw.ot_special_hours, 0).toFixed(2)} ชม.
+              {periodWage?.ot2_hours?.toFixed(2) || '0.00'} ชม.
             </div>
           </div>
           <div style={{ background: 'var(--surface-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>OT ขั้นสูง (×3)</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
-              {dailyWages.reduce((sum, dw) => sum + dw.ot_premium_hours, 0).toFixed(2)} ชม.
+              {periodWage?.ot3_hours?.toFixed(2) || '0.00'} ชม.
             </div>
           </div>
           <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '700' }}>รวม OT ทั้งหมด</div>
             <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
-              {dailyWages.reduce((sum, dw) => sum + dw.ot_normal_hours + dw.ot_special_hours + dw.ot_premium_hours, 0).toFixed(2)} ชม.
+              {((periodWage?.ot1_hours || 0) + (periodWage?.ot2_hours || 0) + (periodWage?.ot3_hours || 0)).toFixed(2)} ชม. (คูณ multiplier แล้ว)
             </div>
           </div>
         </div>
 
-        {/* เลือกดูรายวัน */}
-        <div style={{ marginTop: '24px' }}>
-          <button
-            className="btn btn-secondary"
-            onClick={() => setShowDailyDetail(!showDailyDetail)}
-            style={{ marginBottom: '16px' }}
-          >
-            {showDailyDetail ? 'ซ่อนรายละเอียดรายวัน' : 'ดูรายละเอียดรายวัน'}
-          </button>
-
-          {showDailyDetail && (
-            <div>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                เลือกวันที่ต้องการดู:
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
-                {dailyWages.map(dw => (
-                  <label
-                    key={dw.work_date}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 12px',
-                      background: selectedDates.includes(dw.work_date) ? 'var(--primary-light)' : 'var(--surface-bg)',
-                      border: selectedDates.includes(dw.work_date) ? '2px solid var(--primary)' : '1px solid var(--border-light)',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '13px'
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedDates.includes(dw.work_date)}
-                      onChange={() => toggleDate(dw.work_date)}
-                    />
-                    {format(new Date(dw.work_date), 'dd/MM')}
-                  </label>
-                ))}
-              </div>
-
-              {selectedDates.length > 0 && (
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>วันที่</th>
-                        <th className="text-right">ค่าจ้างพื้นฐาน</th>
-                        <th className="text-right">ค่า OT 1</th>
-                        <th className="text-right">ค่า OT 2</th>
-                        <th className="text-right">ค่า OT 3</th>
-                        <th className="text-right">รวม</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getSelectedDailyWages().map(dw => (
-                        <tr key={dw.work_date}>
-                          <td>{format(new Date(dw.work_date), 'dd/MM/yyyy')}</td>
-                          <td className="text-right">{dw.base_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                          <td className="text-right">{dw.ot1_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                          <td className="text-right">{dw.ot2_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                          <td className="text-right">{dw.ot3_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                          <td className="text-right" style={{ fontWeight: '700' }}>
-                            {dw.daily_total_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {/* ลบส่วนเลือกดูรายวันออก เพราะ API V2 ไม่ส่ง dailyWages มาแล้ว ใช้ summary data แทน */}
       </div>
 
       {/* ประกันสังคม */}

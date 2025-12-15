@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select('employee_id, name, department, perhr_salary, perday_salary, monthly_salary, employment_type')
+      .eq('status', 'active')
 
     if (empError) throw empError
     if (!employees || employees.length === 0) {
@@ -148,7 +149,9 @@ export async function POST(request: NextRequest) {
             name: employee.name,
             department: employee.department,
             perhr_salary: employee.perhr_salary || 0,
-            perday_salary: employee.perday_salary || 0
+            perday_salary: employee.perday_salary || 0,
+            monthly_salary: employee.monthly_salary || 0,
+            employment_type: (employee.employment_type || 'รายวัน') as 'รายวัน' | 'รายเดือน'
           },
           dailyWages,
           hasBonus
