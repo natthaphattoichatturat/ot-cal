@@ -425,7 +425,7 @@ export default function Home() {
             <a href="/wages" className="btn btn-primary">
               {t('nav.wages')}
             </a>
-            <a href="/documents" className="btn btn-secondary">
+            <a href="/export" className="btn btn-secondary">
               {t('nav.documents')}
             </a>
             <a href="/employees" className="btn btn-secondary">
