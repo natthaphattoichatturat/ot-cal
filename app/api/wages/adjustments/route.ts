@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
           })
         }
       } catch (error) {
-        console.warn('Error accessing wage_adjustments_combined view, falling back to manual adjustments only:', error.message)
+        console.warn('Error accessing wage_adjustments_combined view, falling back to manual adjustments only:', error instanceof Error ? error.message : String(error))
       }
     }
 
