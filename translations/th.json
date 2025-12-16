@@ -303,7 +303,18 @@
     "backToSelect": "กลับไปเลือกพนักงาน",
     "downloadPDF": "ดาวน์โหลด PDF",
     "exporting": "กำลังสร้าง PDF...",
-    "pdfError": "เกิดข้อผิดพลาดในการสร้าง PDF"
+    "pdfError": "เกิดข้อผิดพลาดในการสร้าง PDF",
+    "sso110": "สปส. 1-10",
+    "sso110Desc": "แบบส่งเงินสมทบประกันสังคม",
+    "pnd1": "ภ.ง.ด.1",
+    "pnd1Desc": "แบบยื่นภาษีเงินได้หัก ณ ที่จ่าย รายเดือน",
+    "pnd1kor": "ภ.ง.ด.1ก",
+    "pnd1korDesc": "แบบยื่นภาษีเงินได้หัก ณ ที่จ่าย รายปี",
+    "withholdingCert": "50 ทวิ",
+    "withholdingCertDesc": "หนังสือรับรองการหักภาษี ณ ที่จ่าย",
+    "everyPeriod": "ทุกงวด",
+    "monthly": "รายเดือน",
+    "yearly": "รายปี"
   },
   "dashboard": {
     "title": "Dashboard",
