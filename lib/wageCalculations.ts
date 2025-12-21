@@ -162,6 +162,19 @@ export function calculatePeriodWage(
 ): PeriodWageCalculation {
   const employmentType = employee.employment_type || 'รายวัน'
 
+  // คำนวณเงินรายชั่วโมงใหม่ตาม logic ที่ถูกต้อง (ใช้ทศนิยม 8 หลัก)
+  let calculatedPerHrSalary: number
+  if (employmentType === 'รายเดือน') {
+    // พนักงานรายเดือน: (เงินเดือน ÷ 15) ÷ 8
+    calculatedPerHrSalary = Number(((employee.monthly_salary || 0) / 15 / 8).toFixed(8))
+  } else {
+    // พนักงานรายวัน: เงินรายวัน ÷ 8
+    calculatedPerHrSalary = Number(((employee.perday_salary || 0) / 8).toFixed(8))
+  }
+
+  // ใช้ perhr_salary ที่คำนวณใหม่ แทน perhr_salary จาก database
+  const actualPerHrSalary = calculatedPerHrSalary
+
   let totalBaseWage: number
   let totalOt1Wage: number
   let totalOt2Wage: number

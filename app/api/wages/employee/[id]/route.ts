@@ -92,6 +92,19 @@ export async function GET(
 
     const employmentType = (employee.employment_type || 'รายวัน') as 'รายวัน' | 'รายเดือน'
 
+    // คำนวณเงินรายชั่วโมงใหม่ตาม logic ที่ถูกต้อง (ใช้ทศนิยม 8 หลัก)
+    let calculatedPerHrSalary: number
+    if (employmentType === 'รายเดือน') {
+      // พนักงานรายเดือน: (เงินเดือน ÷ 15) ÷ 8
+      calculatedPerHrSalary = Number(((employee.monthly_salary || 0) / 15 / 8).toFixed(8))
+    } else {
+      // พนักงานรายวัน: เงินรายวัน ÷ 8
+      calculatedPerHrSalary = Number(((employee.perday_salary || 0) / 8).toFixed(8))
+    }
+
+    // ใช้ perhr_salary ที่คำนวณใหม่ แทน perhr_salary จาก database
+    const actualPerHrSalary = calculatedPerHrSalary
+
     // แปลง attendances เป็น DailyAttendanceV2 format
     const dailyAttendances: DailyAttendanceV2[] = (attendances || []).map(att => ({
       work_date: att.work_date,
@@ -143,7 +156,7 @@ export async function GET(
       name: employee.name,
       department: employee.department || 'ไม่ระบุ',
       employment_type: employmentType,
-      perhr_salary: employee.perhr_salary || 0,
+      perhr_salary: actualPerHrSalary, // ใช้ที่คำนวณใหม่แล้ว
       perday_salary: employee.perday_salary || 0,
       monthly_salary: employee.monthly_salary || 0
     }

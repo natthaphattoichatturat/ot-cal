@@ -101,6 +101,19 @@ export async function POST(request: NextRequest) {
 
       const employmentType = (employee.employment_type || 'รายวัน') as 'รายวัน' | 'รายเดือน'
 
+      // คำนวณเงินรายชั่วโมงใหม่ตาม logic ที่ถูกต้อง (ใช้ทศนิยม 8 หลัก)
+      let calculatedPerHrSalary: number
+      if (employmentType === 'รายเดือน') {
+        // พนักงานรายเดือน: (เงินเดือน ÷ 15) ÷ 8
+        calculatedPerHrSalary = Number(((employee.monthly_salary || 0) / 15 / 8).toFixed(8))
+      } else {
+        // พนักงานรายวัน: เงินรายวัน ÷ 8
+        calculatedPerHrSalary = Number(((employee.perday_salary || 0) / 8).toFixed(8))
+      }
+
+      // ใช้ perhr_salary ที่คำนวณใหม่ แทน perhr_salary จาก database
+      const actualPerHrSalary = calculatedPerHrSalary
+
       // คำนวณทั้ง 2 งวด
       for (const period of [1, 2] as const) {
         const attendances = period === 1 ? period1Attendances : period2Attendances
@@ -123,7 +136,7 @@ export async function POST(request: NextRequest) {
               is_leave: att.is_leave || false,
               late: att.late || false
             },
-            employee.perhr_salary || 0,
+            actualPerHrSalary,
             employmentType
           )
         )
@@ -148,7 +161,7 @@ export async function POST(request: NextRequest) {
             employee_id: employee.employee_id,
             name: employee.name,
             department: employee.department,
-            perhr_salary: employee.perhr_salary || 0,
+            perhr_salary: actualPerHrSalary, // ใช้ที่คำนวณใหม่แล้ว
             perday_salary: employee.perday_salary || 0,
             monthly_salary: employee.monthly_salary || 0,
             employment_type: (employee.employment_type || 'รายวัน') as 'รายวัน' | 'รายเดือน'
