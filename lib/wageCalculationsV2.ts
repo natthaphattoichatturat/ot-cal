@@ -143,25 +143,35 @@ export function calculatePeriodWageV2(
   }
   
   // ========== คำนวณ OT ==========
-  // รวมชั่วโมง OT (ใช้ multiplied fields ที่คูณไว้แล้ว)
-  let ot1_hours = 0 // ชั่วโมง OT ที่คูณ 1.5 แล้ว
-  let ot2_hours = 0 // ชั่วโมง OT ที่คูณ multiplier แล้ว (รายวัน ×2, รายเดือน ×1)
-  let ot3_hours = 0 // ชั่วโมง OT ที่คูณ 3 แล้ว
+  // รวมชั่วโมง OT จริง (ยังไม่คูณ multiplier)
+  let ot1_hours_raw = 0 // ชั่วโมง OT ปกติ จริง
+  let ot2_hours_raw = 0 // ชั่วโมง OT พิเศษ จริง
+  let ot3_hours_raw = 0 // ชั่วโมง OT พิเศษเกิน จริง
 
   attendances.forEach(att => {
-    // ใช้ multiplied fields (ถ้ามี) หรือคูณเอง (ถ้าไม่มี - backward compatibility)
-    ot1_hours += att.ot_normal_hours_multiplied ?? (att.ot_normal_hours || 0)
-    ot2_hours += att.ot_special_hours_multiplied ?? (att.ot_special_hours || 0)
-    ot3_hours += att.ot_premium_hours_multiplied ?? (att.ot_premium_hours || 0)
+    ot1_hours_raw += att.ot_normal_hours || 0
+    ot2_hours_raw += att.ot_special_hours || 0
+    ot3_hours_raw += att.ot_premium_hours || 0
   })
 
-  // คำนวณค่า OT (คูณกับ perhr_salary เท่านั้น เพราะ multiplier คูณไว้แล้ว)
-  const ot1_wage = ot1_hours * employee.perhr_salary
-  const ot2_wage = ot2_hours * employee.perhr_salary
-  const ot3_wage = ot3_hours * employee.perhr_salary
+  // คำนวณชั่วโมง OT ที่คูณ multiplier แล้ว (สำหรับแสดงผล)
+  const ot1_hours_multiplied = ot1_hours_raw * 1.5
+  const ot2_multiplier = isDaily ? 2 : 1
+  const ot2_hours_multiplied = ot2_hours_raw * ot2_multiplier
+  const ot3_hours_multiplied = ot3_hours_raw * 3
+
+  // คำนวณค่า OT (คูณชั่วโมงคูณแล้ว × perhr_salary)
+  const ot1_wage = ot1_hours_multiplied * employee.perhr_salary
+  const ot2_wage = ot2_hours_multiplied * employee.perhr_salary
+  const ot3_wage = ot3_hours_multiplied * employee.perhr_salary
+
+  // ใช้ตัวแปรที่ถูกต้องสำหรับ return
+  const ot1_hours = ot1_hours_raw
+  const ot2_hours = ot2_hours_raw
+  const ot3_hours = ot3_hours_raw
 
   const total_ot_wage = ot1_wage + ot2_wage + ot3_wage
-  
+
   // ========== คำนวณค่ากะ ==========
   // นับจำนวนวันที่ทำกะดึก (check_in_time >= 20:00 และ < 06:00)
   // กะกลางคืน: 20:00 - 05:30

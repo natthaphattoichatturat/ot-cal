@@ -47,12 +47,14 @@ export async function GET(request: NextRequest) {
     const employeeWages = (wageDetails || []).map(wd => {
       const employee = Array.isArray(wd.employees) ? wd.employees[0] : wd.employees
 
-      // แยก OT wages (สมมติเป็น OT1, OT2, OT3 แต่ใน wage_summary รวมเป็น ot_wage)
-      const totalOtWage = wd.ot_wage || 0
-      // สมมติแบ่ง OT ตามอัตราส่วน (จริงๆควรคำนวณใหม่ แต่ใช้ temp value)
-      const ot1Wage = totalOtWage * 0.5 // 1.5x
-      const ot2Wage = totalOtWage * 0.3 // 2x
-      const ot3Wage = totalOtWage * 0.2 // 3x
+      // ใช้ OT wages ที่แยกไว้แล้วใน database (ถ้ามี) หรือแบ่งสัดส่วน (สำหรับ backward compatibility)
+      const ot1Wage = wd.ot1_wage || (wd.ot_wage ? wd.ot_wage * 0.5 : 0)
+      const ot2Wage = wd.ot2_wage || (wd.ot_wage ? wd.ot_wage * 0.3 : 0)
+      const ot3Wage = wd.ot3_wage || (wd.ot_wage ? wd.ot_wage * 0.2 : 0)
+
+      // คำนวณ gross wage (base + ot รวม)
+      const totalOtWage = ot1Wage + ot2Wage + ot3Wage
+      const grossWage = (wd.base_wage || 0) + totalOtWage
 
       return {
         employeeId: wd.employee_id,
@@ -63,7 +65,7 @@ export async function GET(request: NextRequest) {
         totalOt1Wage: ot1Wage,
         totalOt2Wage: ot2Wage,
         totalOt3Wage: ot3Wage,
-        grossWage: wd.total_income || 0,
+        grossWage: grossWage,
         attendanceBonus: wd.attendance_bonus || 0,
         nightShiftAllowance: 0, // ไม่มีใน wage_summary
         additionalIncome: 0, // ไม่มีใน wage_summary

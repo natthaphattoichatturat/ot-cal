@@ -6,7 +6,10 @@ CREATE TABLE IF NOT EXISTS wage_summary (
     month INTEGER NOT NULL,
     period INTEGER NOT NULL CHECK (period IN (1, 2)),
     base_wage DECIMAL(10,2) DEFAULT 0,
-    ot_wage DECIMAL(10,2) DEFAULT 0,
+    ot1_wage DECIMAL(10,2) DEFAULT 0, -- OT ×1.5
+    ot2_wage DECIMAL(10,2) DEFAULT 0, -- OT ×2 (รายวัน) หรือ ×1 (รายเดือน)
+    ot3_wage DECIMAL(10,2) DEFAULT 0, -- OT ×3
+    ot_wage DECIMAL(10,2) DEFAULT 0,  -- OT รวมทั้งหมด (สำหรับ backward compatibility)
     attendance_bonus DECIMAL(10,2) DEFAULT 0,
     total_income DECIMAL(10,2) DEFAULT 0,
     sso DECIMAL(10,2) DEFAULT 0,
