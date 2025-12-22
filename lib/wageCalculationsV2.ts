@@ -8,7 +8,7 @@ export interface DailyAttendanceV2 {
   actual_hours: number
 
   // ชั่วโมง OT จริง (ยังไม่คูณ multiplier)
-  ot_normal_hours: number // OT ปกติ (ชั่วโมงจริง)
+  ot_normal_hours: number // OT ปกติ (ชั่วโมงจริง) - รวม OT เช้าด้วย
   ot_special_hours: number // OT วันหยุด 8 ชม.แรก (ชั่วโมงจริง)
   ot_premium_hours: number // OT วันหยุดเกิน 8 ชม. (ชั่วโมงจริง)
 
@@ -16,6 +16,9 @@ export interface DailyAttendanceV2 {
   ot_normal_hours_multiplied?: number // OT ปกติ × 1.5
   ot_special_hours_multiplied?: number // OT พิเศษ (รายวัน ×2, รายเดือน ×1)
   ot_premium_hours_multiplied?: number // OT ขั้นสูง × 3
+
+  // OT เช้า (เข้าก่อน 08:00, ระหว่าง 06:00-08:00)
+  morning_ot_hours?: number // ชั่วโมง OT เช้าจริง (ถ้ามีใน database)
 
   scheduled_in_time?: string
   check_in_time?: string
@@ -103,13 +106,17 @@ export interface PeriodWageDetailV2 {
 
 /**
  * คำนวณค่าจ้างรายงวดแบบละเอียด
+ * @param morningOTAllowance - ชั่วโมง OT เช้าที่ user อนุญาต (ถ้าไม่ส่งมา = 0, ไม่นับ OT เช้า)
+ * @param selectedDates - วันที่ที่เลือกให้ OT เช้า (null = ทุกวัน, array = เฉพาะวันที่เลือก)
  */
 export function calculatePeriodWageV2(
   employee: EmployeeInfoV2,
   attendances: DailyAttendanceV2[],
   leaveRecords: LeaveRecord[],
   adjustments: WageAdjustment[],
-  periodDates: { startDate: string; endDate: string }
+  periodDates: { startDate: string; endDate: string },
+  morningOTAllowance: number = 0, // OT เช้าที่ user อนุญาต (default = 0)
+  selectedDates: string[] | null = null // วันที่เลือกให้ OT เช้า (null = ทุกวัน)
 ): PeriodWageDetailV2 {
   
   const isDaily = employee.employment_type === 'รายวัน'
@@ -144,15 +151,73 @@ export function calculatePeriodWageV2(
   
   // ========== คำนวณ OT ==========
   // รวมชั่วโมง OT จริง (ยังไม่คูณ multiplier)
-  let ot1_hours_raw = 0 // ชั่วโมง OT ปกติ จริง
+  let ot1_hours_raw = 0 // ชั่วโมง OT ปกติ จริง (ไม่รวม OT เช้า)
   let ot2_hours_raw = 0 // ชั่วโมง OT พิเศษ จริง
   let ot3_hours_raw = 0 // ชั่วโมง OT พิเศษเกิน จริง
+  let calculatedMorningOT = 0 // OT เช้าที่ระบบคำนวณได้ (ทุกวัน)
+  let calculatedMorningOTRegular = 0 // OT เช้าวันธรรมดา
+  let calculatedMorningOTHoliday = 0 // OT เช้าวันหยุด
 
   attendances.forEach(att => {
-    ot1_hours_raw += att.ot_normal_hours || 0
+    // คำนวณ morning OT จาก check_in_time และ scheduled_in_time
+    // OT เช้า = เข้าก่อน scheduled_in_time และหลัง 06:00, สูงสุด 2 ชม.
+    let morningOTForDay = 0
+
+    if (att.check_in_time && att.scheduled_in_time) {
+      const checkInMinutes = timeStringToMinutes(att.check_in_time)
+      const scheduledInMinutes = timeStringToMinutes(att.scheduled_in_time)
+
+      // เข้าก่อน scheduled_in และหลัง 06:00 (360 นาที)
+      if (checkInMinutes < scheduledInMinutes && checkInMinutes >= 360) {
+        const otMinutes = scheduledInMinutes - checkInMinutes
+        // ปัดลงเป็น 30 นาที และสูงสุด 120 นาที (2 ชม.)
+        morningOTForDay = roundDownTo30Min(Math.min(otMinutes, 120)) / 60
+      }
+    }
+
+    // ตรวจสอบว่าวันนี้อยู่ใน selectedDates หรือไม่
+    const isDateSelected = selectedDates === null || selectedDates.includes(att.work_date)
+
+    // นับ morning OT ที่คำนวณได้ (เฉพาะวันที่เลือก)
+    if (morningOTForDay > 0 && isDateSelected) {
+      calculatedMorningOT += morningOTForDay
+
+      // แยก morning OT ตามประเภทวัน
+      if (att.is_holiday) {
+        calculatedMorningOTHoliday += morningOTForDay
+      } else {
+        calculatedMorningOTRegular += morningOTForDay
+      }
+    }
+
+    // OT ปกติ = ot_normal_hours - morning OT
+    // (เพราะ ot_normal_hours จาก database รวม morning OT ไว้แล้ว)
+    const otNormalWithoutMorning = Math.max(0, (att.ot_normal_hours || 0) - morningOTForDay)
+
+    ot1_hours_raw += otNormalWithoutMorning
     ot2_hours_raw += att.ot_special_hours || 0
     ot3_hours_raw += att.ot_premium_hours || 0
   })
+
+  // ========== เพิ่ม Morning OT ที่ user กำหนด ==========
+  // ถ้า user กำหนด morningOTAllowance มากกว่าที่คำนวณได้ ให้ใช้ค่าที่คำนวณได้
+  // ถ้า user กำหนดน้อยกว่า ให้ใช้ค่าที่ user กำหนด
+  const effectiveMorningOT = Math.min(morningOTAllowance, calculatedMorningOT)
+
+  // คำนวณสัดส่วน morning OT ที่จะให้ (กรณี user ให้น้อยกว่าที่คำนวณได้)
+  const morningOTRatio = calculatedMorningOT > 0 ? effectiveMorningOT / calculatedMorningOT : 0
+
+  // แยก morning OT ที่จะให้จริงตามประเภทวัน
+  const effectiveMorningOTRegular = calculatedMorningOTRegular * morningOTRatio
+  const effectiveMorningOTHoliday = calculatedMorningOTHoliday * morningOTRatio
+
+  // เพิ่ม morning OT วันธรรมดาเข้าไปใน OT ปกติ (OT1)
+  ot1_hours_raw += effectiveMorningOTRegular
+
+  // เพิ่ม morning OT วันหยุดเข้าไปใน OT พิเศษ (OT2)
+  ot2_hours_raw += effectiveMorningOTHoliday
+
+  console.log(`[Morning OT] Employee: ${employee.employee_id}, Calculated: ${calculatedMorningOT.toFixed(2)} (Regular: ${calculatedMorningOTRegular.toFixed(2)}, Holiday: ${calculatedMorningOTHoliday.toFixed(2)}), Allowed: ${morningOTAllowance}, Effective: ${effectiveMorningOT.toFixed(2)} (Regular: ${effectiveMorningOTRegular.toFixed(2)}, Holiday: ${effectiveMorningOTHoliday.toFixed(2)})`)
 
   // คำนวณชั่วโมง OT ที่คูณ multiplier แล้ว (สำหรับแสดงผล)
   const ot1_hours_multiplied = ot1_hours_raw * 1.5
@@ -359,6 +424,26 @@ export function calculateMonthlySSO(
     total_monthly_sso: Math.round(totalMonthlySso * 100) / 100,
     employer_sso: Math.round(employerSso * 100) / 100
   }
+}
+
+/**
+ * Helper: แปลงเวลา string เป็นนาที (สำหรับคำนวณ OT เช้า)
+ * เช่น "06:30:00" -> 390 นาที
+ */
+function timeStringToMinutes(time: string): number {
+  if (!time) return 0
+  const parts = time.split(':')
+  const hours = parseInt(parts[0]) || 0
+  const minutes = parseInt(parts[1]) || 0
+  return hours * 60 + minutes
+}
+
+/**
+ * Helper: ปัดลงเป็น 30 นาที
+ * เช่น 45 นาที -> 30 นาที, 90 นาที -> 90 นาที
+ */
+function roundDownTo30Min(minutes: number): number {
+  return Math.floor(minutes / 30) * 30
 }
 
 /**

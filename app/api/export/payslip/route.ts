@@ -142,13 +142,28 @@ export async function GET(request: NextRequest) {
         monthly_salary: employee.monthly_salary || 0
       }
 
+      // ดึง Morning OT Allowance ที่ user กำหนด
+      const { data: morningOTData } = await supabase
+        .from('morning_ot_allowances')
+        .select('allowed_hours, selected_dates')
+        .eq('employee_id', employee.employee_id)
+        .eq('year', year)
+        .eq('month', monthNum)
+        .eq('period', period)
+        .single()
+
+      const morningOTAllowance = morningOTData?.allowed_hours || 0
+      const selectedDates = morningOTData?.selected_dates || null
+
       // คำนวณค่าจ้าง
       const periodWage = calculatePeriodWageV2(
         employeeInfo,
         dailyAttendances,
         leaveRecordsV2,
         wageAdjustments,
-        { startDate, endDate }
+        { startDate, endDate },
+        morningOTAllowance,
+        selectedDates
       )
 
       // คำนวณ SSO (ต้องดึงข้อมูลงวดอื่นมาด้วย)
@@ -214,12 +229,27 @@ export async function GET(request: NextRequest) {
         description: adj.description
       }))
 
+      // ดึง Morning OT Allowance สำหรับงวดอื่น
+      const { data: otherMorningOTData } = await supabase
+        .from('morning_ot_allowances')
+        .select('allowed_hours, selected_dates')
+        .eq('employee_id', employee.employee_id)
+        .eq('year', year)
+        .eq('month', monthNum)
+        .eq('period', otherPeriod)
+        .single()
+
+      const otherMorningOTAllowance = otherMorningOTData?.allowed_hours || 0
+      const otherSelectedDates = otherMorningOTData?.selected_dates || null
+
       const otherPeriodWage = calculatePeriodWageV2(
         employeeInfo,
         otherDailyAttendances,
         otherLeaveRecordsV2,
         otherWageAdjustments,
-        { startDate: otherStart, endDate: otherEnd }
+        { startDate: otherStart, endDate: otherEnd },
+        otherMorningOTAllowance,
+        otherSelectedDates
       )
 
       // คำนวณ SSO

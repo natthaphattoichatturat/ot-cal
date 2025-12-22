@@ -90,6 +90,20 @@ export async function GET(
       console.error('Adjustments fetch error:', adjError)
     }
 
+    // ดึงข้อมูล Morning OT Allowance ที่ user กำหนด
+    const { data: morningOTData } = await supabase
+      .from('morning_ot_allowances')
+      .select('allowed_hours, calculated_hours, actual_hours, selected_dates')
+      .eq('employee_id', employeeId)
+      .eq('year', year)
+      .eq('month', monthNum)
+      .eq('period', period)
+      .single()
+
+    // ใช้ allowed_hours ที่ user กำหนด (ถ้าไม่มี = 0)
+    const morningOTAllowance = morningOTData?.allowed_hours || 0
+    const selectedDates = morningOTData?.selected_dates || null
+
     const employmentType = (employee.employment_type || 'รายวัน') as 'รายวัน' | 'รายเดือน'
 
     // คำนวณเงินรายชั่วโมงใหม่ตาม logic ที่ถูกต้อง (ใช้ทศนิยม 8 หลัก)
@@ -162,12 +176,15 @@ export async function GET(
     }
 
     // คำนวณค่าจ้างรายงวด (งวดปัจจุบัน) โดยใช้ V2
+    // ส่ง morningOTAllowance เพื่อใช้แทน OT เช้าอัตโนมัติ
     const periodWage = calculatePeriodWageV2(
       employeeInfo,
       dailyAttendances,
       leaveRecordsV2,
       wageAdjustments,
-      { startDate, endDate }
+      { startDate, endDate },
+      morningOTAllowance,
+      selectedDates
     )
 
     // ดึงข้อมูลงวดอื่นของเดือนเดียวกันเพื่อคำนวณ SSO
@@ -196,6 +213,19 @@ export async function GET(
       .eq('year', year)
       .eq('month', monthNum)
       .eq('period', otherPeriod)
+
+    // ดึง Morning OT Allowance สำหรับงวดอื่น
+    const { data: otherMorningOTData } = await supabase
+      .from('morning_ot_allowances')
+      .select('allowed_hours, selected_dates')
+      .eq('employee_id', employeeId)
+      .eq('year', year)
+      .eq('month', monthNum)
+      .eq('period', otherPeriod)
+      .single()
+
+    const otherMorningOTAllowance = otherMorningOTData?.allowed_hours || 0
+    const otherSelectedDates = otherMorningOTData?.selected_dates || null
 
     // แปลงงวดอื่นเป็น V2 format
     const otherDailyAttendances: DailyAttendanceV2[] = (otherAttendances || []).map(att => ({
@@ -240,7 +270,9 @@ export async function GET(
       otherDailyAttendances,
       otherLeaveRecordsV2,
       otherWageAdjustments,
-      { startDate: otherStart, endDate: otherEnd }
+      { startDate: otherStart, endDate: otherEnd },
+      otherMorningOTAllowance,
+      otherSelectedDates
     )
 
     // คำนวณประกันสังคม

@@ -159,13 +159,39 @@ export async function GET(request: NextRequest) {
         .eq('month', monthNum)
         .eq('period', 2)
 
+      // ดึง Morning OT Allowance ที่ user กำหนดสำหรับทั้ง 2 งวด
+      const { data: morningOT1 } = await supabase
+        .from('morning_ot_allowances')
+        .select('allowed_hours, selected_dates')
+        .eq('employee_id', employee.employee_id)
+        .eq('year', year)
+        .eq('month', monthNum)
+        .eq('period', 1)
+        .single()
+
+      const { data: morningOT2 } = await supabase
+        .from('morning_ot_allowances')
+        .select('allowed_hours, selected_dates')
+        .eq('employee_id', employee.employee_id)
+        .eq('year', year)
+        .eq('month', monthNum)
+        .eq('period', 2)
+        .single()
+
+      const morningOTAllowance1 = morningOT1?.allowed_hours || 0
+      const morningOTAllowance2 = morningOT2?.allowed_hours || 0
+      const selectedDates1 = morningOT1?.selected_dates || null
+      const selectedDates2 = morningOT2?.selected_dates || null
+
       // คำนวณค่าจ้างทั้ง 2 งวด
       const wage1 = calculatePeriodWageV2(
         employeeInfo,
         convertAttendances(att1 || []),
         convertLeaves(leave1 || []),
         convertAdjustments(adj1 || []),
-        { startDate: start1, endDate: end1 }
+        { startDate: start1, endDate: end1 },
+        morningOTAllowance1,
+        selectedDates1
       )
 
       const wage2 = calculatePeriodWageV2(
@@ -173,7 +199,9 @@ export async function GET(request: NextRequest) {
         convertAttendances(att2 || []),
         convertLeaves(leave2 || []),
         convertAdjustments(adj2 || []),
-        { startDate: start2, endDate: end2 }
+        { startDate: start2, endDate: end2 },
+        morningOTAllowance2,
+        selectedDates2
       )
 
       // รายได้รวมทั้งเดือน

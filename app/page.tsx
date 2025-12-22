@@ -47,6 +47,16 @@ export default function Home() {
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const searchRef = useRef<HTMLDivElement>(null)
 
+  // Morning OT Modal state
+  const [showMorningOTModal, setShowMorningOTModal] = useState(false)
+  const [morningOTData, setMorningOTData] = useState<any[]>([])
+  const [loadingMorningOT, setLoadingMorningOT] = useState(false)
+  const [savingMorningOT, setSavingMorningOT] = useState(false)
+  const [morningOTMessage, setMorningOTMessage] = useState('')
+  const [morningOTPeriod, setMorningOTPeriod] = useState<1 | 2>(1)
+  const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(new Set())
+  const [selectedDates, setSelectedDates] = useState<Map<string, string[]>>(new Map())
+
   // Thai day names
   const thaiDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
 
@@ -231,6 +241,176 @@ export default function Home() {
       setImportMessage('ผิดพลาด: เกิดข้อผิดพลาดในการนำเข้าข้อมูล')
     } finally {
       setImporting(false)
+    }
+  }
+
+  // ========== Morning OT Functions ==========
+  const openMorningOTModal = async (period: 1 | 2) => {
+    setMorningOTPeriod(period)
+    setShowMorningOTModal(true)
+    setMorningOTMessage('')
+    await fetchMorningOTData(period)
+  }
+
+  const fetchMorningOTData = async (period: 1 | 2) => {
+    setLoadingMorningOT(true)
+    try {
+      const year = parseInt(selectedYear)
+      const month = parseInt(selectedMonth)
+
+      const res = await fetch(`/api/morning-ot/calculated?year=${year}&month=${month}&period=${period}`)
+      const data = await res.json()
+
+      if (data.success) {
+        // เพิ่ม field สำหรับ input
+        const dataWithInput = data.data.map((emp: any) => ({
+          ...emp,
+          input_hours: emp.allowed_hours ?? ''
+        }))
+        setMorningOTData(dataWithInput)
+
+        // ตั้งค่า selected dates จาก database
+        const newSelectedDates = new Map<string, string[]>()
+        data.data.forEach((emp: any) => {
+          if (emp.selected_dates && Array.isArray(emp.selected_dates)) {
+            newSelectedDates.set(emp.employee_id, emp.selected_dates)
+          } else {
+            // ถ้าไม่มี selected_dates หมายถึงเลือกทุกวัน
+            const allDates = emp.details.map((d: any) => d.date)
+            newSelectedDates.set(emp.employee_id, allDates)
+          }
+        })
+        setSelectedDates(newSelectedDates)
+      }
+    } catch (error) {
+      console.error('Error fetching morning OT:', error)
+    } finally {
+      setLoadingMorningOT(false)
+    }
+  }
+
+  const handleMorningOTInputChange = (employeeId: string, value: string) => {
+    setMorningOTData(prev => prev.map(emp =>
+      emp.employee_id === employeeId
+        ? { ...emp, input_hours: value }
+        : emp
+    ))
+  }
+
+  const toggleEmployeeExpanded = (employeeId: string) => {
+    setExpandedEmployees(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(employeeId)) {
+        newSet.delete(employeeId)
+      } else {
+        newSet.add(employeeId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleDateSelection = (employeeId: string, date: string) => {
+    setSelectedDates(prev => {
+      const newMap = new Map(prev)
+      const currentDates = newMap.get(employeeId) || []
+
+      if (currentDates.includes(date)) {
+        // ลบออก
+        newMap.set(employeeId, currentDates.filter(d => d !== date))
+      } else {
+        // เพิ่มเข้า
+        newMap.set(employeeId, [...currentDates, date])
+      }
+
+      return newMap
+    })
+  }
+
+  const selectAllDates = (employeeId: string, allDates: string[]) => {
+    setSelectedDates(prev => {
+      const newMap = new Map(prev)
+      newMap.set(employeeId, allDates)
+      return newMap
+    })
+  }
+
+  const deselectAllDates = (employeeId: string) => {
+    setSelectedDates(prev => {
+      const newMap = new Map(prev)
+      newMap.set(employeeId, [])
+      return newMap
+    })
+  }
+
+  const saveMorningOT = async () => {
+    setSavingMorningOT(true)
+    setMorningOTMessage('')
+
+    try {
+      const year = parseInt(selectedYear)
+      const month = parseInt(selectedMonth)
+
+      // กรองเฉพาะที่มีการกรอกค่า
+      const allowances = morningOTData
+        .filter(emp => emp.input_hours !== '' && parseFloat(emp.input_hours) > 0)
+        .map(emp => {
+          const inputHours = parseFloat(emp.input_hours) || 0
+          const calculatedHours = emp.total_morning_ot || 0
+          // ใช้ค่าที่น้อยกว่า (ไม่ให้เกินที่ระบบคำนวณได้)
+          const actualHours = Math.min(inputHours, calculatedHours)
+
+          // ดึง selected dates สำหรับพนักงานคนนี้
+          const empSelectedDates = selectedDates.get(emp.employee_id) || []
+          const allDates = emp.details.map((d: any) => d.date)
+
+          // ถ้าเลือกทุกวัน ให้ส่ง null, ถ้าไม่ใช่ ให้ส่ง array
+          const finalSelectedDates = empSelectedDates.length === allDates.length &&
+            allDates.every((d: string) => empSelectedDates.includes(d))
+            ? null
+            : empSelectedDates
+
+          return {
+            employee_id: emp.employee_id,
+            allowed_hours: actualHours,
+            calculated_hours: calculatedHours,
+            selected_dates: finalSelectedDates,
+            notes: inputHours > calculatedHours
+              ? `ขอ ${inputHours} ชม. แต่ได้แค่ ${calculatedHours} ชม. (ตามที่ระบบคำนวณ)`
+              : null
+          }
+        })
+
+      if (allowances.length === 0) {
+        setMorningOTMessage('ไม่มีข้อมูลที่ต้องบันทึก')
+        setSavingMorningOT(false)
+        return
+      }
+
+      const res = await fetch('/api/morning-ot', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          year,
+          month,
+          period: morningOTPeriod,
+          allowances
+        })
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        setMorningOTMessage(`บันทึกสำเร็จ ${allowances.length} รายการ`)
+        // Refresh data
+        await fetchMorningOTData(morningOTPeriod)
+      } else {
+        setMorningOTMessage(`ผิดพลาด: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Error saving morning OT:', error)
+      setMorningOTMessage('เกิดข้อผิดพลาดในการบันทึก')
+    } finally {
+      setSavingMorningOT(false)
     }
   }
 
@@ -546,6 +726,32 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* Morning OT Buttons */}
+        <div style={{ paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+            จัดการ OT เช้า (เข้างานก่อนเวลา)
+          </label>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => openMorningOTModal(1)}
+              className="btn btn-secondary"
+              disabled={!selectedMonth || !selectedYear}
+            >
+              OT เช้า งวดที่ 1
+            </button>
+            <button
+              onClick={() => openMorningOTModal(2)}
+              className="btn btn-secondary"
+              disabled={!selectedMonth || !selectedYear}
+            >
+              OT เช้า งวดที่ 2
+            </button>
+          </div>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+            * เลือกพนักงานที่จะได้รับ OT เช้า และกำหนดจำนวนชั่วโมง (ไม่เกินที่ระบบคำนวณได้)
+          </p>
+        </div>
       </div>
 
       {/* Tables */}
@@ -559,6 +765,217 @@ export default function Home() {
           {renderTable(filteredPeriod1, 1)}
           {renderTable(filteredPeriod2, 2)}
         </>
+      )}
+
+      {/* Morning OT Modal */}
+      {showMorningOTModal && (
+        <div className="modal-overlay" onClick={() => setShowMorningOTModal(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '900px', maxHeight: '80vh', overflow: 'auto' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>
+                จัดการ OT เช้า - {t(`months.${parseInt(selectedMonth)}`)} {parseInt(selectedYear) + 543} งวดที่ {morningOTPeriod}
+              </h2>
+              <button
+                onClick={() => setShowMorningOTModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+
+            {loadingMorningOT ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
+                <p>กำลังโหลดข้อมูล...</p>
+              </div>
+            ) : morningOTData.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                ไม่พบพนักงานที่มี OT เช้าในงวดนี้
+              </div>
+            ) : (
+              <>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                  * กรอกจำนวนชั่วโมง OT เช้าที่ต้องการให้แต่ละคน (หากกรอกเกินจะได้รับเท่าที่ระบบคำนวณ)
+                </p>
+
+                <div className="table-wrapper" style={{ maxHeight: '50vh', overflow: 'auto' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '40px' }}></th>
+                        <th style={{ minWidth: '100px' }}>รหัส</th>
+                        <th style={{ minWidth: '150px' }}>ชื่อ-นามสกุล</th>
+                        <th style={{ minWidth: '100px' }}>แผนก</th>
+                        <th className="text-center" style={{ minWidth: '100px' }}>OT เช้าที่คำนวณ</th>
+                        <th className="text-center" style={{ minWidth: '80px' }}>วันที่เลือก</th>
+                        <th className="text-center" style={{ minWidth: '120px' }}>OT เช้าที่ให้</th>
+                        <th className="text-center" style={{ minWidth: '100px' }}>สถานะ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {morningOTData.map((emp) => {
+                        const inputHours = parseFloat(emp.input_hours) || 0
+                        const calculatedHours = emp.total_morning_ot || 0
+                        const isOverLimit = inputHours > calculatedHours && emp.input_hours !== ''
+                        const isExpanded = expandedEmployees.has(emp.employee_id)
+                        const empSelectedDates = selectedDates.get(emp.employee_id) || []
+                        const allDates = emp.details.map((d: any) => d.date)
+
+                        return (
+                          <>
+                            <tr key={emp.employee_id}>
+                              <td className="text-center">
+                                <button
+                                  onClick={() => toggleEmployeeExpanded(emp.employee_id)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '16px',
+                                    padding: '4px'
+                                  }}
+                                >
+                                  {isExpanded ? '▼' : '▶'}
+                                </button>
+                              </td>
+                              <td>{emp.employee_id}</td>
+                              <td>{emp.name}</td>
+                              <td>{emp.department}</td>
+                              <td className="text-center" style={{ fontWeight: '600', color: '#1976d2' }}>
+                                {calculatedHours.toFixed(2)} ชม.
+                              </td>
+                              <td className="text-center">
+                                {empSelectedDates.length} / {allDates.length} วัน
+                              </td>
+                              <td className="text-center">
+                                <input
+                                  type="number"
+                                  step="0.5"
+                                  min="0"
+                                  max={calculatedHours}
+                                  value={emp.input_hours}
+                                  onChange={(e) => handleMorningOTInputChange(emp.employee_id, e.target.value)}
+                                  placeholder="0"
+                                  style={{
+                                    width: '80px',
+                                    textAlign: 'center',
+                                    padding: '6px',
+                                    border: isOverLimit ? '2px solid #f44336' : '1px solid var(--border-color)'
+                                  }}
+                                />
+                              </td>
+                              <td className="text-center">
+                                {emp.allowed_hours !== null && emp.allowed_hours !== undefined ? (
+                                  <span style={{ color: '#4caf50', fontWeight: '600' }}>
+                                    ✓ {emp.allowed_hours} ชม.
+                                  </span>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                )}
+                              </td>
+                            </tr>
+
+                            {isExpanded && (
+                              <tr key={`${emp.employee_id}-details`}>
+                                <td colSpan={8} style={{ padding: '12px 20px', backgroundColor: '#f8f9fa' }}>
+                                  <div style={{ marginBottom: '8px' }}>
+                                    <button
+                                      onClick={() => selectAllDates(emp.employee_id, allDates)}
+                                      className="btn btn-sm"
+                                      style={{ marginRight: '8px', fontSize: '12px', padding: '4px 8px' }}
+                                    >
+                                      เลือกทั้งหมด
+                                    </button>
+                                    <button
+                                      onClick={() => deselectAllDates(emp.employee_id)}
+                                      className="btn btn-sm btn-secondary"
+                                      style={{ fontSize: '12px', padding: '4px 8px' }}
+                                    >
+                                      ยกเลิกทั้งหมด
+                                    </button>
+                                  </div>
+
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                                    {emp.details.map((detail: any) => {
+                                      const isSelected = empSelectedDates.includes(detail.date)
+                                      const dayOfWeek = new Date(detail.date).getDay()
+                                      const dayColor = dayOfWeek === 0 ? '#e53935' : dayOfWeek === 6 ? '#1976d2' : '#666'
+
+                                      return (
+                                        <label
+                                          key={detail.date}
+                                          style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            padding: '6px',
+                                            border: `1px solid ${isSelected ? '#4caf50' : '#ddd'}`,
+                                            borderRadius: '4px',
+                                            backgroundColor: isSelected ? '#e8f5e9' : 'white',
+                                            cursor: 'pointer',
+                                            fontSize: '13px'
+                                          }}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() => toggleDateSelection(emp.employee_id, detail.date)}
+                                            style={{ marginRight: '8px' }}
+                                          />
+                                          <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: '600', color: dayColor }}>
+                                              {detail.date}
+                                              {detail.is_holiday && <span style={{ marginLeft: '4px', color: '#e53935' }}>🏖️</span>}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#999' }}>
+                                              {detail.check_in} → OT {detail.morning_ot_hours.toFixed(2)} ชม.
+                                            </div>
+                                          </div>
+                                        </label>
+                                      )
+                                    })}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {morningOTMessage && (
+                  <div
+                    className={morningOTMessage.includes('สำเร็จ') ? 'message message-success' : 'message message-error'}
+                    style={{ marginTop: '16px' }}
+                  >
+                    {morningOTMessage}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+                  <button
+                    onClick={() => setShowMorningOTModal(false)}
+                    className="btn btn-secondary"
+                  >
+                    ปิด
+                  </button>
+                  <button
+                    onClick={saveMorningOT}
+                    disabled={savingMorningOT}
+                    className="btn btn-primary"
+                  >
+                    {savingMorningOT ? 'กำลังบันทึก...' : 'บันทึก OT เช้า'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

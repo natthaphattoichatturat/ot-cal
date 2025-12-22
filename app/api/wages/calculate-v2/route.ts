@@ -152,13 +152,28 @@ export async function POST(request: NextRequest) {
             description: adj.description
           }))
 
+          // ดึง Morning OT Allowance ที่ user กำหนด
+          const { data: morningOTData } = await supabase
+            .from('morning_ot_allowances')
+            .select('allowed_hours, selected_dates')
+            .eq('employee_id', employee.employee_id)
+            .eq('year', year)
+            .eq('month', month)
+            .eq('period', period)
+            .single()
+
+          const morningOTAllowance = morningOTData?.allowed_hours || 0
+          const selectedDates = morningOTData?.selected_dates || null
+
           // Calculate wage for this period
           const periodWage = calculatePeriodWageV2(
             employeeInfo,
             dailyAttendances,
             leaveRecords,
             wageAdjustments,
-            { startDate, endDate }
+            { startDate, endDate },
+            morningOTAllowance,
+            selectedDates
           )
 
           // Calculate SSO (need both periods)
@@ -236,12 +251,27 @@ export async function POST(request: NextRequest) {
             description: adj.description
           }))
 
+          // ดึง Morning OT Allowance สำหรับงวดอื่น
+          const { data: otherMorningOTData } = await supabase
+            .from('morning_ot_allowances')
+            .select('allowed_hours, selected_dates')
+            .eq('employee_id', employee.employee_id)
+            .eq('year', year)
+            .eq('month', month)
+            .eq('period', otherPeriod)
+            .single()
+
+          const otherMorningOTAllowance = otherMorningOTData?.allowed_hours || 0
+          const otherSelectedDates = otherMorningOTData?.selected_dates || null
+
           const otherPeriodWage = calculatePeriodWageV2(
             employeeInfo,
             otherDailyAttendances,
             otherLeaveRecords,
             otherWageAdjustments,
-            { startDate: otherStart, endDate: otherEnd }
+            { startDate: otherStart, endDate: otherEnd },
+            otherMorningOTAllowance,
+            otherSelectedDates
           )
 
           // Calculate monthly SSO
