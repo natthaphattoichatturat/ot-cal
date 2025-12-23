@@ -8,6 +8,9 @@ interface AttendanceData {
   employeeId: string
   name: string
   department: string
+  position?: string
+  department_code?: string
+  section?: string
   attendance: {
     [date: string]: {
       otHours: number
@@ -46,6 +49,13 @@ export default function Home() {
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const searchRef = useRef<HTMLDivElement>(null)
+
+  // Multi-select state
+  const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set())
+
+  // Group by state
+  const [groupBy, setGroupBy] = useState<'none' | 'position' | 'department_code' | 'section'>('none')
+  const [selectedGroup, setSelectedGroup] = useState<string>('')
 
   // Morning OT Modal state
   const [showMorningOTModal, setShowMorningOTModal] = useState(false)
@@ -95,10 +105,10 @@ export default function Home() {
     }
   }, [selectedMonth, selectedYear])
 
-  // Filter data when search changes
+  // Filter data when search, selection, or group changes
   useEffect(() => {
     filterData()
-  }, [searchQuery, period1Data, period2Data])
+  }, [searchQuery, period1Data, period2Data, selectedEmployees, groupBy, selectedGroup])
 
   // Close autocomplete when clicking outside
   useEffect(() => {
@@ -137,26 +147,80 @@ export default function Home() {
   const filterData = () => {
     const query = searchQuery.toLowerCase().trim()
 
-    if (!query) {
-      setFilteredPeriod1(period1Data)
-      setFilteredPeriod2(period2Data)
+    let filtered1 = [...period1Data]
+    let filtered2 = [...period2Data]
+
+    // Filter by search query
+    if (query) {
+      filtered1 = filtered1.filter(emp =>
+        emp.employeeId.toLowerCase().includes(query) ||
+        emp.name.toLowerCase().includes(query)
+      )
+      filtered2 = filtered2.filter(emp =>
+        emp.employeeId.toLowerCase().includes(query) ||
+        emp.name.toLowerCase().includes(query)
+      )
+      setShowAutocomplete(true)
+    } else {
       setShowAutocomplete(false)
-      return
     }
 
-    const filtered1 = period1Data.filter(emp =>
-      emp.employeeId.toLowerCase().includes(query) ||
-      emp.name.toLowerCase().includes(query)
-    )
+    // Filter by selected employees (multi-select)
+    if (selectedEmployees.size > 0) {
+      filtered1 = filtered1.filter(emp => selectedEmployees.has(emp.employeeId))
+      filtered2 = filtered2.filter(emp => selectedEmployees.has(emp.employeeId))
+    }
 
-    const filtered2 = period2Data.filter(emp =>
-      emp.employeeId.toLowerCase().includes(query) ||
-      emp.name.toLowerCase().includes(query)
-    )
+    // Filter by group
+    if (groupBy !== 'none' && selectedGroup) {
+      filtered1 = filtered1.filter(emp => {
+        const value = emp[groupBy] || ''
+        return value === selectedGroup
+      })
+      filtered2 = filtered2.filter(emp => {
+        const value = emp[groupBy] || ''
+        return value === selectedGroup
+      })
+    }
 
     setFilteredPeriod1(filtered1)
     setFilteredPeriod2(filtered2)
-    setShowAutocomplete(true)
+  }
+
+  // Get unique group values
+  const getGroupOptions = () => {
+    if (groupBy === 'none') return []
+    const allEmployees = [...period1Data, ...period2Data]
+    const values = new Set<string>()
+    allEmployees.forEach(emp => {
+      const value = emp[groupBy]
+      if (value) values.add(value)
+    })
+    return Array.from(values).sort()
+  }
+
+  // Toggle employee selection
+  const toggleEmployeeSelection = (employeeId: string) => {
+    setSelectedEmployees(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(employeeId)) {
+        newSet.delete(employeeId)
+      } else {
+        newSet.add(employeeId)
+      }
+      return newSet
+    })
+  }
+
+  // Select all visible employees
+  const selectAllEmployees = () => {
+    const allIds = new Set(period1Data.map(emp => emp.employeeId))
+    setSelectedEmployees(allIds)
+  }
+
+  // Clear all selections
+  const clearAllSelections = () => {
+    setSelectedEmployees(new Set())
   }
 
   const getAutocompleteOptions = () => {
@@ -180,9 +244,9 @@ export default function Home() {
   }
 
   const handleSelectEmployee = (emp: AttendanceData) => {
-    setSearchQuery(`${emp.employeeId} - ${emp.name}`)
+    // Toggle selection instead of replacing search
+    toggleEmployeeSelection(emp.employeeId)
     setShowAutocomplete(false)
-    filterData()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -454,6 +518,91 @@ export default function Home() {
       }
     }
 
+    // คำนวณผลรวมทั้งหมดของทุกพนักงาน
+    let grandTotalOT = 0
+    let grandTotalNormalOT = 0
+    let grandTotalSpecialOT = 0
+    let grandTotalPremiumOT = 0
+    let grandTotalOTMultiplied = 0
+    let grandTotalNormalOTMultiplied = 0
+    let grandTotalSpecialOTMultiplied = 0
+    let grandTotalPremiumOTMultiplied = 0
+    const dailyTotals: { [date: string]: number } = {}
+
+    dates.forEach(date => {
+      dailyTotals[date] = 0
+    })
+
+    // คำนวณสำหรับแต่ละพนักงานและรวมทั้งหมด
+    const employeeStats = data.map((employee) => {
+      let totalOT = 0
+      let totalNormalOT = 0
+      let totalSpecialOT = 0
+      let totalPremiumOT = 0
+      let totalOTMultiplied = 0
+      let totalNormalOTMultiplied = 0
+      let totalSpecialOTMultiplied = 0
+      let totalPremiumOTMultiplied = 0
+
+      dates.forEach(date => {
+        if (employee.attendance[date]) {
+          const otHours = employee.attendance[date].otHours
+          totalOT += otHours
+          totalNormalOT += employee.attendance[date].otNormalHours || 0
+          totalSpecialOT += employee.attendance[date].otSpecialHours || 0
+          totalPremiumOT += employee.attendance[date].otPremiumHours || 0
+          totalOTMultiplied += employee.attendance[date].otHoursMultiplied || 0
+          totalNormalOTMultiplied += employee.attendance[date].otNormalHoursMultiplied || 0
+          totalSpecialOTMultiplied += employee.attendance[date].otSpecialHoursMultiplied || 0
+          totalPremiumOTMultiplied += employee.attendance[date].otPremiumHoursMultiplied || 0
+          dailyTotals[date] += otHours
+        }
+      })
+
+      grandTotalOT += totalOT
+      grandTotalNormalOT += totalNormalOT
+      grandTotalSpecialOT += totalSpecialOT
+      grandTotalPremiumOT += totalPremiumOT
+      grandTotalOTMultiplied += totalOTMultiplied
+      grandTotalNormalOTMultiplied += totalNormalOTMultiplied
+      grandTotalSpecialOTMultiplied += totalSpecialOTMultiplied
+      grandTotalPremiumOTMultiplied += totalPremiumOTMultiplied
+
+      return {
+        employee,
+        totalOT,
+        totalNormalOT,
+        totalSpecialOT,
+        totalPremiumOT,
+        totalOTMultiplied,
+        totalNormalOTMultiplied,
+        totalSpecialOTMultiplied,
+        totalPremiumOTMultiplied
+      }
+    })
+
+    // Check if all visible employees are selected
+    const allVisibleIds = data.map(emp => emp.employeeId)
+    const allSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedEmployees.has(id))
+
+    const toggleSelectAll = () => {
+      if (allSelected) {
+        // Deselect all visible
+        setSelectedEmployees(prev => {
+          const newSet = new Set(prev)
+          allVisibleIds.forEach(id => newSet.delete(id))
+          return newSet
+        })
+      } else {
+        // Select all visible
+        setSelectedEmployees(prev => {
+          const newSet = new Set(prev)
+          allVisibleIds.forEach(id => newSet.add(id))
+          return newSet
+        })
+      }
+    }
+
     return (
       <div className="table-container" style={{ marginBottom: '24px' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)' }}>
@@ -465,19 +614,29 @@ export default function Home() {
           <table className="data-table">
             <thead>
               <tr>
+                {/* Checkbox column */}
+                <th style={{ minWidth: '50px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    title={allSelected ? 'ยกเลิกเลือกทั้งหมด' : 'เลือกทั้งหมด'}
+                    style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                  />
+                </th>
                 <th style={{ minWidth: '120px' }}>{t('home.employeeId')}</th>
                 <th style={{ minWidth: '180px' }}>{t('home.employeeName')}</th>
 
-                {/* 8 คอลัมน์สรุป */}
+                {/* 8 คอลัมน์สรุป - เปลี่ยนชื่อ */}
                 <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd', fontWeight: '700' }}>รวม OT</th>
-                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT ปกติ</th>
-                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT พิเศษ</th>
-                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT ขั้นสูง</th>
+                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT 1.5</th>
+                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT 2</th>
+                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT 3</th>
 
                 <th className="text-center" style={{ minWidth: '100px', background: '#fff3e0', fontWeight: '700' }}>รวม OT (คำนวณ)</th>
-                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT ปกติ (×1.5)</th>
-                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT พิเศษ (×2)</th>
-                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT ขั้นสูง (×3)</th>
+                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT 1.5 (×1.5)</th>
+                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT 2 (×2)</th>
+                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT 3 (×3)</th>
 
                 {/* คอลัมน์วัน */}
                 {dates.map(date => {
@@ -496,94 +655,174 @@ export default function Home() {
             <tbody>
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={dates.length + 10} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={dates.length + 11} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     {searchQuery ? t('home.noData') : t('home.noData')}
                   </td>
                 </tr>
               ) : (
-                data.map((employee) => {
-                  let totalOT = 0
-                  let totalNormalOT = 0
-                  let totalSpecialOT = 0
-                  let totalPremiumOT = 0
+                <>
+                  {employeeStats.map(({ employee, totalOT, totalNormalOT, totalSpecialOT, totalPremiumOT, totalOTMultiplied, totalNormalOTMultiplied, totalSpecialOTMultiplied, totalPremiumOTMultiplied }) => {
+                    const isChecked = selectedEmployees.has(employee.employeeId)
 
-                  let totalOTMultiplied = 0
-                  let totalNormalOTMultiplied = 0
-                  let totalSpecialOTMultiplied = 0
-                  let totalPremiumOTMultiplied = 0
+                    return (
+                      <tr key={employee.employeeId}>
+                        {/* Checkbox */}
+                        <td className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleEmployeeSelection(employee.employeeId)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
+                        <td>{employee.employeeId}</td>
+                        <td className="employee-name">{employee.name}</td>
 
-                  dates.forEach(date => {
-                    if (employee.attendance[date]) {
-                      totalOT += employee.attendance[date].otHours
-                      totalNormalOT += employee.attendance[date].otNormalHours || 0
-                      totalSpecialOT += employee.attendance[date].otSpecialHours || 0
-                      totalPremiumOT += employee.attendance[date].otPremiumHours || 0
+                        {/* 8 คอลัมน์สรุป */}
+                        <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                          {totalOT.toFixed(2)}
+                        </td>
+                        <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                          {totalNormalOT.toFixed(2)}
+                        </td>
+                        <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                          {totalSpecialOT.toFixed(2)}
+                        </td>
+                        <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                          {totalPremiumOT.toFixed(2)}
+                        </td>
 
-                      totalOTMultiplied += employee.attendance[date].otHoursMultiplied || 0
-                      totalNormalOTMultiplied += employee.attendance[date].otNormalHoursMultiplied || 0
-                      totalSpecialOTMultiplied += employee.attendance[date].otSpecialHoursMultiplied || 0
-                      totalPremiumOTMultiplied += employee.attendance[date].otPremiumHoursMultiplied || 0
-                    }
-                  })
+                        <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                          {totalOTMultiplied.toFixed(2)}
+                        </td>
+                        <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                          {totalNormalOTMultiplied.toFixed(2)}
+                        </td>
+                        <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                          {totalSpecialOTMultiplied.toFixed(2)}
+                        </td>
+                        <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                          {totalPremiumOTMultiplied.toFixed(2)}
+                        </td>
 
-                  return (
-                    <tr key={employee.employeeId}>
-                      <td>{employee.employeeId}</td>
-                      <td className="employee-name">{employee.name}</td>
+                        {/* คอลัมน์วัน */}
+                        {dates.map(date => {
+                          const att = employee.attendance[date]
+                          const dayColor = getDayColor(date)
 
-                      {/* 8 คอลัมน์สรุป */}
-                      <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
-                        {totalOT.toFixed(2)}
-                      </td>
-                      <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
-                        {totalNormalOT.toFixed(2)}
-                      </td>
-                      <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
-                        {totalSpecialOT.toFixed(2)}
-                      </td>
-                      <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
-                        {totalPremiumOT.toFixed(2)}
-                      </td>
+                          return (
+                            <td
+                              key={date}
+                              className={`text-center ${dayColor}`}
+                              title={att ? `เข้า: ${att.checkInTime} / ออก: ${att.checkOutTime}\nชั่วโมงจริง: ${att.actualHours}` : ''}
+                            >
+                              {att ? (
+                                <span className="ot-value">
+                                  {att.otHours.toFixed(2)}
+                                </span>
+                              ) : ''}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })}
 
-                      <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
-                        {totalOTMultiplied.toFixed(2)}
-                      </td>
-                      <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
-                        {totalNormalOTMultiplied.toFixed(2)}
-                      </td>
-                      <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
-                        {totalSpecialOTMultiplied.toFixed(2)}
-                      </td>
-                      <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
-                        {totalPremiumOTMultiplied.toFixed(2)}
-                      </td>
-
-                      {/* คอลัมน์วัน */}
-                      {dates.map(date => {
-                        const att = employee.attendance[date]
-                        const dayColor = getDayColor(date)
-
-                        return (
-                          <td
-                            key={date}
-                            className={`text-center ${dayColor}`}
-                            title={att ? `เข้า: ${att.checkInTime} / ออก: ${att.checkOutTime}\nชั่วโมงจริง: ${att.actualHours}` : ''}
-                          >
-                            {att ? (
-                              <span className="ot-value">
-                                {att.otHours.toFixed(2)}
-                              </span>
-                            ) : ''}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  )
-                })
+                </>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* แถวสรุปรวม - แยกออกมาจากตาราง (Fixed Position) */}
+        {data.length > 0 && (
+          <div style={{
+            background: '#f5f5f5',
+            padding: '12px 16px',
+            borderRadius: '0 0 8px 8px',
+            boxShadow: '0 -2px 8px rgba(0,0,0,0.08)',
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 10,
+            borderTop: '2px solid #e0e0e0'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              color: '#333',
+              overflowX: 'auto',
+              paddingBottom: '4px'
+            }}>
+              <div style={{ fontWeight: '700', fontSize: '14px', minWidth: '120px', flexShrink: 0 }}>
+                สรุปรวม ({data.length} คน)
+              </div>
+
+              {/* กลุ่ม OT ดิบ */}
+              <div style={{ display: 'flex', gap: '12px', background: '#e3f2fd', padding: '8px 12px', borderRadius: '6px', flexShrink: 0 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#666' }}>รวม OT</div>
+                  <div style={{ fontWeight: '700', fontSize: '18px', color: '#1976d2' }}>{grandTotalOT.toFixed(2)}</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#666' }}>OT 1.5</div>
+                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalNormalOT.toFixed(2)}</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#666' }}>OT 2</div>
+                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalSpecialOT.toFixed(2)}</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#666' }}>OT 3</div>
+                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalPremiumOT.toFixed(2)}</div>
+                </div>
+              </div>
+
+              {/* กลุ่ม OT คำนวณแล้ว */}
+              <div style={{ display: 'flex', gap: '12px', background: '#fff3e0', padding: '8px 12px', borderRadius: '6px', flexShrink: 0 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#666' }}>รวม (คำนวณ)</div>
+                  <div style={{ fontWeight: '700', fontSize: '18px', color: '#e65100' }}>{grandTotalOTMultiplied.toFixed(2)}</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#666' }}>×1.5</div>
+                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalNormalOTMultiplied.toFixed(2)}</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#666' }}>×2</div>
+                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalSpecialOTMultiplied.toFixed(2)}</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#666' }}>×3</div>
+                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalPremiumOTMultiplied.toFixed(2)}</div>
+                </div>
+              </div>
+
+              {/* สรุปรายวัน - แสดงทุกวัน scroll ได้ */}
+              <div style={{
+                display: 'flex',
+                gap: '6px',
+                background: '#fafafa',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid #e0e0e0',
+                flexShrink: 0
+              }}>
+                {dates.map(date => {
+                  const day = parseInt(date.split('-')[2])
+                  const dateObj = new Date(date)
+                  const isSunday = dateObj.getDay() === 0
+                  return (
+                    <div key={date} style={{ textAlign: 'center', minWidth: '45px' }}>
+                      <div style={{ fontSize: '10px', color: isSunday ? '#e53935' : '#666' }}>{day}</div>
+                      <div style={{ fontWeight: '600', fontSize: '14px', color: '#333' }}>{dailyTotals[date].toFixed(2)}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -698,6 +937,107 @@ export default function Home() {
             </select>
           </div>
         </div>
+
+        {/* Group By Controls */}
+        <div style={{ paddingTop: '20px', borderTop: '1px solid var(--border-light)', marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+            จัดกลุ่มพนักงาน (Group By)
+          </label>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => { setGroupBy('none'); setSelectedGroup(''); }}
+              className={`btn ${groupBy === 'none' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px' }}
+            >
+              ทั้งหมด
+            </button>
+            <button
+              onClick={() => { setGroupBy('position'); setSelectedGroup(''); }}
+              className={`btn ${groupBy === 'position' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px' }}
+            >
+              ตำแหน่ง
+            </button>
+            <button
+              onClick={() => { setGroupBy('department_code'); setSelectedGroup(''); }}
+              className={`btn ${groupBy === 'department_code' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px' }}
+            >
+              ฝ่าย
+            </button>
+            <button
+              onClick={() => { setGroupBy('section'); setSelectedGroup(''); }}
+              className={`btn ${groupBy === 'section' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px' }}
+            >
+              แผนก
+            </button>
+
+            {/* Dropdown เลือกกลุ่มย่อย */}
+            {groupBy !== 'none' && (
+              <select
+                value={selectedGroup}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                style={{ padding: '8px 12px', minWidth: '200px' }}
+              >
+                <option value="">-- เลือก{groupBy === 'position' ? 'ตำแหน่ง' : groupBy === 'department_code' ? 'ฝ่าย' : 'แผนก'} --</option>
+                {getGroupOptions().map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+
+        {/* Selected Employees Display */}
+        {selectedEmployees.size > 0 && (
+          <div style={{ paddingTop: '20px', borderTop: '1px solid var(--border-light)', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                พนักงานที่เลือก ({selectedEmployees.size} คน)
+              </label>
+              <button
+                onClick={clearAllSelections}
+                className="btn btn-secondary"
+                style={{ padding: '4px 12px', fontSize: '12px' }}
+              >
+                ล้างทั้งหมด
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {Array.from(selectedEmployees).slice(0, 10).map(empId => {
+                const emp = period1Data.find(e => e.employeeId === empId)
+                return (
+                  <span
+                    key={empId}
+                    style={{
+                      padding: '4px 8px',
+                      background: '#e3f2fd',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {emp?.name || empId}
+                    <button
+                      onClick={() => toggleEmployeeSelection(empId)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', fontSize: '14px' }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )
+              })}
+              {selectedEmployees.size > 10 && (
+                <span style={{ padding: '4px 8px', background: '#f5f5f5', borderRadius: '4px', fontSize: '12px' }}>
+                  +{selectedEmployees.size - 10} คน
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Import */}
         <div style={{ paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
