@@ -97,9 +97,23 @@ export async function GET(request: NextRequest) {
         deductionByCategory[cat] = (deductionByCategory[cat] || 0) + (ded.amount || 0)
       })
 
+      // ถ้ามีการกำหนดภาษีแบบ manual ให้ใช้ค่านั้นแทนภาษีที่คำนวณไว้ใน wage_summary
+      const manualTax =
+        deductionByCategory['ภาษี'] ||
+        deductionByCategory['ภาษีหัก ณ ที่จ่าย'] ||
+        deductionByCategory['ภาษีเงินได้หัก ณ ที่จ่าย'] ||
+        0
+
       // คำนวณรวมเงินเพิ่มและเงินหักจาก adjustments
       const additionalIncome = empAdjustments.income.reduce((sum, inc) => sum + (inc.amount || 0), 0)
       const additionalDeduction = empAdjustments.deduction.reduce((sum, ded) => sum + (ded.amount || 0), 0)
+
+      const baseTax = wd.tax || 0
+      const effectiveTax = manualTax > 0 ? manualTax : baseTax
+      const baseTotalDeductions = wd.total_deduction || 0
+      const effectiveTotalDeductions = manualTax > 0 ? (baseTotalDeductions - baseTax + manualTax) : baseTotalDeductions
+      const baseNetWage = wd.net_wage || 0
+      const effectiveNetWage = manualTax > 0 ? (baseNetWage + baseTax - manualTax) : baseNetWage
 
       return {
         employeeId: wd.employee_id,
@@ -149,10 +163,10 @@ export async function GET(request: NextRequest) {
         roundingDed: 0,
         additionalDeduction: additionalDeduction,
         sso: wd.sso || 0,
-        tax: wd.tax || 0,
-        totalDeductions: wd.total_deduction || 0,
+        tax: effectiveTax,
+        totalDeductions: effectiveTotalDeductions,
         // เงินสุทธิ
-        netWage: wd.net_wage || 0
+        netWage: effectiveNetWage
       }
     })
 

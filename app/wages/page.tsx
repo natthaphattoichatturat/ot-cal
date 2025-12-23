@@ -98,8 +98,9 @@ export default function WagesPage() {
 
   const printRef = useRef<HTMLDivElement>(null)
 
-  // Add income/deduction modal state
+  // Add income/deduction/tax modal state
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false)
+  const [adjustmentMode, setAdjustmentMode] = useState<'income' | 'deduction' | 'tax'>('income')
   const [adjustmentType, setAdjustmentType] = useState<'income' | 'deduction'>('income')
   const [adjustmentCategory, setAdjustmentCategory] = useState('')
   const [adjustmentAmount, setAdjustmentAmount] = useState('')
@@ -146,6 +147,7 @@ export default function WagesPage() {
   }
 
   const openAdjustmentModal = (type: 'income' | 'deduction') => {
+    setAdjustmentMode(type)
     setAdjustmentType(type)
     setAdjustmentCategory('')
     setAdjustmentAmount('')
@@ -156,8 +158,20 @@ export default function WagesPage() {
     setShowAdjustmentModal(true)
   }
 
+  const openTaxModal = () => {
+    setAdjustmentMode('tax')
+    setAdjustmentType('deduction')
+    setAdjustmentCategory('ภาษี')
+    setAdjustmentAmount('')
+    setAdjustmentDescription('')
+    setAdjustmentEmployeeSearch('')
+    setAdjustmentEmployeeIds(new Set(selectedEmployees))
+    setShowAdjustmentModal(true)
+  }
+
   const closeAdjustmentModal = () => {
     setShowAdjustmentModal(false)
+    setAdjustmentMode('income')
     setAdjustmentCategory('')
     setAdjustmentAmount('')
     setAdjustmentDescription('')
@@ -183,7 +197,10 @@ export default function WagesPage() {
       alert('กรุณาเลือกเดือนและปี')
       return
     }
-    if (!adjustmentCategory || !adjustmentAmount) {
+    const effectiveType: 'income' | 'deduction' = adjustmentMode === 'tax' ? 'deduction' : adjustmentType
+    const effectiveCategory = adjustmentMode === 'tax' ? 'ภาษี' : adjustmentCategory
+
+    if (!effectiveCategory || !adjustmentAmount) {
       alert('กรุณากรอกข้อมูลให้ครบ')
       return
     }
@@ -214,8 +231,8 @@ export default function WagesPage() {
               year: yearNum,
               month: monthNum,
               period: selectedPeriod,
-              adjustment_type: adjustmentType,
-              category: adjustmentCategory,
+              adjustment_type: effectiveType,
+              category: effectiveCategory,
               amount: amountNum,
               description: adjustmentDescription || null,
               created_by: 'admin'
@@ -451,6 +468,14 @@ export default function WagesPage() {
               title="เพิ่มเงินหัก ให้พนักงาน"
             >
               เพิ่มเงินหัก
+            </button>
+            <button
+              onClick={openTaxModal}
+              className="btn btn-secondary"
+              type="button"
+              title="กำหนดภาษีหัก ณ ที่จ่าย ให้พนักงาน"
+            >
+              ภาษี
             </button>
             <button onClick={handlePrint} className="btn btn-primary">
               Print Report
@@ -1052,7 +1077,7 @@ export default function WagesPage() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>
-                {adjustmentType === 'income' ? 'เพิ่มเงินได้' : 'เพิ่มเงินหัก'}
+                {adjustmentMode === 'tax' ? 'ภาษี' : adjustmentType === 'income' ? 'เพิ่มเงินได้' : 'เพิ่มเงินหัก'}
               </h2>
               <button className="btn btn-secondary" type="button" onClick={closeAdjustmentModal}>
                 ปิด
@@ -1075,16 +1100,22 @@ export default function WagesPage() {
                 <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>
                   ประเภท <span style={{ color: '#dc2626' }}>*</span>
                 </label>
-                <select
-                  value={adjustmentCategory}
-                  onChange={(e) => setAdjustmentCategory(e.target.value)}
-                  style={{ width: '100%' }}
-                >
-                  <option value="">-- เลือกประเภท --</option>
-                  {(adjustmentType === 'income' ? incomeCategories : deductionCategories).map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                {adjustmentMode === 'tax' ? (
+                  <div style={{ padding: '10px 12px', border: '1px solid var(--border-light)', borderRadius: '8px', background: 'var(--bg-surface)' }}>
+                    ภาษี
+                  </div>
+                ) : (
+                  <select
+                    value={adjustmentCategory}
+                    onChange={(e) => setAdjustmentCategory(e.target.value)}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">-- เลือกประเภท --</option>
+                    {(adjustmentType === 'income' ? incomeCategories : deductionCategories).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div>
