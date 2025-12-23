@@ -63,6 +63,24 @@ const fmt = (num: number) => {
 
 const safeNum = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 
+// Categories for adjustments (same as wage detail page)
+const incomeCategories = [
+  'โบนัส',
+  'ค่าตำแหน่ง',
+  'ค่าโทรศัพท์',
+  'ค่าเดินทาง',
+  'ค่าอาหาร',
+  'เงินพิเศษอื่นๆ'
+]
+
+const deductionCategories = [
+  'หักค่าปรับ',
+  'หักค่าเสียหาย',
+  'หักเงินกู้',
+  'หักค่าสวัสดิการ',
+  'หักอื่นๆ'
+]
+
 export default function WagesPage() {
   const { t } = useLanguage()
   const [selectedMonth, setSelectedMonth] = useState('')
@@ -79,6 +97,16 @@ export default function WagesPage() {
   const [showSelectedOnly, setShowSelectedOnly] = useState(false)
 
   const printRef = useRef<HTMLDivElement>(null)
+
+  // Add income/deduction modal state
+  const [showAdjustmentModal, setShowAdjustmentModal] = useState(false)
+  const [adjustmentType, setAdjustmentType] = useState<'income' | 'deduction'>('income')
+  const [adjustmentCategory, setAdjustmentCategory] = useState('')
+  const [adjustmentAmount, setAdjustmentAmount] = useState('')
+  const [adjustmentDescription, setAdjustmentDescription] = useState('')
+  const [adjustmentEmployeeSearch, setAdjustmentEmployeeSearch] = useState('')
+  const [adjustmentEmployeeIds, setAdjustmentEmployeeIds] = useState<Set<string>>(new Set())
+  const [savingAdjustment, setSavingAdjustment] = useState(false)
 
   // Initialize with current month/year
   useEffect(() => {
@@ -114,6 +142,104 @@ export default function WagesPage() {
       setEmployeeWages([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const openAdjustmentModal = (type: 'income' | 'deduction') => {
+    setAdjustmentType(type)
+    setAdjustmentCategory('')
+    setAdjustmentAmount('')
+    setAdjustmentDescription('')
+    setAdjustmentEmployeeSearch('')
+    // default to currently selected employees (if any), otherwise empty (user can choose)
+    setAdjustmentEmployeeIds(new Set(selectedEmployees))
+    setShowAdjustmentModal(true)
+  }
+
+  const closeAdjustmentModal = () => {
+    setShowAdjustmentModal(false)
+    setAdjustmentCategory('')
+    setAdjustmentAmount('')
+    setAdjustmentDescription('')
+    setAdjustmentEmployeeSearch('')
+    setAdjustmentEmployeeIds(new Set())
+  }
+
+  const toggleAdjustmentEmployee = (employeeId: string) => {
+    setAdjustmentEmployeeIds(prev => {
+      const next = new Set(prev)
+      if (next.has(employeeId)) next.delete(employeeId)
+      else next.add(employeeId)
+      return next
+    })
+  }
+
+  const selectAllAdjustmentEmployees = (ids: string[]) => {
+    setAdjustmentEmployeeIds(new Set(ids))
+  }
+
+  const saveAdjustment = async () => {
+    if (!selectedYear || !selectedMonth) {
+      alert('กรุณาเลือกเดือนและปี')
+      return
+    }
+    if (!adjustmentCategory || !adjustmentAmount) {
+      alert('กรุณากรอกข้อมูลให้ครบ')
+      return
+    }
+    if (adjustmentEmployeeIds.size === 0) {
+      alert('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+      return
+    }
+
+    const yearNum = parseInt(selectedYear)
+    const monthNum = parseInt(selectedMonth)
+    const amountNum = parseFloat(adjustmentAmount)
+
+    if (!Number.isFinite(yearNum) || !Number.isFinite(monthNum) || !Number.isFinite(amountNum)) {
+      alert('ข้อมูลเดือน/ปี/จำนวนเงินไม่ถูกต้อง')
+      return
+    }
+
+    setSavingAdjustment(true)
+    try {
+      const employeeIds = Array.from(adjustmentEmployeeIds)
+      const results = await Promise.allSettled(
+        employeeIds.map(empId =>
+          fetch('/api/wages/adjustments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employee_id: empId,
+              year: yearNum,
+              month: monthNum,
+              period: selectedPeriod,
+              adjustment_type: adjustmentType,
+              category: adjustmentCategory,
+              amount: amountNum,
+              description: adjustmentDescription || null,
+              created_by: 'admin'
+            })
+          }).then(r => r.json())
+        )
+      )
+
+      const failed = results.filter(r => r.status === 'rejected').length +
+        results.filter(r => r.status === 'fulfilled' && !(r.value as any)?.success).length
+
+      if (failed > 0) {
+        alert(`บันทึกสำเร็จบางส่วน (ล้มเหลว ${failed} รายการ)`)
+      } else {
+        alert('บันทึกสำเร็จ')
+      }
+
+      closeAdjustmentModal()
+      await fetchWageData()
+    } catch (error) {
+      console.error('Error saving adjustment:', error)
+      alert('เกิดข้อผิดพลาดในการบันทึก')
+    } finally {
+      setSavingAdjustment(false)
     }
   }
 
@@ -310,6 +436,22 @@ export default function WagesPage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => openAdjustmentModal('income')}
+              className="btn btn-primary"
+              type="button"
+              title="เพิ่มเงินได้ (เงินเพิ่ม) ให้พนักงาน"
+            >
+              เพิ่มเงินได้
+            </button>
+            <button
+              onClick={() => openAdjustmentModal('deduction')}
+              className="btn btn-secondary"
+              type="button"
+              title="เพิ่มเงินหัก ให้พนักงาน"
+            >
+              เพิ่มเงินหัก
+            </button>
             <button onClick={handlePrint} className="btn btn-primary">
               Print Report
             </button>
@@ -872,6 +1014,184 @@ export default function WagesPage() {
           {/* Print Note */}
           <div className="no-print" style={{ marginTop: '16px', textAlign: 'center', color: '#666', fontSize: '13px' }}>
             <p>Recommended: Print in Landscape mode with minimal margins for best results.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal เพิ่มเงินได้/เพิ่มเงินหัก */}
+      {showAdjustmentModal && (
+        <div
+          className="no-print"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={closeAdjustmentModal}
+        >
+          <div
+            className="card"
+            style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '820px',
+              maxHeight: '90vh',
+              overflow: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>
+                {adjustmentType === 'income' ? 'เพิ่มเงินได้' : 'เพิ่มเงินหัก'}
+              </h2>
+              <button className="btn btn-secondary" type="button" onClick={closeAdjustmentModal}>
+                ปิด
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>
+                  เลือกงวด
+                </label>
+                <div style={{ padding: '10px 12px', border: '1px solid var(--border-light)', borderRadius: '8px', background: 'var(--bg-surface)' }}>
+                  {selectedMonth && selectedYear
+                    ? `${['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][Math.max(0, parseInt(selectedMonth) - 1)]} ${parseInt(selectedYear) + 543} - งวด ${selectedPeriod}`
+                    : 'กรุณาเลือกเดือน/ปี'}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>
+                  ประเภท <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <select
+                  value={adjustmentCategory}
+                  onChange={(e) => setAdjustmentCategory(e.target.value)}
+                  style={{ width: '100%' }}
+                >
+                  <option value="">-- เลือกประเภท --</option>
+                  {(adjustmentType === 'income' ? incomeCategories : deductionCategories).map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>
+                  จำนวนเงิน (บาท) <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  value={adjustmentAmount}
+                  onChange={(e) => setAdjustmentAmount(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>
+                  รายละเอียด/หมายเหตุ
+                </label>
+                <input
+                  type="text"
+                  value={adjustmentDescription}
+                  onChange={(e) => setAdjustmentDescription(e.target.value)}
+                  placeholder="ระบุรายละเอียดเพิ่มเติม (ถ้ามี)"
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                <div style={{ fontWeight: 700 }}>
+                  เลือกพนักงาน <span style={{ color: '#dc2626' }}>*</span> ({adjustmentEmployeeIds.size} คน)
+                </div>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    onClick={() => selectAllAdjustmentEmployees(baseFilteredData.map(e => e.employeeId))}
+                  >
+                    พนักงานทั้งหมด
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    onClick={() => setAdjustmentEmployeeIds(new Set())}
+                  >
+                    ล้างการเลือก
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '10px' }}>
+                <input
+                  type="text"
+                  placeholder="ค้นหาพนักงาน (ชื่อหรือรหัส)..."
+                  value={adjustmentEmployeeSearch}
+                  onChange={(e) => setAdjustmentEmployeeSearch(e.target.value)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div style={{ border: '1px solid var(--border-light)', borderRadius: '8px', maxHeight: '260px', overflow: 'auto' }}>
+                {baseFilteredData
+                  .filter(emp => {
+                    const q = adjustmentEmployeeSearch.trim().toLowerCase()
+                    if (!q) return true
+                    return emp.employeeId.toLowerCase().includes(q) || emp.name.toLowerCase().includes(q)
+                  })
+                  .map(emp => {
+                    const checked = adjustmentEmployeeIds.has(emp.employeeId)
+                    return (
+                      <label
+                        key={emp.employeeId}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '10px 12px',
+                          borderBottom: '1px solid var(--border-light)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleAdjustmentEmployee(emp.employeeId)}
+                        />
+                        <div style={{ fontWeight: 700 }}>{emp.employeeId}</div>
+                        <div style={{ color: 'var(--text-secondary)' }}>
+                          - {emp.name} {emp.position ? `(${emp.position})` : ''}
+                        </div>
+                      </label>
+                    )
+                  })}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '18px' }}>
+              <button className="btn btn-secondary" type="button" onClick={closeAdjustmentModal} disabled={savingAdjustment}>
+                ยกเลิก
+              </button>
+              <button className="btn btn-primary" type="button" onClick={saveAdjustment} disabled={savingAdjustment}>
+                {savingAdjustment ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
           </div>
         </div>
       )}
