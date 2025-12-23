@@ -1,102 +1,84 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { format, getDaysInMonth, getDay } from 'date-fns'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
-
-interface DailyWageData {
-  employeeId: string
-  name: string
-  department: string
-  wages: {
-    [date: string]: {
-      base_wage: number
-      ot1_wage: number
-      ot2_wage: number
-      ot3_wage: number
-      daily_total_wage: number
-    }
-  }
-}
 
 interface EmployeeWage {
   employeeId: string
   name: string
   department: string
   employmentType: string
+  position: string
+  departmentCode: string
+  section: string
+  // เงินเดือน/ค่าจ้าง
   totalBaseWage: number
+  // OT
   totalOt1Wage: number
   totalOt2Wage: number
   totalOt3Wage: number
+  totalOt4Wage: number
   grossWage: number
+  // เงินเพิ่ม
   attendanceBonus: number
   nightShiftAllowance: number
+  positionAllowance: number
+  telephoneAllowance: number
+  livingAllowance: number
+  specialAllowance: number
+  otherIncome1: number
+  otherIncome2: number
+  returnDiligence: number
+  returnVacation: number
+  bonus1: number
+  bonus2: number
+  compta: number
+  rounding: number
   additionalIncome: number
   totalIncome: number
   // เงินหัก
-  lateMinutes: number
   lateDeduction: number
-  leaveDays: number
+  absentDeduction: number
   leaveDeduction: number
+  uniformDeduction: number
+  studentLoanDeduction: number
+  coopDeduction: number
+  damagesDeduction: number
+  latePenalty: number
+  deductSpecial: number
+  deductOther: number
+  comptaDed: number
+  roundingDed: number
   additionalDeduction: number
   sso: number
   tax: number
   totalDeductions: number
-  // เงินสุทธิ
   netWage: number
 }
 
-interface MasterItem {
-  id: number
-  item_name: string
-  item_name_th: string
-  include_in_sso: boolean
-  is_fixed: boolean
-  default_amount: number
+// Format number with 2 decimal places
+const fmt = (num: number) => {
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
+
+const safeNum = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 
 export default function WagesPage() {
   const { t } = useLanguage()
-  const [activeTab, setActiveTab] = useState<'daily' | 'summary'>('summary') // เปลี่ยนเป็น summary เป็นค่าเริ่มต้น
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedPeriod, setSelectedPeriod] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(false)
-
-  // Daily wages data (for Tab 1)
-  const [dailyWageData, setDailyWageData] = useState<DailyWageData[]>([])
-  const [filteredDailyWages, setFilteredDailyWages] = useState<DailyWageData[]>([])
-
-  // Summary data (for Tab 2)
   const [employeeWages, setEmployeeWages] = useState<EmployeeWage[]>([])
-  const [filteredEmployees, setFilteredEmployees] = useState<EmployeeWage[]>([])
 
-  // Search & Pagination
-  const [currentPage, setCurrentPage] = useState(1)
+  // Multi-select and Group By
+  const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set())
+  const [groupBy, setGroupBy] = useState<'none' | 'position' | 'departmentCode' | 'section'>('none')
+  const [selectedGroup, setSelectedGroup] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const itemsPerPage = 10
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false)
 
-  // Income/Deduction Popup State
-  const [showIncomeDeductionPopup, setShowIncomeDeductionPopup] = useState(false)
-  const [recordType, setRecordType] = useState<'income' | 'deduction'>('income')
-  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
-  const [selectedItem, setSelectedItem] = useState('')
-  const [amount, setAmount] = useState('')
-  const [notes, setNotes] = useState('')
-  const [masterItems, setMasterItems] = useState<MasterItem[]>([])
-  const [savingRecord, setSavingRecord] = useState(false)
-  const [message, setMessage] = useState('')
-
-  // Employee search state
-  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('')
-  const [filteredEmployeesForSelection, setFilteredEmployeesForSelection] = useState<EmployeeWage[]>([])
-  const [searchingEmployees, setSearchingEmployees] = useState(false)
-
-  // Calculate wages state
-  const [calculating, setCalculating] = useState(false)
-  const [calculateMessage, setCalculateMessage] = useState('')
-
-  const thaiDays = [t('days.sunday'), t('days.monday'), t('days.tuesday'), t('days.wednesday'), t('days.thursday'), t('days.friday'), t('days.saturday')]
+  const printRef = useRef<HTMLDivElement>(null)
 
   // Initialize with current month/year
   useEffect(() => {
@@ -110,76 +92,7 @@ export default function WagesPage() {
     if (selectedMonth && selectedYear) {
       fetchWageData()
     }
-  }, [selectedMonth, selectedYear, selectedPeriod, activeTab])
-
-  // Filter data when search changes
-  useEffect(() => {
-    filterData()
-  }, [searchQuery, dailyWageData, employeeWages])
-
-  // Real-time employee search for popup
-  useEffect(() => {
-    const searchEmployees = async () => {
-      if (!employeeSearchQuery.trim()) {
-        setFilteredEmployeesForSelection(employeeWages)
-        return
-      }
-
-      setSearchingEmployees(true)
-      try {
-        const searchQuery = employeeSearchQuery.trim()
-        let searchBy = 'name'
-        let searchValue = searchQuery
-
-        // Check if it's an employee ID (numeric or starts with letter)
-        if (/^\d/.test(searchQuery) || /^[A-Za-z]/.test(searchQuery)) {
-          searchBy = 'employee_id'
-        }
-
-        const res = await fetch(`/api/employees?search=${encodeURIComponent(searchValue)}&searchBy=${searchBy}&status=active`)
-        const data = await res.json()
-
-        if (data.success) {
-          // Map to EmployeeWage format for consistency
-          const mappedEmployees = (data.data || []).map((emp: any) => ({
-            employeeId: emp.employee_id,
-            name: emp.name,
-            department: emp.department || 'ไม่ระบุ',
-            employmentType: emp.employment_type || 'รายวัน',
-            totalBaseWage: 0,
-            totalOt1Wage: 0,
-            totalOt2Wage: 0,
-            totalOt3Wage: 0,
-            grossWage: 0,
-            attendanceBonus: 0,
-            nightShiftAllowance: 0,
-            additionalIncome: 0,
-            totalIncome: 0,
-            lateMinutes: 0,
-            lateDeduction: 0,
-            leaveDays: 0,
-            leaveDeduction: 0,
-            additionalDeduction: 0,
-            sso: 0,
-            tax: 0,
-            totalDeductions: 0,
-            netWage: 0
-          }))
-          setFilteredEmployeesForSelection(mappedEmployees)
-        } else {
-          setFilteredEmployeesForSelection([])
-        }
-      } catch (error) {
-        console.error('Error searching employees:', error)
-        setFilteredEmployeesForSelection([])
-      } finally {
-        setSearchingEmployees(false)
-      }
-    }
-
-    const timeoutId = setTimeout(searchEmployees, 300) // Debounce 300ms
-    return () => clearTimeout(timeoutId)
-  }, [employeeSearchQuery, employeeWages])
+  }, [selectedMonth, selectedYear, selectedPeriod])
 
   const fetchWageData = async () => {
     if (!selectedMonth || !selectedYear) return
@@ -187,8 +100,6 @@ export default function WagesPage() {
     setLoading(true)
     try {
       const monthStr = `${selectedYear}-${selectedMonth}`
-
-      // ใช้ API เดียวที่ส่งข้อมูลทั้งหมดมาเลย (เร็วกว่าเดิม 10-50 เท่า!)
       const res = await fetch(`/api/wages/summary?month=${monthStr}&period=${selectedPeriod}`)
       const data = await res.json()
 
@@ -206,418 +117,215 @@ export default function WagesPage() {
     }
   }
 
-  const filterData = () => {
-    const query = searchQuery.toLowerCase().trim()
+  // Filter base data based on search + group (NOT selection; selection is a separate view mode)
+  const baseFilteredData = useMemo((): EmployeeWage[] => {
+    let filtered = [...employeeWages]
 
-    // ลบแท็บ daily แล้ว filter แค่ employeeWages
-    if (!query) {
-      setFilteredEmployees(employeeWages)
-    } else {
-      const filtered = employeeWages.filter(emp =>
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(emp =>
         emp.employeeId.toLowerCase().includes(query) ||
         emp.name.toLowerCase().includes(query)
       )
-      setFilteredEmployees(filtered)
-    }
-    setCurrentPage(1)
-  }
-
-  // Pagination
-  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentEmployees = filteredEmployees.slice(startIndex, endIndex)
-
-  const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page)
-    }
-  }
-
-  const getDayColor = (dateStr: string): string => {
-    const date = new Date(dateStr)
-    const day = getDay(date)
-
-    const colors = [
-      'day-sunday',
-      'day-monday',
-      'day-tuesday',
-      'day-wednesday',
-      'day-thursday',
-      'day-friday',
-      'day-saturday'
-    ]
-
-    return colors[day]
-  }
-
-  const renderDailyWagesTable = () => {
-    const year = parseInt(selectedYear)
-    const month = parseInt(selectedMonth)
-    let dates: string[] = []
-
-    if (selectedPeriod === 1) {
-      const prevMonth = month === 1 ? 12 : month - 1
-      const prevYear = month === 1 ? year - 1 : year
-      const daysInPrevMonth = getDaysInMonth(new Date(prevYear, prevMonth - 1))
-
-      for (let day = 26; day <= daysInPrevMonth; day++) {
-        dates.push(`${prevYear}-${prevMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`)
-      }
-
-      for (let day = 1; day <= 10; day++) {
-        dates.push(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`)
-      }
-    } else {
-      for (let day = 11; day <= 25; day++) {
-        dates.push(`${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`)
-      }
     }
 
-    return (
-      <div className="table-container">
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-            {t('wages.title')} - {t(`months.${parseInt(selectedMonth)}`)} {parseInt(selectedYear) + 543} ({t('wages.period1')})
-          </h3>
-        </div>
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th style={{ minWidth: '120px' }}>{t('wages.employeeId')}</th>
-                <th style={{ minWidth: '180px' }}>{t('wages.employeeName')}</th>
-                {dates.map(date => {
-                  const day = parseInt(date.split('-')[2])
-                  const dateObj = new Date(date)
-                  const dayOfWeek = thaiDays[dateObj.getDay()]
-                  return (
-                    <th key={date} className="text-center" style={{ minWidth: '90px' }}>
-                      <div style={{ fontWeight: '700' }}>{day}</div>
-                      <div style={{ fontSize: '11px', fontWeight: '400', opacity: 0.7 }}>{dayOfWeek}</div>
-                    </th>
-                  )
-                })}
-                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>{t('wages.baseWage')}</th>
-                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>{t('wages.ot1Wage')}</th>
-                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>{t('wages.ot2Wage')}</th>
-                <th className="text-center" style={{ minWidth: '110px', background: 'var(--surface-bg)' }}>{t('wages.ot3Wage')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDailyWages.length === 0 ? (
-                <tr>
-                  <td colSpan={dates.length + 6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    {searchQuery ? t('wages.noData') : t('wages.noData')}
-                  </td>
-                </tr>
-              ) : (
-                filteredDailyWages.map((employee) => {
-                  let totalBase = 0
-                  let totalOt1 = 0
-                  let totalOt2 = 0
-                  let totalOt3 = 0
-
-                  dates.forEach(date => {
-                    if (employee.wages[date]) {
-                      totalBase += employee.wages[date].base_wage
-                      totalOt1 += employee.wages[date].ot1_wage
-                      totalOt2 += employee.wages[date].ot2_wage
-                      totalOt3 += employee.wages[date].ot3_wage
-                    }
-                  })
-
-                  return (
-                    <tr key={employee.employeeId}>
-                      <td>{employee.employeeId}</td>
-                      <td className="employee-name">{employee.name}</td>
-                      {dates.map(date => {
-                        const wage = employee.wages[date]
-                        const dayColor = getDayColor(date)
-
-                        return (
-                          <td
-                            key={date}
-                            className={`text-center ${dayColor}`}
-                            title={wage ? `${t('common.baht')}: ${wage.daily_total_wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ${t('common.baht')}` : ''}
-                          >
-                            {wage ? (
-                              <span className="ot-value">
-                                {wage.daily_total_wage.toLocaleString('th-TH', { minimumFractionDigits: 0 })}
-                              </span>
-                            ) : ''}
-                          </td>
-                        )
-                      })}
-                      <td className="text-center" style={{ fontWeight: '600', fontSize: '14px', background: 'var(--surface-bg)' }}>
-                        {totalBase.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="text-center" style={{ fontWeight: '600', fontSize: '14px', background: 'var(--surface-bg)' }}>
-                        {totalOt1.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="text-center" style={{ fontWeight: '600', fontSize: '14px', background: 'var(--surface-bg)' }}>
-                        {totalOt2.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="text-center" style={{ fontWeight: '600', fontSize: '14px', background: 'var(--surface-bg)' }}>
-                        {totalOt3.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )
-  }
-
-  // Fetch master items เมื่อเปิด popup
-  const fetchMasterItems = async (type: 'income' | 'deduction') => {
-    try {
-      const res = await fetch(`/api/income-deduction/master?category=${type}`)
-      const data = await res.json()
-      if (data.success) {
-        setMasterItems(data.data)
-      }
-    } catch (error) {
-      console.error('Error fetching master items:', error)
-    }
-  }
-
-  const openIncomeDeductionPopup = (type: 'income' | 'deduction') => {
-    setRecordType(type)
-    setShowIncomeDeductionPopup(true)
-    setSelectedEmployees([])
-    setSelectedItem('')
-    setAmount('')
-    setNotes('')
-    setMessage('')
-    setEmployeeSearchQuery('') // Reset search when opening popup
-    fetchMasterItems(type)
-  }
-
-  const closeIncomeDeductionPopup = () => {
-    setShowIncomeDeductionPopup(false)
-    setSelectedEmployees([])
-    setSelectedItem('')
-    setAmount('')
-    setNotes('')
-    setMessage('')
-    setEmployeeSearchQuery('') // Reset search when closing popup
-  }
-
-  const toggleEmployee = (employeeId: string) => {
-    if (selectedEmployees.includes(employeeId)) {
-      setSelectedEmployees(selectedEmployees.filter(id => id !== employeeId))
-    } else {
-      setSelectedEmployees([...selectedEmployees, employeeId])
-    }
-  }
-
-  const selectAllEmployees = () => {
-    if (selectedEmployees.length === filteredEmployees.length) {
-      setSelectedEmployees([])
-    } else {
-      setSelectedEmployees(filteredEmployees.map(emp => emp.employeeId))
-    }
-  }
-
-  const calculateWages = async () => {
-    if (!selectedMonth || !selectedYear) {
-      setCalculateMessage(`${t('common.error')}: กรุณาเลือกเดือนและปี`)
-      return
-    }
-
-    setCalculating(true)
-    setCalculateMessage('')
-
-    try {
-      // ใช้ API batch ที่เร็วกว่าเดิม 10-50 เท่า!
-      const res = await fetch('/api/wages/calculate-batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          month: parseInt(selectedMonth),
-          year: parseInt(selectedYear)
-        })
+    // Filter by group
+    if (groupBy !== 'none' && selectedGroup) {
+      filtered = filtered.filter(emp => {
+        if (groupBy === 'position') return emp.position === selectedGroup
+        if (groupBy === 'departmentCode') return emp.departmentCode === selectedGroup
+        if (groupBy === 'section') return emp.section === selectedGroup
+        return true
       })
-
-      const data = await res.json()
-
-      if (data.success) {
-        const duration = data.duration_ms ? ` (${(data.duration_ms / 1000).toFixed(1)}s)` : ''
-        setCalculateMessage(`${t('common.success')}: คำนวณสำเร็จ ${data.calculated} รายการ${duration}`)
-        // Refresh data
-        await fetchWageData()
-        setTimeout(() => {
-          setCalculateMessage('')
-        }, 3000)
-      } else {
-        setCalculateMessage(`${t('common.error')}: ${data.error}`)
-      }
-    } catch (error) {
-      console.error('Error calculating wages:', error)
-      setCalculateMessage(`${t('common.error')}: เกิดข้อผิดพลาดในการคำนวณ`)
-    } finally {
-      setCalculating(false)
     }
+
+    return filtered
+  }, [employeeWages, groupBy, searchQuery, selectedGroup])
+
+  const filteredData = useMemo(() => {
+    if (!showSelectedOnly) return baseFilteredData
+    if (selectedEmployees.size === 0) return baseFilteredData
+    return baseFilteredData.filter(emp => selectedEmployees.has(emp.employeeId))
+  }, [baseFilteredData, selectedEmployees, showSelectedOnly])
+
+  // Get unique options for Group By dropdown
+  const getGroupOptions = (): string[] => {
+    const options = new Set<string>()
+    employeeWages.forEach(emp => {
+      if (groupBy === 'position' && emp.position) options.add(emp.position)
+      if (groupBy === 'departmentCode' && emp.departmentCode) options.add(emp.departmentCode)
+      if (groupBy === 'section' && emp.section) options.add(emp.section)
+    })
+    return Array.from(options).sort()
   }
 
-  const saveIncomeDeduction = async () => {
-    if (selectedEmployees.length === 0) {
-      setMessage(`${t('common.error')}: กรุณาเลือกพนักงานอย่างน้อย 1 คน`)
-      return
-    }
+  // Toggle employee selection
+  const toggleEmployeeSelection = (employeeId: string) => {
+    setSelectedEmployees(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(employeeId)) {
+        newSet.delete(employeeId)
+      } else {
+        newSet.add(employeeId)
+      }
+      return newSet
+    })
+  }
 
-    if (!selectedItem || !amount) {
-      setMessage(`${t('common.error')}: กรุณากรอกข้อมูลให้ครบถ้วน`)
-      return
-    }
+  // Clear all selections
+  const clearAllSelections = () => {
+    setSelectedEmployees(new Set())
+  }
 
-    setSavingRecord(true)
-    setMessage('')
+  // Calculate totals
+  const calculateTotals = (data: EmployeeWage[]) => {
+    return data.reduce((acc, emp) => ({
+      count: acc.count + 1,
+      totalBaseWage: acc.totalBaseWage + emp.totalBaseWage,
+      totalOt1Wage: acc.totalOt1Wage + emp.totalOt1Wage,
+      totalOt2Wage: acc.totalOt2Wage + emp.totalOt2Wage,
+      totalOt3Wage: acc.totalOt3Wage + emp.totalOt3Wage,
+      totalOt4Wage: acc.totalOt4Wage + emp.totalOt4Wage,
+      positionAllowance: acc.positionAllowance + emp.positionAllowance,
+      attendanceBonus: acc.attendanceBonus + emp.attendanceBonus,
+      nightShiftAllowance: acc.nightShiftAllowance + emp.nightShiftAllowance,
+      telephoneAllowance: acc.telephoneAllowance + emp.telephoneAllowance,
+      livingAllowance: acc.livingAllowance + emp.livingAllowance,
+      specialAllowance: acc.specialAllowance + emp.specialAllowance,
+      compta: acc.compta + emp.compta,
+      rounding: acc.rounding + emp.rounding,
+      totalIncome: acc.totalIncome + emp.totalIncome,
+      // Row 2 totals
+      otherIncome1: acc.otherIncome1 + emp.otherIncome1,
+      otherIncome2: acc.otherIncome2 + emp.otherIncome2,
+      returnDiligence: acc.returnDiligence + emp.returnDiligence,
+      returnVacation: acc.returnVacation + emp.returnVacation,
+      bonus1: acc.bonus1 + emp.bonus1,
+      bonus2: acc.bonus2 + emp.bonus2,
+      // Row 3 totals (deductions)
+      lateDeduction: acc.lateDeduction + emp.lateDeduction,
+      absentDeduction: acc.absentDeduction + emp.absentDeduction,
+      leaveDeduction: acc.leaveDeduction + emp.leaveDeduction,
+      uniformDeduction: acc.uniformDeduction + emp.uniformDeduction,
+      studentLoanDeduction: acc.studentLoanDeduction + emp.studentLoanDeduction,
+      coopDeduction: acc.coopDeduction + emp.coopDeduction,
+      damagesDeduction: acc.damagesDeduction + emp.damagesDeduction,
+      latePenalty: acc.latePenalty + emp.latePenalty,
+      deductSpecial: acc.deductSpecial + emp.deductSpecial,
+      deductOther: acc.deductOther + emp.deductOther,
+      sso: acc.sso + emp.sso,
+      tax: acc.tax + emp.tax,
+      totalDeductions: acc.totalDeductions + emp.totalDeductions,
+      netWage: acc.netWage + emp.netWage
+    }), {
+      count: 0,
+      totalBaseWage: 0, totalOt1Wage: 0, totalOt2Wage: 0, totalOt3Wage: 0, totalOt4Wage: 0,
+      positionAllowance: 0, attendanceBonus: 0, nightShiftAllowance: 0,
+      telephoneAllowance: 0, livingAllowance: 0, specialAllowance: 0,
+      compta: 0, rounding: 0, totalIncome: 0,
+      otherIncome1: 0, otherIncome2: 0, returnDiligence: 0, returnVacation: 0,
+      bonus1: 0, bonus2: 0,
+      lateDeduction: 0, absentDeduction: 0, leaveDeduction: 0, uniformDeduction: 0,
+      studentLoanDeduction: 0, coopDeduction: 0, damagesDeduction: 0, latePenalty: 0,
+      deductSpecial: 0, deductOther: 0, sso: 0, tax: 0, totalDeductions: 0, netWage: 0
+    })
+  }
 
-    try {
-      const selectedMasterItem = masterItems.find(item => item.item_name === selectedItem)
+  // Print handler
+  const handlePrint = () => {
+    window.print()
+  }
 
-      const res = await fetch('/api/income-deduction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employee_ids: selectedEmployees,
-          pay_period_month: parseInt(selectedMonth),
-          pay_period_year: parseInt(selectedYear),
-          pay_period: selectedPeriod,
-          record_type: recordType,
-          item_name: selectedItem,
-          amount: parseFloat(amount),
-          include_in_sso: selectedMasterItem?.include_in_sso || false,
-          is_fixed: selectedMasterItem?.is_fixed || false,
-          notes,
-          created_by: 'admin'
-        })
+  const totals = calculateTotals(filteredData)
+
+  // Check if all visible employees are selected
+  const allVisibleIds = filteredData.map(emp => emp.employeeId)
+  const allSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedEmployees.has(id))
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedEmployees(prev => {
+        const newSet = new Set(prev)
+        allVisibleIds.forEach(id => newSet.delete(id))
+        return newSet
       })
-
-      const data = await res.json()
-
-      if (data.success) {
-        setMessage(`${t('common.success')}: ${data.message}`)
-        setTimeout(() => {
-          closeIncomeDeductionPopup()
-        }, 1500)
-      } else {
-        setMessage(`${t('common.error')}: ${data.error}`)
-      }
-    } catch (error) {
-      console.error('Error saving income/deduction:', error)
-      setMessage(`${t('common.error')}: เกิดข้อผิดพลาดในการบันทึกข้อมูล`)
-    } finally {
-      setSavingRecord(false)
+    } else {
+      setSelectedEmployees(prev => {
+        const newSet = new Set(prev)
+        allVisibleIds.forEach(id => newSet.add(id))
+        return newSet
+      })
     }
   }
 
-  const Pagination = () => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center' }}>
-      <button
-        className="btn btn-secondary"
-        onClick={() => goToPage(currentPage - 1)}
-        disabled={currentPage === 1}
-      >
-        ← {t('common.previous')}
-      </button>
+  // Get current date/time for report footer
+  const now = new Date()
+  const reportDateTime = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear() + 543} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
 
-      <div style={{ display: 'flex', gap: '8px' }}>
-        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-          let pageNum
-          if (totalPages <= 5) {
-            pageNum = i + 1
-          } else if (currentPage <= 3) {
-            pageNum = i + 1
-          } else if (currentPage >= totalPages - 2) {
-            pageNum = totalPages - 4 + i
-          } else {
-            pageNum = currentPage - 2 + i
-          }
-
-          return (
-            <button
-              key={pageNum}
-              className={currentPage === pageNum ? 'btn btn-primary' : 'btn btn-secondary'}
-              onClick={() => goToPage(pageNum)}
-              style={{ minWidth: '40px' }}
-            >
-              {pageNum}
-            </button>
-          )
-        })}
-      </div>
-
-      <button
-        className="btn btn-secondary"
-        onClick={() => goToPage(currentPage + 1)}
-        disabled={currentPage === totalPages}
-      >
-        {t('common.next')} →
-      </button>
-    </div>
-  )
+  // Get group info for footer
+  const groupInfo = groupBy !== 'none' && selectedGroup
+    ? `${groupBy === 'position' ? 'ตำแหน่ง' : groupBy === 'departmentCode' ? 'ฝ่าย' : 'แผนก'}${selectedGroup}`
+    : ''
 
   return (
     <div className="app-container">
-      {/* Header */}
-      <div className="page-header">
+      {/* Print Styles */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-area, .print-area * {
+            visibility: visible;
+          }
+          .print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .wages-select-col {
+            display: none !important;
+            width: 0 !important;
+            padding: 0 !important;
+          }
+          @page {
+            size: landscape;
+            margin: 10mm;
+          }
+        }
+      `}</style>
+
+      {/* Header - No Print */}
+      <div className="page-header no-print">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 className="page-title">{t('wages.title')}</h1>
+            <h1 className="page-title">Payroll System</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-              {t('wages.detailTitle')}
+              รายงานการจ่ายเงินเดือนรายงวด
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => openIncomeDeductionPopup('income')}
-              className="btn btn-secondary"
-            >
-              {t('wages.addIncome')}
+            <button onClick={handlePrint} className="btn btn-primary">
+              Print Report
             </button>
-            <button
-              onClick={() => openIncomeDeductionPopup('deduction')}
-              className="btn btn-secondary"
-            >
-              {t('wages.addDeduction')}
-            </button>
-            <a href="/wages/logs" className="btn btn-primary">
+            <a href="/wages/logs" className="btn btn-secondary">
               ประวัติการปรับเงิน
             </a>
             <a href="/" className="btn btn-secondary">
-              ← {t('common.back')}
+              {t('common.back')}
             </a>
           </div>
         </div>
       </div>
 
-      {/* ลบแท็บ dailySalary ออก เหลือแค่ summary */}
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <div style={{ borderBottom: '2px solid var(--border-light)', padding: '16px 24px' }}>
-          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
-            {t('wages.detailTitle')}
-          </h2>
-        </div>
-      </div>
-
-      {/* Calculate Wages Button & Message */}
-      {calculateMessage && (
-        <div className="card" style={{ marginBottom: '24px', padding: '16px', background: calculateMessage.startsWith('สำเร็จ') ? '#F5F5F5' : '#F5F5F5' }}>
-          <p style={{ margin: 0, color: calculateMessage.startsWith('สำเร็จ') ? 'var(--text-primary)' : 'var(--text-primary)', fontSize: '14px', fontWeight: '700' }}>
-            {calculateMessage}
-          </p>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="card" style={{ marginBottom: '24px', padding: '20px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+      {/* Filters - No Print */}
+      <div className="card no-print" style={{ marginBottom: '24px', padding: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '16px' }}>
           {/* Month */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
@@ -666,11 +374,11 @@ export default function WagesPage() {
           {/* Search */}
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-              {t('wages.searchEmployee')}
+              ค้นหาพนักงาน
             </label>
             <input
               type="text"
-              placeholder={t('wages.searchPlaceholder')}
+              placeholder="ค้นหาชื่อหรือรหัส..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ width: '100%' }}
@@ -678,29 +386,133 @@ export default function WagesPage() {
           </div>
         </div>
 
-        {/* Calculate Wages Button */}
-        <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button
-            onClick={calculateWages}
-            disabled={calculating}
-            className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            {calculating ? (
-              <>
-                <div className="spinner" style={{ width: '16px', height: '16px' }}></div>
-                {t('wages.calculating')}
-              </>
-            ) : (
-              <>
-                🧮 {t('wages.calculateWages')}
-              </>
+        {/* Group By Controls */}
+        <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border-light)', marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+            จัดกลุ่มพนักงาน (Group By)
+          </label>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => { setGroupBy('none'); setSelectedGroup(''); }}
+              className={`btn ${groupBy === 'none' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px' }}
+            >
+              ทั้งหมด
+            </button>
+            <button
+              onClick={() => { setGroupBy('position'); setSelectedGroup(''); }}
+              className={`btn ${groupBy === 'position' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px' }}
+            >
+              ตำแหน่ง
+            </button>
+            <button
+              onClick={() => { setGroupBy('departmentCode'); setSelectedGroup(''); }}
+              className={`btn ${groupBy === 'departmentCode' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px' }}
+            >
+              ฝ่าย
+            </button>
+            <button
+              onClick={() => { setGroupBy('section'); setSelectedGroup(''); }}
+              className={`btn ${groupBy === 'section' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px' }}
+            >
+              แผนก
+            </button>
+
+            {groupBy !== 'none' && (
+              <select
+                value={selectedGroup}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                style={{ padding: '8px 12px', minWidth: '200px' }}
+              >
+                <option value="">-- เลือก{groupBy === 'position' ? 'ตำแหน่ง' : groupBy === 'departmentCode' ? 'ฝ่าย' : 'แผนก'} --</option>
+                {getGroupOptions().map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
             )}
-          </button>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
-            {t('wages.calculateWages')} {t(`months.${parseInt(selectedMonth)}`)} {parseInt(selectedYear) + 543} (ทั้ง 2 {t('common.period')})
-          </p>
+          </div>
         </div>
+
+        {/* View Mode */}
+        <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border-light)', marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+            รูปแบบการแสดงผล
+          </label>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowSelectedOnly(false)}
+              className={`btn ${!showSelectedOnly ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px' }}
+              type="button"
+            >
+              แสดงทั้งหมด
+            </button>
+            <button
+              onClick={() => setShowSelectedOnly(true)}
+              className={`btn ${showSelectedOnly ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '8px 16px' }}
+              type="button"
+              disabled={selectedEmployees.size === 0}
+              title={selectedEmployees.size === 0 ? 'เลือกพนักงานอย่างน้อย 1 คนก่อน' : 'แสดงเฉพาะพนักงานที่เลือก'}
+            >
+              แสดงเฉพาะที่เลือก
+            </button>
+          </div>
+        </div>
+
+        {/* Selected Employees Display */}
+        {selectedEmployees.size > 0 && (
+          <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                พนักงานที่เลือก ({selectedEmployees.size} คน)
+              </label>
+              <button
+                onClick={clearAllSelections}
+                className="btn btn-secondary"
+                style={{ padding: '4px 12px', fontSize: '12px' }}
+              >
+                ล้างทั้งหมด
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {Array.from(selectedEmployees).slice(0, 10).map(empId => {
+                const emp = employeeWages.find(e => e.employeeId === empId)
+                return (
+                  <span
+                    key={empId}
+                    style={{
+                      padding: '4px 8px',
+                      background: '#e3f2fd',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {emp?.name || empId}
+                    <button
+                      onClick={() => toggleEmployeeSelection(empId)}
+                      type="button"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', fontSize: '14px' }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                )
+              })}
+              {selectedEmployees.size > 10 && (
+                <span style={{ padding: '4px 8px', background: '#f5f5f5', borderRadius: '4px', fontSize: '12px' }}>
+                  +{selectedEmployees.size - 10} คน
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -710,330 +522,356 @@ export default function WagesPage() {
           <p style={{ color: 'var(--text-muted)' }}>{t('common.loading')}</p>
         </div>
       ) : (
-        <>
-          {/* Daily Wages Tab */}
-          {activeTab === 'daily' && (
-            <div className="card">
-              {renderDailyWagesTable()}
-            </div>
-          )}
-
-          {/* Summary Tab */}
-          {activeTab === 'summary' && (
-            <>
-              {/* Pagination Top */}
-              {totalPages > 1 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <Pagination />
-                </div>
-              )}
-
-              <div className="card">
-                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
-                    {t('wages.detailTitle')} - {t(`months.${parseInt(selectedMonth)}`)} {parseInt(selectedYear) + 543} ({t('common.period')} {selectedPeriod})
-                  </h3>
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    {t('home.showing')} {startIndex + 1}-{Math.min(endIndex, filteredEmployees.length)} {t('common.people')} {filteredEmployees.length} {t('common.people')}
-                  </p>
-                </div>
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th style={{ minWidth: '100px' }}>{t('wages.employeeId')}</th>
-                        <th style={{ minWidth: '150px' }}>{t('wages.employeeName')}</th>
-                        <th style={{ minWidth: '80px' }}>{t('wages.employeeType')}</th>
-                        <th className="text-right" style={{ minWidth: '100px' }}>{t('wages.baseWage')}</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>OT 1.5</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>OT 2</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>OT 3</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>{t('wages.attendanceBonus')}</th>
-                        <th className="text-right" style={{ minWidth: '100px', background: '#dcfce7' }}>{t('wages.totalIncome')}</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>{t('wages.lateDeduction')}</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>{t('wages.sso')}</th>
-                        <th className="text-right" style={{ minWidth: '80px' }}>{t('wages.tax')}</th>
-                        <th className="text-right" style={{ minWidth: '100px', background: '#fee2e2' }}>{t('wages.deductions')}</th>
-                        <th className="text-right" style={{ minWidth: '120px', background: 'var(--primary-light)' }}>{t('wages.netWage')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentEmployees.length === 0 ? (
-                        <tr>
-                          <td colSpan={14} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                            {searchQuery ? t('wages.noData') : t('wages.noData')}
-                          </td>
-                        </tr>
-                      ) : (
-                        currentEmployees.map((emp) => (
-                          <tr
-                            key={emp.employeeId}
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => window.location.href = `/wages/${emp.employeeId}?month=${selectedYear}-${selectedMonth}&period=${selectedPeriod}`}
-                          >
-                            <td>{emp.employeeId}</td>
-                            <td className="employee-name">{emp.name}</td>
-                            <td>
-                              <span style={{ 
-                                padding: '2px 6px', 
-                                borderRadius: '4px', 
-                                fontSize: '11px',
-                                background: emp.employmentType === 'รายเดือน' ? '#dbeafe' : '#dcfce7',
-                                color: emp.employmentType === 'รายเดือน' ? '#1e40af' : '#16a34a'
-                              }}>
-                                {emp.employmentType || 'รายวัน'}
-                              </span>
-                            </td>
-                            <td className="text-right">{emp.totalBaseWage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                            <td className="text-right">{emp.totalOt1Wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                            <td className="text-right">{emp.totalOt2Wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                            <td className="text-right">{emp.totalOt3Wage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                            <td className="text-right" style={{ color: emp.attendanceBonus > 0 ? '#16a34a' : 'inherit' }}>
-                              {emp.attendanceBonus.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                            </td>
-                            <td className="text-right" style={{ fontWeight: '600', background: '#dcfce7', color: '#16a34a' }}>
-                              {emp.totalIncome.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                            </td>
-                            <td className="text-right" style={{ color: emp.lateDeduction > 0 ? '#dc2626' : 'inherit' }}>
-                              {emp.lateDeduction > 0 ? `-${emp.lateDeduction.toLocaleString('th-TH', { minimumFractionDigits: 2 })}` : '0.00'}
-                            </td>
-                            <td className="text-right">{emp.sso.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                            <td className="text-right">{emp.tax.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                            <td className="text-right" style={{ fontWeight: '600', background: '#fee2e2', color: '#dc2626' }}>
-                              {emp.totalDeductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                            </td>
-                            <td className="text-right" style={{ fontWeight: '700', background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '14px' }}>
-                              {emp.netWage.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Pagination Bottom */}
-              {totalPages > 1 && (
-                <div style={{ marginTop: '16px' }}>
-                  <Pagination />
-                </div>
-              )}
-            </>
-          )}
-        </>
-      )}
-
-      {/* Income/Deduction Popup */}
-      {showIncomeDeductionPopup && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px'
-          }}
-          onClick={closeIncomeDeductionPopup}
-        >
-          <div
-            className="card"
-            style={{
-              maxWidth: '800px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              padding: '24px'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px' }}>
-              {recordType === 'income' ? t('wages.addIncome') : t('wages.addDeduction')}
-            </h2>
-
-            {message && (
-              <div
-                style={{
-                  padding: '12px',
-                  marginBottom: '16px',
-                  borderRadius: '8px',
-                  background: '#F5F5F5',
-                  color: 'var(--text-primary)',
-                  fontSize: '14px',
-                  fontWeight: '600'
-                }}
-              >
-                {message}
-              </div>
-            )}
-
-            {/* งวดที่เลือก */}
-            <div style={{ marginBottom: '20px', padding: '12px', background: 'var(--surface-bg)', borderRadius: '8px' }}>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{t('wages.selectPeriod')}:</div>
-              <div style={{ fontSize: '16px', fontWeight: '600', marginTop: '4px' }}>
-                {t(`months.${parseInt(selectedMonth)}`)} {parseInt(selectedYear) + 543} - {t('common.period')} {selectedPeriod}
-              </div>
+        <div className="print-area" ref={printRef}>
+          <div style={{ background: '#fff', padding: '24px', minWidth: '1200px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            {/* Report Title */}
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#333', margin: 0 }}>
+                รายงานการจ่ายเงินเดือนรายงวด
+              </h2>
             </div>
 
-            {/* เลือกรายการ */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                {t('wages.category')} <span style={{ color: 'red' }}>{t('wages.required')}</span>
-              </label>
-              <select
-                value={selectedItem}
-                onChange={(e) => setSelectedItem(e.target.value)}
-                style={{ width: '100%' }}
-              >
-                <option value="">{t('wages.selectCategory')}</option>
-                {masterItems.map(item => (
-                  <option key={item.id} value={item.item_name}>
-                    {item.item_name_th} {item.include_in_sso && '(คำนวณ SSO)'}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* จำนวนเงิน */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                {t('wages.amount')} ({t('common.baht')}) <span style={{ color: 'red' }}>{t('wages.required')}</span>
-              </label>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder={t('wages.enterAmount')}
-                step="0.01"
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            {/* หมายเหตุ */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                {t('wages.description')}
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder={t('wages.enterDescription')}
-                rows={3}
-                style={{ width: '100%', fontFamily: 'inherit' }}
-              />
-            </div>
-
-            {/* เลือกพนักงาน */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '600' }}>
-                  {t('documents.selectEmployee')} <span style={{ color: 'red' }}>{t('wages.required')}</span>
-                </label>
-                <button
-                  onClick={selectAllEmployees}
-                  className="btn btn-secondary"
-                  style={{ padding: '6px 12px', fontSize: '13px' }}
-                >
-                  {selectedEmployees.length === filteredEmployees.length ? t('common.cancel') : t('documents.allEmployees')}
-                </button>
-              </div>
-
-              {/* Search Box สำหรับค้นหาพนักงาน */}
-              <div style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    value={employeeSearchQuery}
-                    onChange={(e) => setEmployeeSearchQuery(e.target.value)}
-                    placeholder="ค้นหาพนักงาน (ชื่อหรือรหัส)..."
-                    style={{ flex: 1, padding: '8px 12px', fontSize: '14px' }}
-                  />
-                  {employeeSearchQuery && (
-                    <button
-                      onClick={() => setEmployeeSearchQuery('')}
-                      className="btn btn-secondary"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                    >
-                      ล้าง
-                    </button>
-                  )}
-                </div>
-                {(employeeSearchQuery || searchingEmployees) && (
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    {searchingEmployees ? 'กำลังค้นหา...' : `พบ ${filteredEmployeesForSelection.length} คน`}
-                  </div>
-                )}
-              </div>
-
-              <div
-                style={{
-                  maxHeight: '200px',
-                  overflow: 'auto',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: '8px',
-                  padding: '12px'
-                }}
-              >
-                {filteredEmployeesForSelection.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '14px' }}>
-                    ไม่พบพนักงานที่ค้นหา
-                  </div>
-                ) : (
-                  filteredEmployeesForSelection.map(emp => (
-                    <label
-                      key={emp.employeeId}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '8px',
-                        marginBottom: '4px',
-                        background: selectedEmployees.includes(emp.employeeId) ? 'var(--primary-light)' : 'transparent',
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
-                    >
+            {/* Payroll Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col className="no-print wages-select-col" style={{ width: '46px' }} />
+                  <col style={{ width: '180px' }} />
+                  <col style={{ width: '80px' }} />
+                  <col style={{ width: '60px' }} />
+                  <col style={{ width: '60px' }} />
+                  <col style={{ width: '60px' }} />
+                  <col style={{ width: '60px' }} />
+                  <col style={{ width: '60px' }} />
+                  <col style={{ width: '60px' }} />
+                  <col style={{ width: '60px' }} />
+                  <col style={{ width: '60px' }} />
+                  <col style={{ width: '60px' }} />
+                  <col style={{ width: '60px' }} />
+                  <col style={{ width: '50px' }} />
+                  <col style={{ width: '50px' }} />
+                  <col style={{ width: '100px' }} />
+                  <col style={{ width: '100px' }} />
+                </colgroup>
+                <thead>
+                  {/* Header Row 1 - ตามรูปต้นแบบ */}
+                  <tr style={{ borderBottom: '1px solid #000' }}>
+                    <th style={{ padding: '4px 8px', textAlign: 'center', fontWeight: '500' }} className="no-print wages-select-col">
                       <input
                         type="checkbox"
-                        checked={selectedEmployees.includes(emp.employeeId)}
-                        onChange={() => toggleEmployee(emp.employeeId)}
-                        style={{ marginRight: '8px' }}
+                        checked={allSelected}
+                        onChange={toggleSelectAll}
+                        style={{ cursor: 'pointer' }}
                       />
-                      <span style={{ fontSize: '14px' }}>
-                        <strong>{emp.employeeId}</strong> - {emp.name} ({emp.department})
-                      </span>
-                    </label>
-                  ))
+                    </th>
+                    <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: '500' }}>รหัส</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>เงินเดือน</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>OT1</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>OT2</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>OT3</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>OT4</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ค่าตำแหน่ง</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>เบี้ยขยัน</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ค่ากะ</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ค่าโทรศัพท์</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ค่าครองชีพ</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ค่าพิเศษ</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>Compta</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ปัดเศษ</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>เงินได้</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>สุทธิ</th>
+                  </tr>
+
+                  {/* Header Row 2 */}
+                  <tr style={{ borderBottom: '1px solid #000' }}>
+                    <th style={{ padding: '4px 8px' }} className="no-print wages-select-col"></th>
+                    <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: '500' }}>ตำแหน่ง</th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ค่าอื่นๆ</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ค่าอื่นๆ (</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>คืนเบี้ยขยัน</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>คืนพักร้อน</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>โบนัสรายได้</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>โบนัสสหกรณ์</th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                  </tr>
+
+                  {/* Header Row 3 */}
+                  <tr style={{ borderBottom: '1px solid #000' }}>
+                    <th style={{ padding: '4px 8px' }} className="no-print wages-select-col"></th>
+                    <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: '500' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>งวด</span>
+                        <span>วันที่</span>
+                      </div>
+                    </th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>มาสาย</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ขาดงาน</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ลากิจ</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ค่าชุดฟอร์ม</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>หักกยศ.</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>สหกรณ์</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>งานเสีย</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ค่ามาสาย</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>หักค่าพิเศษ</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>หักค่าอื่นๆ</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>Compta</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ปัดเศษ</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: '500' }}>ค่าใช้จ่าย</th>
+                    <th style={{ padding: '4px 8px' }}></th>
+                  </tr>
+
+                  {/* Header Row 4 - SSO/Tax */}
+                  <tr style={{ borderBottom: '1px solid #000' }}>
+                    <th style={{ padding: '0' }} className="no-print wages-select-col"></th>
+                    {/* span up to column before SSO */}
+                    <th colSpan={10} style={{ padding: '0' }}></th>
+                    <th style={{ padding: '4px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '500' }}>สปส.</th>
+                    <th style={{ padding: '0' }}></th>
+                    <th style={{ padding: '4px 8px', textAlign: 'center', fontSize: '10px', fontWeight: '500' }}>ภาษี</th>
+                    <th colSpan={3} style={{ padding: '0' }}></th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredData.length === 0 ? (
+                    <tr>
+                      <td colSpan={17} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                        ไม่พบข้อมูล
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredData.map((emp) => {
+                      const isChecked = selectedEmployees.has(emp.employeeId)
+                      const periodDate = `25/${selectedMonth}/${parseInt(selectedYear) + 543}`
+
+                      return (
+                        <>
+                          {/* Row 1: Main Income */}
+                          <tr>
+                            <td style={{ padding: '4px 8px', verticalAlign: 'top' }} rowSpan={4} className="no-print">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleEmployeeSelection(emp.employeeId)}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            </td>
+                            <td style={{ padding: '4px 8px', fontWeight: '600' }}>{emp.employeeId}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.totalBaseWage)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.totalOt1Wage)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.totalOt2Wage)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.totalOt3Wage)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.totalOt4Wage)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.positionAllowance)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.attendanceBonus)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.nightShiftAllowance)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.telephoneAllowance)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.livingAllowance)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.specialAllowance)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.compta)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.rounding)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.totalIncome)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.netWage)}</td>
+                          </tr>
+
+                          {/* Row 2: Name + Other Income */}
+                          <tr>
+                            <td style={{ padding: '4px 8px', fontWeight: '500' }}>{emp.name}</td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.otherIncome1)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.otherIncome2)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.returnDiligence)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.returnVacation)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.bonus1)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.bonus2)}</td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                          </tr>
+
+                          {/* Row 3: Position + Deductions */}
+                          <tr>
+                            <td style={{ padding: '4px 8px' }}>{emp.position}</td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.lateDeduction)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.absentDeduction)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.leaveDeduction)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.uniformDeduction)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.studentLoanDeduction)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.coopDeduction)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.damagesDeduction)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.latePenalty)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.deductSpecial)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.deductOther)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.comptaDed)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(emp.roundingDed)}</td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>
+                              {fmt(emp.totalDeductions)}
+                            </td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                          </tr>
+
+                          {/* Row 4: Period/Date + SSO/Tax */}
+                          <tr>
+                            <td style={{ padding: '4px 8px', textAlign: 'left' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{selectedPeriod === 1 ? '22' : '22'}</span>
+                                <span>{periodDate}</span>
+                              </div>
+                            </td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(safeNum(emp.sso))}</td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(safeNum(emp.tax))}</td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                            <td style={{ padding: '4px 8px' }}></td>
+                          </tr>
+                        </>
+                      )
+                    })
+                  )}
+                </tbody>
+
+                {/* Footer / Total Row */}
+                {filteredData.length > 0 && (
+                  <tfoot style={{ borderTop: '2px solid #000', borderBottom: '2px solid #000', background: '#fafafa' }}>
+                    {/* Total Row 1 */}
+                    <tr>
+                      <td style={{ padding: '4px 8px' }} className="no-print wages-select-col"></td>
+                      <td style={{ padding: '4px 8px', fontWeight: '700' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>พนักงาน:</span>
+                          <span style={{ borderBottom: '1px solid #000', marginRight: '16px' }}>{totals.count}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.totalBaseWage)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.totalOt1Wage)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.totalOt2Wage)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.totalOt3Wage)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.totalOt4Wage)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.positionAllowance)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.attendanceBonus)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.nightShiftAllowance)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.telephoneAllowance)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.livingAllowance)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.specialAllowance)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.compta)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.rounding)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.totalIncome)}</td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                    </tr>
+
+                    {/* Total Row 2 */}
+                    <tr>
+                      <td style={{ padding: '4px 8px' }} className="no-print wages-select-col"></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.otherIncome1)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.otherIncome2)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.returnDiligence)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.returnVacation)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.bonus1)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.bonus2)}</td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                    </tr>
+
+                    {/* Total Row 3 */}
+                    <tr>
+                      <td style={{ padding: '4px 8px' }} className="no-print wages-select-col"></td>
+                      <td style={{ padding: '4px 8px', color: '#666', fontSize: '11px' }}>{groupInfo}</td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.lateDeduction)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.absentDeduction)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.leaveDeduction)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.uniformDeduction)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.studentLoanDeduction)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.coopDeduction)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.damagesDeduction)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.latePenalty)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.deductSpecial)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.deductOther)}</td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.totalDeductions)}</td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                    </tr>
+
+                    {/* Total Row 4 - SSO/Tax totals */}
+                    <tr>
+                      <td style={{ padding: '4px 8px' }} className="no-print wages-select-col"></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.sso)}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmt(totals.tax)}</td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                      <td style={{ padding: '4px 8px' }}></td>
+                    </tr>
+
+                    {/* Grand Total Row - รวมสปส ภาษี และแสดงวันที่ */}
+                    <tr style={{ borderTop: '1px solid #000' }}>
+                      <td style={{ padding: '12px 8px' }} className="no-print wages-select-col"></td>
+                      <td colSpan={9} style={{ padding: '12px 8px', textAlign: 'left', color: '#666', fontSize: '11px' }}>
+                        {reportDateTime}
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>{fmt(totals.sso)}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '600' }}>{fmt(totals.tax)}</td>
+                      <td style={{ padding: '12px 8px' }}></td>
+                      <td style={{ padding: '12px 8px' }}></td>
+                      <td style={{ padding: '12px 8px' }}></td>
+                      <td style={{ padding: '12px 8px' }}></td>
+                      <td style={{ padding: '12px 8px', textAlign: 'right', fontSize: '11px' }}>
+                        หน้า:
+                      </td>
+                    </tr>
+                  </tfoot>
                 )}
-              </div>
-
-              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                {t('documents.selectEmployee')} {selectedEmployees.length} {t('common.people')}
-              </div>
+              </table>
             </div>
+          </div>
 
-            {/* ปุ่ม */}
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={closeIncomeDeductionPopup}
-                className="btn btn-secondary"
-                disabled={savingRecord}
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={saveIncomeDeduction}
-                className="btn btn-primary"
-                disabled={savingRecord}
-              >
-                {savingRecord ? t('wages.saving') : `💾 ${t('common.save')}`}
-              </button>
-            </div>
+          {/* Print Note */}
+          <div className="no-print" style={{ marginTop: '16px', textAlign: 'center', color: '#666', fontSize: '13px' }}>
+            <p>Recommended: Print in Landscape mode with minimal margins for best results.</p>
           </div>
         </div>
       )}
