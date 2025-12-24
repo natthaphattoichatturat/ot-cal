@@ -10,6 +10,10 @@ interface LeaveRecord {
   leave_date: string
   leave_type: string
   reason: string | null
+  leave_hours?: number
+  deduct_wage?: boolean
+  deduct_diligence?: boolean
+  is_paid?: boolean
   created_by: string | null
   created_at: string
   employees: {
@@ -32,11 +36,16 @@ export default function LeavePage() {
   const [submitting, setSubmitting] = useState(false)
 
   // Form state
-  const [selectedEmployee, setSelectedEmployee] = useState('')
-  const [leaveDate, setLeaveDate] = useState('')
-  const [leaveType, setLeaveType] = useState('Personal')
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(new Set())
+  const [employeeSearch, setEmployeeSearch] = useState('')
+  const [leaveEntries, setLeaveEntries] = useState<Array<{ leaveDate: string; leaveHours: number }>>([
+    { leaveDate: '', leaveHours: 8 }
+  ])
+  const [leaveType, setLeaveType] = useState('ลากิจ')
   const [reason, setReason] = useState('')
   const [createdBy, setCreatedBy] = useState('')
+  const [deductWage, setDeductWage] = useState(false)
+  const [deductDiligence, setDeductDiligence] = useState(false)
   const [message, setMessage] = useState('')
 
   // Filter state
@@ -132,17 +141,39 @@ export default function LeavePage() {
     setMessage('')
 
     try {
+      const leaves = leaveEntries
+        .filter(l => l.leaveDate)
+        .map(l => ({ leaveDate: l.leaveDate, leaveHours: Number(l.leaveHours) }))
+
+      if (selectedEmployeeIds.size === 0) {
+        setMessage(`${t('common.error')}: กรุณาเลือกพนักงานอย่างน้อย 1 คน`)
+        setSubmitting(false)
+        return
+      }
+      if (leaves.length === 0) {
+        setMessage(`${t('common.error')}: กรุณาเลือกวันที่ลาอย่างน้อย 1 วัน`)
+        setSubmitting(false)
+        return
+      }
+      if (leaves.some(l => !Number.isFinite(l.leaveHours) || l.leaveHours < 1 || l.leaveHours > 24)) {
+        setMessage(`${t('common.error')}: ชั่วโมงการลาต้องอยู่ระหว่าง 1 ถึง 24`)
+        setSubmitting(false)
+        return
+      }
+
       const response = await fetch('/api/leave', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          employeeId: selectedEmployee,
-          leaveDate,
           leaveType,
           reason: reason || null,
-          createdBy: createdBy || null
+          createdBy: createdBy || null,
+          employeeIds: Array.from(selectedEmployeeIds),
+          leaves,
+          deductWage,
+          deductDiligence
         })
       })
 
@@ -151,11 +182,14 @@ export default function LeavePage() {
       if (result.success) {
         setMessage(`${t('common.success')}: ${t('leave.successMessage')}`)
         // Reset form
-        setSelectedEmployee('')
-        setLeaveDate('')
-        setLeaveType('Personal')
+        setSelectedEmployeeIds(new Set())
+        setEmployeeSearch('')
+        setLeaveEntries([{ leaveDate: '', leaveHours: 8 }])
+        setLeaveType('ลากิจ')
         setReason('')
         setCreatedBy('')
+        setDeductWage(false)
+        setDeductDiligence(false)
         // Refresh records
         fetchLeaveRecords()
       } else {
@@ -170,12 +204,14 @@ export default function LeavePage() {
 
   const getLeaveTypeStyle = (type: string) => {
     switch (type) {
-      case 'Sick':
+      case 'ลาป่วย':
         return 'bg-red-50 text-red-700 border border-red-200'
-      case 'Vacation':
+      case 'ลาพักร้อน':
         return 'bg-green-50 text-green-700 border border-green-200'
-      case 'Personal':
+      case 'ลากิจ':
         return 'bg-blue-50 text-blue-700 border border-blue-200'
+      case 'ขาดงาน':
+        return 'bg-amber-50 text-amber-800 border border-amber-200'
       default:
         return 'bg-gray-50 text-gray-700 border border-gray-200'
     }
@@ -218,38 +254,138 @@ export default function LeavePage() {
           
           <form onSubmit={handleSubmit} className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              {/* Employee Selection */}
-              <div>
+              {/* Employee Selection (Search + Multiple) */}
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   {t('leave.employeeName')} <span className="text-red-600">*</span>
+                  <span className="ml-2 text-xs text-gray-500">({selectedEmployeeIds.size} คน)</span>
                 </label>
-                <select
-                  value={selectedEmployee}
-                  onChange={(e) => setSelectedEmployee(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                >
-                  <option value="">เลือกพนักงาน</option>
-                  {employees.map((emp) => (
-                    <option key={emp.employee_id} value={emp.employee_id}>
-                      {emp.employee_id} - {emp.name} ({emp.department})
-                    </option>
-                  ))}
-                </select>
+
+                <div className="flex flex-col gap-3">
+                  <input
+                    type="text"
+                    value={employeeSearch}
+                    onChange={(e) => setEmployeeSearch(e.target.value)}
+                    placeholder="ค้นหาพนักงาน (ชื่อหรือรหัส)..."
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEmployeeIds(new Set(employees.map(e => e.employee_id)))}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                      เลือกพนักงานทั้งหมด
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEmployeeIds(new Set())}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                      ล้างการเลือก
+                    </button>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-lg max-h-56 overflow-auto bg-white">
+                    {employees
+                      .filter(emp => {
+                        const q = employeeSearch.trim().toLowerCase()
+                        if (!q) return true
+                        return emp.employee_id.toLowerCase().includes(q) || emp.name.toLowerCase().includes(q)
+                      })
+                      .map(emp => {
+                        const checked = selectedEmployeeIds.has(emp.employee_id)
+                        return (
+                          <label
+                            key={emp.employee_id}
+                            className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedEmployeeIds(prev => {
+                                  const next = new Set(prev)
+                                  if (next.has(emp.employee_id)) next.delete(emp.employee_id)
+                                  else next.add(emp.employee_id)
+                                  return next
+                                })
+                              }}
+                              className="h-4 w-4"
+                            />
+                            <div className="text-sm font-semibold text-gray-900">{emp.employee_id}</div>
+                            <div className="text-sm text-gray-700">
+                              - {emp.name} <span className="text-gray-500">({emp.department})</span>
+                            </div>
+                          </label>
+                        )
+                      })}
+                  </div>
+                </div>
               </div>
 
-              {/* Leave Date */}
-              <div>
+              {/* Leave Dates (Multiple) */}
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   {t('leave.leaveDate')} <span className="text-red-600">*</span>
                 </label>
-                <input
-                  type="date"
-                  value={leaveDate}
-                  onChange={(e) => setLeaveDate(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
+
+                <div className="space-y-3">
+                  {leaveEntries.map((entry, idx) => (
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                      <div className="md:col-span-7">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+                          วันที่ลา
+                        </label>
+                        <input
+                          type="date"
+                          value={entry.leaveDate}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setLeaveEntries(prev => prev.map((p, i) => (i === idx ? { ...p, leaveDate: v } : p)))
+                          }}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+                          ชั่วโมง (1-24)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={24}
+                          value={entry.leaveHours}
+                          onChange={(e) => {
+                            const hours = Number(e.target.value)
+                            setLeaveEntries(prev => prev.map((p, i) => (i === idx ? { ...p, leaveHours: hours } : p)))
+                          }}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        />
+                      </div>
+                      <div className="md:col-span-2 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setLeaveEntries(prev => [...prev, { leaveDate: '', leaveHours: 8 }])}
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                          title="เพิ่มวันลา"
+                        >
+                          + เพิ่ม
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLeaveEntries(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev)}
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                          disabled={leaveEntries.length === 1}
+                          title="ลบวันลา"
+                        >
+                          ลบ
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Leave Type */}
@@ -262,11 +398,46 @@ export default function LeavePage() {
                   onChange={(e) => setLeaveType(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 >
-                  <option value="Personal">{t('leave.personalLeave')}</option>
-                  <option value="Sick">{t('leave.sickLeave')}</option>
-                  <option value="Vacation">{t('leave.annualLeave')}</option>
-                  <option value="Other">{t('leave.otherLeave')}</option>
+                  <option value="ลากิจ">ลากิจ</option>
+                  <option value="ลาป่วย">ลาป่วย</option>
+                  <option value="ลาพักร้อน">ลาพักร้อน</option>
+                  <option value="ลากิจพิเศษ">ลากิจพิเศษ</option>
+                  <option value="ลาคลอด">ลาคลอด</option>
+                  <option value="ลาบวช">ลาบวช</option>
+                  <option value="ขาดงาน">ขาดงาน</option>
+                  <option value="อื่นๆ">อื่นๆ</option>
                 </select>
+              </div>
+
+              {/* Deduction flags */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  การหักเงิน
+                </label>
+                <label className="flex items-center gap-3 px-4 py-2.5 border border-gray-300 rounded-lg">
+                  <input
+                    type="checkbox"
+                    checked={deductWage}
+                    onChange={(e) => setDeductWage(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm text-gray-700">หักเงิน (ถ้าไม่ติ๊ก = ไม่หักเงิน)</span>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  การหักเบี้ยขยัน
+                </label>
+                <label className="flex items-center gap-3 px-4 py-2.5 border border-gray-300 rounded-lg">
+                  <input
+                    type="checkbox"
+                    checked={deductDiligence}
+                    onChange={(e) => setDeductDiligence(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm text-gray-700">หักเบี้ยขยัน (ถ้ามีในงวดนั้น เบี้ยขยันเป็น 0)</span>
+                </label>
               </div>
 
               {/* Created By */}
@@ -434,6 +605,15 @@ export default function LeavePage() {
                       {t('leave.type')}
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      ชั่วโมง
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      หักเงิน
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      หักเบี้ยขยัน
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                       {t('leave.reason')}
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -475,6 +655,25 @@ export default function LeavePage() {
                           {record.leave_type}
                         </span>
                       </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {(record.leave_hours ?? 8).toString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                        record.deduct_wage ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
+                      }`}>
+                        {record.deduct_wage ? 'หัก' : 'ไม่หัก'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                        record.deduct_diligence ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
+                      }`}>
+                        {record.deduct_diligence ? 'หัก' : 'ไม่หัก'}
+                      </span>
+                    </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-600 max-w-xs truncate">
                           {record.reason || '-'}

@@ -122,17 +122,12 @@ export async function POST(request: NextRequest) {
             .eq('status', 'approved')
 
           const leaveRecords: LeaveRecord[] = (leaves || []).map(leave => {
-            // กำหนด is_paid ตามประเภทการลา
-            // ลาป่วย, ลาพักร้อน = ไม่หักเงิน (paid leave)
-            // ลากิจ, ลาคลอด = หักเงิน (unpaid leave)
-            const paidLeaveTypes = ['ลาป่วย', 'ลาพักร้อน', 'sick_leave', 'annual_leave']
-            const isPaid = paidLeaveTypes.includes(leave.leave_type?.toLowerCase() || '')
-
             return {
               leave_date: leave.leave_date,
               leave_type: leave.leave_type,
               leave_hours: leave.leave_hours || 8,
-              is_paid: isPaid
+              is_paid: leave.is_paid === true,
+              deduct_diligence: leave.deduct_diligence === true
             }
           })
 
@@ -224,15 +219,12 @@ export async function POST(request: NextRequest) {
             .eq('status', 'approved')
 
           const otherLeaveRecords: LeaveRecord[] = (otherLeaves || []).map(leave => {
-            // กำหนด is_paid ตามประเภทการลา
-            const paidLeaveTypes = ['ลาป่วย', 'ลาพักร้อน', 'sick_leave', 'annual_leave']
-            const isPaid = paidLeaveTypes.includes(leave.leave_type?.toLowerCase() || '')
-
             return {
               leave_date: leave.leave_date,
               leave_type: leave.leave_type,
               leave_hours: leave.leave_hours || 8,
-              is_paid: isPaid
+              is_paid: leave.is_paid === true,
+              deduct_diligence: leave.deduct_diligence === true
             }
           })
 

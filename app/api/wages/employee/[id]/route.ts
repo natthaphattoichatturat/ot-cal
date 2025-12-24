@@ -143,16 +143,15 @@ export async function GET(
       late_hours: att.late_hours || 0
     }))
 
-    // แปลง leave records และกำหนด is_paid
+    // แปลง leave records (ใช้ flag จาก database)
     const leaveRecordsV2: LeaveRecord[] = (leaveRecords || []).map(leave => {
-      const paidLeaveTypes = ['ลาป่วย', 'ลาพักร้อน', 'sick_leave', 'annual_leave']
-      const isPaid = paidLeaveTypes.includes(leave.leave_type?.toLowerCase() || '')
-
       return {
         leave_date: leave.leave_date,
         leave_type: leave.leave_type,
         leave_hours: leave.leave_hours || 8,
-        is_paid: isPaid
+        // is_paid: true = ไม่หักเงิน, false = หักเงิน
+        is_paid: leave.is_paid === true,
+        deduct_diligence: leave.deduct_diligence === true
       }
     })
 
@@ -163,6 +162,14 @@ export async function GET(
       amount: adj.amount,
       description: adj.description
     }))
+
+    // ถ้ามีการกำหนดภาษีแบบ manual ให้ใช้ค่านั้นแทน (สำหรับงวดนี้)
+    const manualTax = wageAdjustments
+      .filter(a =>
+        a.adjustment_type === 'deduction' &&
+        (a.category === 'ภาษี' || a.category === 'ภาษีหัก ณ ที่จ่าย' || a.category === 'ภาษีเงินได้หัก ณ ที่จ่าย')
+      )
+      .reduce((sum, a) => sum + (a.amount || 0), 0)
 
     // ข้อมูลพนักงาน
     const employeeInfo: EmployeeInfoV2 = {
@@ -186,6 +193,11 @@ export async function GET(
       morningOTAllowance,
       selectedDates
     )
+
+    // Override ภาษีด้วยค่าที่กรอก manual (ถ้ามี) แล้วคำนวณยอดหัก/สุทธิใหม่
+    if (manualTax > 0) {
+      periodWage.tax = manualTax
+    }
 
     // ดึงข้อมูลงวดอื่นของเดือนเดียวกันเพื่อคำนวณ SSO
     const otherPeriod = period === 1 ? 2 : 1
@@ -247,14 +259,12 @@ export async function GET(
     }))
 
     const otherLeaveRecordsV2: LeaveRecord[] = (otherLeaves || []).map(leave => {
-      const paidLeaveTypes = ['ลาป่วย', 'ลาพักร้อน', 'sick_leave', 'annual_leave']
-      const isPaid = paidLeaveTypes.includes(leave.leave_type?.toLowerCase() || '')
-
       return {
         leave_date: leave.leave_date,
         leave_type: leave.leave_type,
         leave_hours: leave.leave_hours || 8,
-        is_paid: isPaid
+        is_paid: leave.is_paid === true,
+        deduct_diligence: leave.deduct_diligence === true
       }
     })
 

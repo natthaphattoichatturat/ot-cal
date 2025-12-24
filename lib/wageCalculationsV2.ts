@@ -44,6 +44,7 @@ export interface LeaveRecord {
   leave_type: string // 'ลากิจ', 'ลาป่วย', 'ลาพักร้อน', 'ลาคลอด', etc.
   leave_hours: number
   is_paid?: boolean // true = ไม่หักเงิน, false/undefined = หักเงิน
+  deduct_diligence?: boolean // true = งวดนั้นไม่ได้เบี้ยขยัน
 }
 
 export interface WageAdjustment {
@@ -250,7 +251,8 @@ export function calculatePeriodWageV2(
   const nightShiftAllowance = nightShiftDays * 40 // 40 บาทต่อวัน
   
   // ========== เบี้ยขยัน ==========
-  const hasAttendanceBonus = checkAttendanceBonusV2(attendances)
+  const hasDeductDiligence = leaveRecords.some(l => l.deduct_diligence === true)
+  const hasAttendanceBonus = !hasDeductDiligence && checkAttendanceBonusV2(attendances)
   const attendanceBonus = hasAttendanceBonus ? 300 : 0
   
   // ========== เงินเพิ่มจาก adjustments ==========
@@ -270,15 +272,17 @@ export function calculatePeriodWageV2(
   const lateDeduction = (lateMinutes / 60) * employee.perhr_salary
   
   // ========== หักค่าลา (สำหรับรายเดือน) ==========
-  // หักเฉพาะ unpaid leave (ลากิจ, ลาคลอด, ลาไม่รับค่าจ้าง)
-  // ไม่หัก paid leave (ลาป่วย, ลาพักร้อน)
+  // หักเฉพาะ unpaid leave (is_paid !== true) และหักตาม "ชั่วโมงที่ลา"
   let leaveDeduction = 0
   if (!isDaily && unpaidLeaveDays > 0) {
-    // คำนวณค่าแรงต่อวัน = เงินเดือน / 15
-    const dailyRate = employee.monthly_salary / 15
-    leaveDeduction = unpaidLeaveDays * dailyRate
+    const unpaidLeaveHours = leaveRecords
+      .filter(l => l.is_paid !== true)
+      .reduce((sum, l) => sum + (l.leave_hours || 0), 0)
 
-    console.log(`[Leave Deduction] Employee: ${employee.employee_id}, Unpaid days: ${unpaidLeaveDays}, Daily rate: ${dailyRate}, Deduction: ${leaveDeduction}`)
+    // ใช้ perhr_salary ที่คำนวณไว้แล้ว (รายเดือน = (เงินเดือน/15)/8)
+    leaveDeduction = unpaidLeaveHours * employee.perhr_salary
+
+    console.log(`[Leave Deduction] Employee: ${employee.employee_id}, Unpaid hours: ${unpaidLeaveHours}, Hourly: ${employee.perhr_salary}, Deduction: ${leaveDeduction}`)
   }
   
   // ========== เงินหักจาก adjustments ==========
