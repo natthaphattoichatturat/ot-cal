@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
         .eq('employee_id', employee.employee_id)
         .gte('leave_date', start1)
         .lte('leave_date', end1)
-        .eq('status', 'approved')
+        .or('status.eq.approved,leave_able.eq.true')
 
       const { data: adj1 } = await supabase
         .from('wage_adjustments')
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
         .eq('employee_id', employee.employee_id)
         .gte('leave_date', start2)
         .lte('leave_date', end2)
-        .eq('status', 'approved')
+        .or('status.eq.approved,leave_able.eq.true')
 
       const { data: adj2 } = await supabase
         .from('wage_adjustments')

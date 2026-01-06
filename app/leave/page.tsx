@@ -173,7 +173,9 @@ export default function LeavePage() {
           employeeIds: Array.from(selectedEmployeeIds),
           leaves,
           deductWage,
-          deductDiligence
+          deductDiligence,
+          status: 'approved',
+          leaveAble: true
         })
       })
 

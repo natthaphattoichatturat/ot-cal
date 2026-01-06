@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         .eq('employee_id', employee.employee_id)
         .gte('leave_date', startDate)
         .lte('leave_date', endDate)
-        .eq('status', 'approved')
+        .or('status.eq.approved,leave_able.eq.true')
 
       // ดึงข้อมูลเงินเพิ่ม/หัก
       const { data: adjustments } = await supabase
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
         .eq('employee_id', employee.employee_id)
         .gte('leave_date', otherStart)
         .lte('leave_date', otherEnd)
-        .eq('status', 'approved')
+        .or('status.eq.approved,leave_able.eq.true')
 
       const { data: otherAdjustments } = await supabase
         .from('wage_adjustments')

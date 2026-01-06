@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getPayrollPeriodFromDate } from '@/lib/payrollPeriod'
+import { recalculateEmployeePeriod } from '@/lib/wageRecalculation'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -144,7 +146,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, employee_id, updates } = body
+    const { id, employee_id, updates, recalc } = body
 
     if (!id && !employee_id) {
       return NextResponse.json(
@@ -171,7 +173,42 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ success: true, data })
+    let recalcError: string | null = null
+    const wageFields = ['perday_salary', 'perhr_salary', 'monthly_salary', 'employment_type']
+    const shouldRecalc = updates && wageFields.some(field => Object.prototype.hasOwnProperty.call(updates, field))
+
+    if (shouldRecalc) {
+      try {
+        let targetYear: number | null = null
+        let targetMonth: number | null = null
+        let targetPeriod: 1 | 2 | null = null
+
+        if (recalc && recalc.year && recalc.month && recalc.period) {
+          targetYear = Number(recalc.year)
+          targetMonth = Number(recalc.month)
+          targetPeriod = Number(recalc.period) as 1 | 2
+        } else {
+          const currentPeriod = getPayrollPeriodFromDate(new Date())
+          targetYear = currentPeriod.year
+          targetMonth = currentPeriod.month
+          targetPeriod = currentPeriod.period
+        }
+
+        if (targetYear && targetMonth && targetPeriod) {
+          await recalculateEmployeePeriod({
+            employeeId: data.employee_id,
+            year: targetYear,
+            month: targetMonth,
+            period: targetPeriod
+          })
+        }
+      } catch (err: any) {
+        recalcError = err?.message || 'Failed to recalculate wages'
+        console.error('Employee recalc error:', err)
+      }
+    }
+
+    return NextResponse.json({ success: true, data, recalc_error: recalcError })
   } catch (error) {
     console.error('PUT employee error:', error)
     return NextResponse.json(

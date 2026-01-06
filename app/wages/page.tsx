@@ -87,6 +87,7 @@ export default function WagesPage() {
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedPeriod, setSelectedPeriod] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(false)
+  const [recalculating, setRecalculating] = useState(false)
   const [employeeWages, setEmployeeWages] = useState<EmployeeWage[]>([])
 
   // Multi-select and Group By
@@ -143,6 +144,60 @@ export default function WagesPage() {
       setEmployeeWages([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRecalculateSelected = async () => {
+    if (!selectedYear || !selectedMonth) {
+      alert('กรุณาเลือกเดือนและปีก่อน')
+      return
+    }
+
+    if (selectedEmployees.size === 0) {
+      alert('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+      return
+    }
+
+    const yearNum = parseInt(selectedYear)
+    const monthNum = parseInt(selectedMonth)
+    if (!Number.isFinite(yearNum) || !Number.isFinite(monthNum)) {
+      alert('ข้อมูลเดือน/ปีไม่ถูกต้อง')
+      return
+    }
+
+    setRecalculating(true)
+    try {
+      const employeeIds = Array.from(selectedEmployees)
+      const results = await Promise.allSettled(
+        employeeIds.map(empId =>
+          fetch('/api/wages/recalculate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employee_id: empId,
+              year: yearNum,
+              month: monthNum,
+              period: selectedPeriod
+            })
+          }).then(r => r.json())
+        )
+      )
+
+      const failed = results.filter(r => r.status === 'rejected').length +
+        results.filter(r => r.status === 'fulfilled' && !(r.value as any)?.success).length
+
+      if (failed > 0) {
+        alert(`คำนวณใหม่สำเร็จบางส่วน (ล้มเหลว ${failed} รายการ)`)
+      } else {
+        alert('คำนวณใหม่สำเร็จ')
+      }
+
+      await fetchWageData()
+    } catch (error) {
+      console.error('Error recalculating wages:', error)
+      alert('เกิดข้อผิดพลาดในการคำนวณใหม่')
+    } finally {
+      setRecalculating(false)
     }
   }
 
@@ -476,6 +531,15 @@ export default function WagesPage() {
               title="กำหนดภาษีหัก ณ ที่จ่าย ให้พนักงาน"
             >
               ภาษี
+            </button>
+            <button
+              onClick={handleRecalculateSelected}
+              className="btn btn-secondary"
+              type="button"
+              disabled={recalculating}
+              title="คำนวณใหม่เฉพาะพนักงานที่เลือกในงวดนี้"
+            >
+              {recalculating ? 'กำลังคำนวณ...' : 'คำนวณใหม่ (ที่เลือก)'}
             </button>
             <button onClick={handlePrint} className="btn btn-primary">
               Print Report

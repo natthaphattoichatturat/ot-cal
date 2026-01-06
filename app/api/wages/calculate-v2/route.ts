@@ -58,12 +58,17 @@ export async function POST(request: NextRequest) {
       // Process each employee
       for (const employee of employees) {
         try {
+          const employmentType = employee.employment_type === 'รายเดือน' ? 'รายเดือน' : 'รายวัน'
+          const calculatedPerHrSalary = employmentType === 'รายเดือน'
+            ? Number(((employee.monthly_salary || 0) / 15 / 8).toFixed(8))
+            : Number(((employee.perday_salary || 0) / 8).toFixed(8))
+
           const employeeInfo: EmployeeInfoV2 = {
             employee_id: employee.employee_id,
             name: employee.name,
             department: employee.department || 'ไม่ระบุ',
-            employment_type: employee.employment_type === 'รายเดือน' ? 'รายเดือน' : 'รายวัน',
-            perhr_salary: employee.perhr_salary || 0,
+            employment_type: employmentType,
+            perhr_salary: calculatedPerHrSalary,
             perday_salary: employee.perday_salary || 0,
             monthly_salary: employee.monthly_salary || 0
           }
@@ -119,7 +124,7 @@ export async function POST(request: NextRequest) {
             .eq('employee_id', employee.employee_id)
             .gte('leave_date', startDate)
             .lte('leave_date', endDate)
-            .eq('status', 'approved')
+            .or('status.eq.approved,leave_able.eq.true')
 
           const leaveRecords: LeaveRecord[] = (leaves || []).map(leave => {
             return {
@@ -216,7 +221,7 @@ export async function POST(request: NextRequest) {
             .eq('employee_id', employee.employee_id)
             .gte('leave_date', otherStart)
             .lte('leave_date', otherEnd)
-            .eq('status', 'approved')
+            .or('status.eq.approved,leave_able.eq.true')
 
           const otherLeaveRecords: LeaveRecord[] = (otherLeaves || []).map(leave => {
             return {
@@ -489,4 +494,3 @@ export async function POST(request: NextRequest) {
     }, { status: 500 })
   }
 }
-

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { recalculateEmployeePeriod } from '@/lib/wageRecalculation'
 
 /**
  * API สำหรับจัดการเงินเพิ่ม/เงินหัก (wage_adjustments)
@@ -194,10 +195,24 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
+    let recalcError: string | null = null
+    try {
+      await recalculateEmployeePeriod({
+        employeeId: employee_id,
+        year,
+        month,
+        period
+      })
+    } catch (err: any) {
+      recalcError = err?.message || 'Failed to recalculate wages'
+      console.error('Adjustment recalc error:', err)
+    }
+
     return NextResponse.json({
       success: true,
       message: 'เพิ่มรายการสำเร็จ',
-      data
+      data,
+      recalc_error: recalcError
     })
   } catch (error: any) {
     return NextResponse.json({
@@ -244,10 +259,26 @@ export async function PUT(request: NextRequest) {
 
     if (error) throw error
 
+    let recalcError: string | null = null
+    if (data?.employee_id && data?.year && data?.month && data?.period) {
+      try {
+        await recalculateEmployeePeriod({
+          employeeId: data.employee_id,
+          year: data.year,
+          month: data.month,
+          period: data.period
+        })
+      } catch (err: any) {
+        recalcError = err?.message || 'Failed to recalculate wages'
+        console.error('Adjustment recalc error:', err)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'แก้ไขรายการสำเร็จ',
-      data
+      data,
+      recalc_error: recalcError
     })
   } catch (error: any) {
     return NextResponse.json({
@@ -275,6 +306,14 @@ export async function DELETE(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    const { data: existing, error: fetchError } = await supabase
+      .from('wage_adjustments')
+      .select('employee_id, year, month, period')
+      .eq('id', parseInt(id))
+      .single()
+
+    if (fetchError) throw fetchError
+
     const { error } = await supabase
       .from('wage_adjustments')
       .delete()
@@ -282,9 +321,25 @@ export async function DELETE(request: NextRequest) {
 
     if (error) throw error
 
+    let recalcError: string | null = null
+    if (existing?.employee_id && existing?.year && existing?.month && existing?.period) {
+      try {
+        await recalculateEmployeePeriod({
+          employeeId: existing.employee_id,
+          year: existing.year,
+          month: existing.month,
+          period: existing.period
+        })
+      } catch (err: any) {
+        recalcError = err?.message || 'Failed to recalculate wages'
+        console.error('Adjustment recalc error:', err)
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'ลบรายการสำเร็จ'
+      message: 'ลบรายการสำเร็จ',
+      recalc_error: recalcError
     })
   } catch (error: any) {
     return NextResponse.json({

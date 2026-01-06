@@ -69,7 +69,7 @@ export async function GET(
       .eq('employee_id', employeeId)
       .gte('leave_date', startDate)
       .lte('leave_date', endDate)
-      .eq('status', 'approved')
+      .or('status.eq.approved,leave_able.eq.true')
       .order('leave_date', { ascending: true })
 
     if (leaveError) {
@@ -216,7 +216,7 @@ export async function GET(
       .eq('employee_id', employeeId)
       .gte('leave_date', otherStart)
       .lte('leave_date', otherEnd)
-      .eq('status', 'approved')
+      .or('status.eq.approved,leave_able.eq.true')
 
     const { data: otherAdjustments } = await supabase
       .from('wage_adjustments')

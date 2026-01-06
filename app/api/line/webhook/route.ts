@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendLineMessage, LINE_CONFIG } from '@/lib/lineConfig'
+import { getPayrollPeriodFromDate } from '@/lib/payrollPeriod'
+import { recalculateEmployeePeriod } from '@/lib/wageRecalculation'
 import crypto from 'crypto'
 
 // Verify LINE signature
@@ -80,6 +82,7 @@ async function handlePostback(event: any) {
       .from('leave_records')
       .update({
         leave_able: true,
+        status: 'approved',
         updated_at: new Date().toISOString(),
       })
       .eq('id', leaveId)
@@ -105,6 +108,18 @@ async function handlePostback(event: any) {
       console.error('Failed to update attendance:', attendanceError)
     }
 
+    try {
+      const { year, month, period } = getPayrollPeriodFromDate(leaveRecord.leave_date)
+      await recalculateEmployeePeriod({
+        employeeId,
+        year,
+        month,
+        period
+      })
+    } catch (err) {
+      console.error('Leave recalc error:', err)
+    }
+
     // Send approval notification to employee via Employee LINE OA
     try {
       await sendLineMessage(employee.line_id_employ, [
@@ -124,6 +139,7 @@ async function handlePostback(event: any) {
       .from('leave_records')
       .update({
         leave_able: false,
+        status: 'rejected',
         rejected_reason: 'ไม่อนุมัติโดยผู้จัดการ',
         updated_at: new Date().toISOString(),
       })
@@ -132,6 +148,18 @@ async function handlePostback(event: any) {
     if (updateError) {
       console.error('Failed to update leave record:', updateError)
       return
+    }
+
+    try {
+      const { year, month, period } = getPayrollPeriodFromDate(leaveRecord.leave_date)
+      await recalculateEmployeePeriod({
+        employeeId,
+        year,
+        month,
+        period
+      })
+    } catch (err) {
+      console.error('Leave recalc error:', err)
     }
 
     // Send rejection notification to employee via Employee LINE OA

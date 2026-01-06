@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getPayrollPeriodFromDate } from '@/lib/payrollPeriod'
+import { recalculateEmployeePeriod } from '@/lib/wageRecalculation'
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,6 +23,10 @@ export async function POST(request: NextRequest) {
     const leaves: Array<{ leaveDate: string; leaveHours: number }> | undefined = body.leaves
     const deductWage: boolean = body.deductWage === true
     const deductDiligence: boolean = body.deductDiligence === true
+    const status = typeof body.status === 'string' ? body.status : 'approved'
+    const leaveAble = typeof body.leaveAble === 'boolean'
+      ? body.leaveAble
+      : (typeof body.leave_able === 'boolean' ? body.leave_able : status === 'approved')
 
     const isBatch = Array.isArray(employeeIds) && Array.isArray(leaves)
 
@@ -55,6 +61,8 @@ export async function POST(request: NextRequest) {
           leave_type: leaveType || 'Personal',
           reason: reason || null,
           created_by: createdBy || null,
+          status,
+          leave_able: leaveAble,
           // new fields (if column exists)
           leave_hours: body.leaveHours ?? 8,
           is_paid: body.deductWage === true ? false : true,
@@ -83,10 +91,25 @@ export async function POST(request: NextRequest) {
           onConflict: 'employee_id,work_date'
         })
 
+      let recalcError: string | null = null
+      try {
+        const { year, month, period } = getPayrollPeriodFromDate(leaveDate)
+        await recalculateEmployeePeriod({
+          employeeId,
+          year,
+          month,
+          period
+        })
+      } catch (err: any) {
+        recalcError = err?.message || 'Failed to recalculate wages'
+        console.error('Leave recalc error:', err)
+      }
+
       return NextResponse.json({
         success: true,
         data,
-        mode: 'single'
+        mode: 'single',
+        recalc_error: recalcError
       })
     }
 
@@ -133,6 +156,8 @@ export async function POST(request: NextRequest) {
         leave_type: leaveType || 'Personal',
         reason: reason || null,
         created_by: createdBy || null,
+        status,
+        leave_able: leaveAble,
         leave_hours: l.leaveHours,
         is_paid: deductWage ? false : true,
         deduct_wage: deductWage,
@@ -161,11 +186,35 @@ export async function POST(request: NextRequest) {
       .from('daily_attendance')
       .upsert(attendanceRows, { onConflict: 'employee_id,work_date' })
 
+    const recalcTargets = new Set<string>()
+    for (const empId of employeeIds) {
+      for (const leave of leaves) {
+        const { year, month, period } = getPayrollPeriodFromDate(leave.leaveDate)
+        recalcTargets.add(`${empId}|${year}|${month}|${period}`)
+      }
+    }
+
+    const recalcResults = await Promise.allSettled(
+      Array.from(recalcTargets).map(target => {
+        const [empId, yearStr, monthStr, periodStr] = target.split('|')
+        return recalculateEmployeePeriod({
+          employeeId: empId,
+          year: Number(yearStr),
+          month: Number(monthStr),
+          period: Number(periodStr) as 1 | 2
+        })
+      })
+    )
+
+    const recalcFailed = recalcResults.filter(r => r.status === 'rejected')
+
     return NextResponse.json({
       success: true,
       data: upserted || [],
       mode: 'batch',
-      counts: { employees: employeeIds.length, dates: leaves.length, records: rows.length }
+      counts: { employees: employeeIds.length, dates: leaves.length, records: rows.length },
+      recalculated: recalcTargets.size,
+      recalc_failed: recalcFailed.length
     })
 
   } catch (error) {
