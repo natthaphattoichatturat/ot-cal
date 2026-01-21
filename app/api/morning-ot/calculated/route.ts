@@ -40,26 +40,48 @@ export async function GET(request: NextRequest) {
       endDate = `${year}-${month.toString().padStart(2, '0')}-25`
     }
 
-    // ดึง attendance ที่มี morning OT
-    const { data: attendances, error: attError } = await supabase
-      .from('daily_attendance')
-      .select(`
-        employee_id,
-        work_date,
-        check_in_time,
-        scheduled_in_time,
-        morning_ot_hours,
-        is_holiday,
-        employees!fk_daily_employee (
-          name,
-          department
-        )
-      `)
-      .gte('work_date', startDate)
-      .lte('work_date', endDate)
-      .not('check_in_time', 'is', null)
-      .order('employee_id')
-      .order('work_date')
+    const baseSelect = `
+      employee_id,
+      work_date,
+      check_in_time,
+      scheduled_in_time,
+      is_holiday,
+      employees!fk_daily_employee (
+        name,
+        department
+      )
+    `
+    const selectWithMorning = `
+      employee_id,
+      work_date,
+      check_in_time,
+      scheduled_in_time,
+      morning_ot_hours,
+      is_holiday,
+      employees!fk_daily_employee (
+        name,
+        department
+      )
+    `
+
+    const buildQuery = (selectClause: string) => (
+      supabase
+        .from('daily_attendance')
+        .select(selectClause)
+        .gte('work_date', startDate)
+        .lte('work_date', endDate)
+        .not('check_in_time', 'is', null)
+        .order('employee_id')
+        .order('work_date')
+    )
+
+    // ดึง attendance ที่มี morning OT (fallback ถ้าคอลัมน์ไม่มี)
+    let { data: attendances, error: attError } = await buildQuery(selectWithMorning)
+    if (attError && attError.code === '42703') {
+      const retry = await buildQuery(baseSelect)
+      attendances = retry.data
+      attError = retry.error
+    }
 
     if (attError) {
       console.error('Error fetching attendance:', attError)
