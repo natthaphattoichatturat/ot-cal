@@ -5,7 +5,8 @@ import {
   calculateDailyWage,
   checkAttendanceBonus,
   calculatePeriodWage,
-  calculateMonthlySSO
+  calculateMonthlySSO,
+  applyMorningOtAllowance
 } from '@/lib/wageCalculations'
 
 /**
@@ -43,6 +44,24 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
+    const { data: morningAllowances, error: morningError } = await supabase
+      .from('morning_ot_allowances')
+      .select('employee_id, period, allowed_hours, selected_dates')
+      .eq('year', year)
+      .eq('month', month)
+
+    if (morningError) {
+      console.warn('Failed to fetch morning OT allowances:', morningError)
+    }
+
+    const morningAllowanceMap = new Map<string, { allowed_hours: number; selected_dates: string[] | null }>()
+    ;(morningAllowances || []).forEach(item => {
+      morningAllowanceMap.set(`${item.employee_id}-${item.period}`, {
+        allowed_hours: item.allowed_hours || 0,
+        selected_dates: item.selected_dates ?? null
+      })
+    })
+
     const wageRecords = []
 
     // Process both periods
@@ -70,8 +89,31 @@ export async function POST(request: NextRequest) {
             continue // Skip if no attendance
           }
 
+          const morningAllowance = morningAllowanceMap.get(`${employee.employee_id}-${period}`) || {
+            allowed_hours: 0,
+            selected_dates: null
+          }
+
           // Calculate daily wages
-          const dailyWages = attendances.map(att =>
+          const attendanceInput = attendances.map(att => ({
+            work_date: att.work_date,
+            actual_hours: att.actual_hours || 0,
+            ot_normal_hours: att.ot_normal_hours || 0,
+            ot_special_hours: att.ot_special_hours || 0,
+            ot_premium_hours: att.ot_premium_hours || 0,
+            scheduled_in_time: att.scheduled_in_time,
+            check_in_time: att.check_in_time,
+            is_holiday: att.is_holiday || false,
+            is_leave: att.is_leave || false,
+            late: att.late || false
+          }))
+
+          const adjustedAttendances = applyMorningOtAllowance(attendanceInput, {
+            allowedHours: morningAllowance.allowed_hours || 0,
+            selectedDates: morningAllowance.selected_dates ?? null
+          })
+
+          const dailyWages = adjustedAttendances.map(att =>
             calculateDailyWage(
               {
                 work_date: att.work_date,
@@ -90,18 +132,7 @@ export async function POST(request: NextRequest) {
           )
 
           // Check attendance bonus
-          const hasBonus = checkAttendanceBonus(attendances.map(att => ({
-            work_date: att.work_date,
-            actual_hours: att.actual_hours || 0,
-            ot_normal_hours: att.ot_normal_hours || 0,
-            ot_special_hours: att.ot_special_hours || 0,
-            ot_premium_hours: att.ot_premium_hours || 0,
-            scheduled_in_time: att.scheduled_in_time,
-            check_in_time: att.check_in_time,
-            is_holiday: att.is_holiday || false,
-            is_leave: att.is_leave || false,
-            late: att.late || false
-          })))
+          const hasBonus = checkAttendanceBonus(attendanceInput)
 
           // Calculate period wage
           const periodWage = calculatePeriodWage(
@@ -131,7 +162,30 @@ export async function POST(request: NextRequest) {
             .gte('work_date', otherStart)
             .lte('work_date', otherEnd)
 
-          const otherDailyWages = (otherAttendances || []).map(att =>
+          const otherMorningAllowance = morningAllowanceMap.get(`${employee.employee_id}-${otherPeriod}`) || {
+            allowed_hours: 0,
+            selected_dates: null
+          }
+
+          const otherAttendanceInput = (otherAttendances || []).map(att => ({
+            work_date: att.work_date,
+            actual_hours: att.actual_hours || 0,
+            ot_normal_hours: att.ot_normal_hours || 0,
+            ot_special_hours: att.ot_special_hours || 0,
+            ot_premium_hours: att.ot_premium_hours || 0,
+            scheduled_in_time: att.scheduled_in_time,
+            check_in_time: att.check_in_time,
+            is_holiday: att.is_holiday || false,
+            is_leave: att.is_leave || false,
+            late: att.late || false
+          }))
+
+          const otherAdjustedAttendances = applyMorningOtAllowance(otherAttendanceInput, {
+            allowedHours: otherMorningAllowance.allowed_hours || 0,
+            selectedDates: otherMorningAllowance.selected_dates ?? null
+          })
+
+          const otherDailyWages = otherAdjustedAttendances.map(att =>
             calculateDailyWage(
               {
                 work_date: att.work_date,
@@ -147,18 +201,7 @@ export async function POST(request: NextRequest) {
             )
           )
 
-          const otherHasBonus = checkAttendanceBonus((otherAttendances || []).map(att => ({
-            work_date: att.work_date,
-            actual_hours: att.actual_hours || 0,
-            ot_normal_hours: att.ot_normal_hours || 0,
-            ot_special_hours: att.ot_special_hours || 0,
-            ot_premium_hours: att.ot_premium_hours || 0,
-            scheduled_in_time: att.scheduled_in_time,
-            check_in_time: att.check_in_time,
-            is_holiday: att.is_holiday || false,
-            is_leave: att.is_leave || false,
-            late: att.late || false
-          })))
+          const otherHasBonus = checkAttendanceBonus(otherAttendanceInput)
 
           const otherPeriodWage = calculatePeriodWage(
             {
@@ -272,4 +315,3 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
-

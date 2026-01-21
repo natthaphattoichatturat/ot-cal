@@ -36,6 +36,11 @@ function timeToMinutes(time: string): number {
   return hours * 60 + minutes
 }
 
+function isBreakScanTime(time: string): boolean {
+  const minutes = timeToMinutes(time)
+  return (minutes >= 0 && minutes < 60) || (minutes >= 720 && minutes < 780)
+}
+
 // Convert minutes to time string
 function minutesToTime(minutes: number): string {
   const hours = Math.floor(minutes / 60)
@@ -455,6 +460,10 @@ export function calculateOTFromScans(
     for (let idx = 0; idx < records.length; idx++) {
       const current = records[idx]
 
+      if (isBreakScanTime(current.scanTime)) {
+        continue
+      }
+
       // Check if this is a duplicate of the last added scan
       if (cleanedRecords.length > 0) {
         const last = cleanedRecords[cleanedRecords.length - 1]
@@ -488,10 +497,7 @@ export function calculateOTFromScans(
         continue
       }
 
-      // Skip check-in scans during 00:00-01:00 (misdata from break period)
-      const checkInMinutes = timeToMinutes(checkIn.scanTime)
-      if (checkInMinutes >= 0 && checkInMinutes <= 60) {
-        // This is a break scan after midnight, skip it
+      if (isBreakScanTime(checkIn.scanTime)) {
         processedIndices.add(i)
         i++
         continue
@@ -504,15 +510,16 @@ export function calculateOTFromScans(
       // Look for check-out, handling special case of shift 2 with break scan
       while (j < processedRecords.length) {
         if (processedRecords[j].scanType === 2) {
-          checkOut = processedRecords[j]
-          break
+          if (isBreakScanTime(processedRecords[j].scanTime)) {
+            j++
+            continue
+          } else {
+            checkOut = processedRecords[j]
+            break
+          }
         } else if (processedRecords[j].scanType === 1) {
           // Found another check-in before check-out
-          // Skip if it's a break scan (00:00-01:00)
-          const nextCheckInMinutes = timeToMinutes(processedRecords[j].scanTime)
-
-          if (nextCheckInMinutes >= 0 && nextCheckInMinutes <= 60) {
-            // This is a break scan after midnight, skip it and continue looking for check-out
+          if (isBreakScanTime(processedRecords[j].scanTime)) {
             j++
             continue
           } else {
@@ -539,7 +546,7 @@ export function calculateOTFromScans(
       // Calculate OT
       const checkInDate = checkIn.scanDate
       const checkOutDate = checkOut.scanDate
-      // checkInMinutes already declared above
+      const checkInMinutes = timeToMinutes(checkIn.scanTime)
       const checkOutMinutes = timeToMinutes(checkOut.scanTime)
 
       const shift = determineShift(checkInMinutes)

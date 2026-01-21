@@ -433,3 +433,82 @@ export function getPeriodDates(year: number, month: number, period: 1 | 2): { st
     return { startDate, endDate }
   }
 }
+
+export type MorningOtAllowanceInput = {
+  allowedHours: number
+  selectedDates: string[] | null
+}
+
+/**
+ * ปรับ OT เช้าให้นับเฉพาะที่ user อนุญาตในงวด
+ * - ถ้าไม่อนุญาต จะหัก OT เช้าออกจาก ot_normal_hours
+ * - ถ้าอนุญาต จะเพิ่มกลับตามสัดส่วนของวันที่เลือก
+ */
+export function applyMorningOtAllowance(
+  attendances: DailyAttendance[],
+  allowance: MorningOtAllowanceInput
+): DailyAttendance[] {
+  if (!attendances || attendances.length === 0) return attendances
+
+  const selectedSet = allowance.selectedDates ? new Set(allowance.selectedDates) : null
+
+  const morningOtByIndex = attendances.map(att => {
+    const morningOt = calculateMorningOtHours(att.check_in_time, att.scheduled_in_time)
+    const isSelected = selectedSet === null || selectedSet.has(att.work_date)
+    return {
+      morningOt,
+      eligibleOt: isSelected ? morningOt : 0,
+      isHoliday: att.is_holiday
+    }
+  })
+
+  const totalMorningOt = morningOtByIndex.reduce((sum, item) => sum + item.eligibleOt, 0)
+  const effectiveMorningOt = Math.min(allowance.allowedHours || 0, totalMorningOt)
+  const ratio = totalMorningOt > 0 ? effectiveMorningOt / totalMorningOt : 0
+
+  return attendances.map((att, idx) => {
+    const { morningOt, eligibleOt, isHoliday } = morningOtByIndex[idx]
+
+    if (!morningOt) return att
+
+    const allowedForDay = eligibleOt * ratio
+    const baseOtNormal = Math.max(0, (att.ot_normal_hours || 0) - morningOt)
+
+    return {
+      ...att,
+      ot_normal_hours: isHoliday ? baseOtNormal : baseOtNormal + allowedForDay,
+      ot_special_hours: (att.ot_special_hours || 0) + (isHoliday ? allowedForDay : 0)
+    }
+  })
+}
+
+function calculateMorningOtHours(checkInTime?: string, scheduledInTime?: string): number {
+  if (!checkInTime) return 0
+
+  const checkInMinutes = timeToMinutes(checkInTime)
+  if (checkInMinutes === null) return 0
+
+  const scheduledMinutes = timeToMinutes(scheduledInTime || '08:00')
+  if (scheduledMinutes === null) return 0
+
+  if (checkInMinutes < scheduledMinutes && checkInMinutes >= 360) {
+    const otMinutes = scheduledMinutes - checkInMinutes
+    return roundDownToHalfHour(Math.min(otMinutes, 120)) / 60
+  }
+
+  return 0
+}
+
+function timeToMinutes(timeStr: string): number | null {
+  if (!timeStr) return null
+  const [hoursStr, minutesStr] = timeStr.split(':')
+  const hours = Number(hoursStr)
+  const minutes = Number(minutesStr)
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null
+  return hours * 60 + minutes
+}
+
+function roundDownToHalfHour(minutes: number): number {
+  return Math.floor(minutes / 30) * 30
+}
