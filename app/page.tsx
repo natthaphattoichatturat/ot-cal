@@ -66,6 +66,8 @@ export default function Home() {
   const [morningOTPeriod, setMorningOTPeriod] = useState<1 | 2>(1)
   const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(new Set())
   const [selectedDates, setSelectedDates] = useState<Map<string, string[]>>(new Map())
+  const [morningOTSelectedEmployees, setMorningOTSelectedEmployees] = useState<Set<string>>(new Set())
+  const [useSelectedForMorningOT, setUseSelectedForMorningOT] = useState(false)
 
   // Thai day names
   const thaiDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
@@ -313,6 +315,7 @@ export default function Home() {
     setMorningOTPeriod(period)
     setShowMorningOTModal(true)
     setMorningOTMessage('')
+    setExpandedEmployees(new Set())
     await fetchMorningOTData(period)
   }
 
@@ -326,12 +329,32 @@ export default function Home() {
       const data = await res.json()
 
       if (data.success) {
-        // เพิ่ม field สำหรับ input
-        const dataWithInput = data.data.map((emp: any) => ({
-          ...emp,
-          input_hours: emp.allowed_hours ?? ''
-        }))
+        const hasExistingAllowance = data.data.some((emp: any) => (emp.allowed_hours || 0) > 0)
+        const useMainSelection = useSelectedForMorningOT && selectedEmployees.size > 0 && !hasExistingAllowance
+        const initialSelected = new Set<string>()
+        const dataWithInput = data.data.map((emp: any) => {
+          const allowedHours = emp.allowed_hours || 0
+          const calculatedHours = emp.total_morning_ot || 0
+          const selectedByMain = useMainSelection && selectedEmployees.has(emp.employee_id)
+          const shouldSelect = allowedHours > 0 || selectedByMain
+
+          if (shouldSelect) {
+            initialSelected.add(emp.employee_id)
+          }
+
+          let inputValue = allowedHours > 0 ? String(allowedHours) : ''
+          if (!inputValue && selectedByMain && calculatedHours > 0) {
+            inputValue = String(calculatedHours)
+          }
+
+          return {
+            ...emp,
+            input_hours: inputValue
+          }
+        })
+
         setMorningOTData(dataWithInput)
+        setMorningOTSelectedEmployees(initialSelected)
 
         // ตั้งค่า selected dates จาก database
         const newSelectedDates = new Map<string, string[]>()
@@ -359,6 +382,74 @@ export default function Home() {
         ? { ...emp, input_hours: value }
         : emp
     ))
+
+    const numericValue = parseFloat(value)
+    setMorningOTSelectedEmployees(prev => {
+      const newSet = new Set(prev)
+      if (!Number.isNaN(numericValue) && numericValue > 0) {
+        newSet.add(employeeId)
+      } else {
+        newSet.delete(employeeId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleMorningOTSelection = (employeeId: string, calculatedHours: number) => {
+    setMorningOTSelectedEmployees(prev => {
+      const newSet = new Set(prev)
+      const isSelected = newSet.has(employeeId)
+
+      if (isSelected) {
+        newSet.delete(employeeId)
+        setMorningOTData(prevData => prevData.map(emp =>
+          emp.employee_id === employeeId ? { ...emp, input_hours: '' } : emp
+        ))
+      } else {
+        newSet.add(employeeId)
+        setMorningOTData(prevData => prevData.map(emp => {
+          if (emp.employee_id !== employeeId) return emp
+          const currentInput = emp.input_hours
+          const hasInput = currentInput !== '' && parseFloat(currentInput) > 0
+          const nextInput = hasInput ? currentInput : (calculatedHours > 0 ? String(calculatedHours) : '')
+          return { ...emp, input_hours: nextInput }
+        }))
+      }
+
+      return newSet
+    })
+  }
+
+  const selectAllMorningOTEmployees = () => {
+    const allIds = new Set(morningOTData.map(emp => emp.employee_id))
+    setMorningOTSelectedEmployees(allIds)
+    setMorningOTData(prevData => prevData.map(emp => {
+      const currentInput = emp.input_hours
+      const hasInput = currentInput !== '' && parseFloat(currentInput) > 0
+      const nextInput = hasInput ? currentInput : String(emp.total_morning_ot || 0)
+      return { ...emp, input_hours: nextInput }
+    }))
+  }
+
+  const deselectAllMorningOTEmployees = () => {
+    setMorningOTSelectedEmployees(new Set())
+    setMorningOTData(prevData => prevData.map(emp => ({ ...emp, input_hours: '' })))
+  }
+
+  const applyMainSelectionToMorningOT = () => {
+    if (selectedEmployees.size === 0) return
+    const selectedSet = new Set<string>()
+    setMorningOTData(prevData => prevData.map(emp => {
+      if (selectedEmployees.has(emp.employee_id)) {
+        selectedSet.add(emp.employee_id)
+        const currentInput = emp.input_hours
+        const hasInput = currentInput !== '' && parseFloat(currentInput) > 0
+        const nextInput = hasInput ? currentInput : String(emp.total_morning_ot || 0)
+        return { ...emp, input_hours: nextInput }
+      }
+      return { ...emp, input_hours: '' }
+    }))
+    setMorningOTSelectedEmployees(selectedSet)
   }
 
   const toggleEmployeeExpanded = (employeeId: string) => {
@@ -414,12 +505,15 @@ export default function Home() {
       const year = parseInt(selectedYear)
       const month = parseInt(selectedMonth)
 
-      // กรองเฉพาะที่มีการกรอกค่า
+      const selectedSet = morningOTSelectedEmployees
+
       const allowances = morningOTData
-        .filter(emp => emp.input_hours !== '' && parseFloat(emp.input_hours) > 0)
+        .filter(emp => selectedSet.has(emp.employee_id))
         .map(emp => {
           const inputHours = parseFloat(emp.input_hours) || 0
           const calculatedHours = emp.total_morning_ot || 0
+          if (inputHours <= 0) return null
+
           // ใช้ค่าที่น้อยกว่า (ไม่ให้เกินที่ระบบคำนวณได้)
           const actualHours = Math.min(inputHours, calculatedHours)
 
@@ -443,8 +537,27 @@ export default function Home() {
               : null
           }
         })
+        .filter(Boolean) as Array<{
+          employee_id: string
+          allowed_hours: number
+          calculated_hours: number
+          selected_dates: string[] | null
+          notes: string | null
+        }>
 
-      if (allowances.length === 0) {
+      const removals = morningOTData
+        .filter(emp => !selectedSet.has(emp.employee_id) && (emp.allowed_hours || 0) > 0)
+        .map(emp => ({
+          employee_id: emp.employee_id,
+          allowed_hours: 0,
+          calculated_hours: 0,
+          selected_dates: null,
+          notes: 'ยกเลิก OT เช้า'
+        }))
+
+      const records = [...allowances, ...removals]
+
+      if (records.length === 0) {
         setMorningOTMessage('ไม่มีข้อมูลที่ต้องบันทึก')
         setSavingMorningOT(false)
         return
@@ -457,14 +570,19 @@ export default function Home() {
           year,
           month,
           period: morningOTPeriod,
-          allowances
+          allowances: records
         })
       })
 
       const data = await res.json()
 
       if (data.success) {
-        setMorningOTMessage(`บันทึกสำเร็จ ${allowances.length} รายการ`)
+        const savedCount = allowances.length
+        const removedCount = removals.length
+        const messageParts = []
+        if (savedCount > 0) messageParts.push(`บันทึก ${savedCount} รายการ`)
+        if (removedCount > 0) messageParts.push(`ยกเลิก ${removedCount} รายการ`)
+        setMorningOTMessage(messageParts.length > 0 ? `สำเร็จ: ${messageParts.join(' / ')}` : 'บันทึกสำเร็จ')
         // Refresh data
         await fetchMorningOTData(morningOTPeriod)
       } else {
@@ -1088,6 +1206,22 @@ export default function Home() {
               OT เช้า งวดที่ 2
             </button>
           </div>
+          <div style={{ marginTop: '8px' }}>
+            {selectedEmployees.size > 0 ? (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                <input
+                  type="checkbox"
+                  checked={useSelectedForMorningOT}
+                  onChange={(e) => setUseSelectedForMorningOT(e.target.checked)}
+                />
+                ใช้พนักงานที่เลือกในตาราง ({selectedEmployees.size} คน) เมื่อเปิดรายการ OT เช้า
+              </label>
+            ) : (
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                * ถ้าต้องการเลือกเฉพาะบางคน ให้ติ๊กพนักงานในตารางด้านล่างก่อน
+              </p>
+            )}
+          </div>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
             * เลือกพนักงานที่จะได้รับ OT เช้า และกำหนดจำนวนชั่วโมง (ไม่เกินที่ระบบคำนวณได้)
           </p>
@@ -1142,10 +1276,42 @@ export default function Home() {
                   * กรอกจำนวนชั่วโมง OT เช้าที่ต้องการให้แต่ละคน (หากกรอกเกินจะได้รับเท่าที่ระบบคำนวณ)
                 </p>
 
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    เลือกแล้ว {morningOTSelectedEmployees.size} คน จาก {morningOTData.length} คน
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={selectAllMorningOTEmployees}
+                      className="btn btn-sm"
+                      style={{ fontSize: '12px', padding: '4px 8px' }}
+                    >
+                      เลือกทั้งหมด
+                    </button>
+                    <button
+                      onClick={deselectAllMorningOTEmployees}
+                      className="btn btn-sm btn-secondary"
+                      style={{ fontSize: '12px', padding: '4px 8px' }}
+                    >
+                      ยกเลิกทั้งหมด
+                    </button>
+                    {selectedEmployees.size > 0 && (
+                      <button
+                        onClick={applyMainSelectionToMorningOT}
+                        className="btn btn-sm btn-secondary"
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                      >
+                        ใช้พนักงานที่เลือกในตาราง ({selectedEmployees.size})
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="table-wrapper" style={{ maxHeight: '50vh', overflow: 'auto' }}>
                   <table className="data-table">
                     <thead>
                       <tr>
+                        <th className="text-center" style={{ width: '50px' }}>เลือก</th>
                         <th style={{ width: '40px' }}></th>
                         <th style={{ minWidth: '100px' }}>รหัส</th>
                         <th style={{ minWidth: '150px' }}>ชื่อ-นามสกุล</th>
@@ -1162,12 +1328,22 @@ export default function Home() {
                         const calculatedHours = emp.total_morning_ot || 0
                         const isOverLimit = inputHours > calculatedHours && emp.input_hours !== ''
                         const isExpanded = expandedEmployees.has(emp.employee_id)
+                        const isEmployeeSelected = morningOTSelectedEmployees.has(emp.employee_id)
+                        const hasSavedAllowance = (emp.allowed_hours || 0) > 0
                         const empSelectedDates = selectedDates.get(emp.employee_id) || []
                         const allDates = emp.details.map((d: any) => d.date)
 
                         return (
                           <>
-                            <tr key={emp.employee_id}>
+                            <tr key={emp.employee_id} style={{ backgroundColor: isEmployeeSelected ? '#f1f8e9' : 'transparent' }}>
+                              <td className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isEmployeeSelected}
+                                  onChange={() => toggleMorningOTSelection(emp.employee_id, calculatedHours)}
+                                  style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                />
+                              </td>
                               <td className="text-center">
                                 <button
                                   onClick={() => toggleEmployeeExpanded(emp.employee_id)}
@@ -1200,33 +1376,39 @@ export default function Home() {
                                   value={emp.input_hours}
                                   onChange={(e) => handleMorningOTInputChange(emp.employee_id, e.target.value)}
                                   placeholder="0"
+                                  disabled={!isEmployeeSelected}
                                   style={{
                                     width: '80px',
                                     textAlign: 'center',
                                     padding: '6px',
-                                    border: isOverLimit ? '2px solid #f44336' : '1px solid var(--border-color)'
+                                    border: isOverLimit ? '2px solid #f44336' : '1px solid var(--border-color)',
+                                    backgroundColor: isEmployeeSelected ? 'white' : '#f5f5f5',
+                                    cursor: isEmployeeSelected ? 'text' : 'not-allowed'
                                   }}
                                 />
                               </td>
                               <td className="text-center">
-                                {emp.allowed_hours !== null && emp.allowed_hours !== undefined ? (
+                                {hasSavedAllowance ? (
                                   <span style={{ color: '#4caf50', fontWeight: '600' }}>
                                     ✓ {emp.allowed_hours} ชม.
                                   </span>
+                                ) : isEmployeeSelected ? (
+                                  <span style={{ color: '#ff9800', fontWeight: '600' }}>รอกรอกชั่วโมง</span>
                                 ) : (
-                                  <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                  <span style={{ color: 'var(--text-muted)' }}>ไม่เลือก</span>
                                 )}
                               </td>
                             </tr>
 
                             {isExpanded && (
                               <tr key={`${emp.employee_id}-details`}>
-                                <td colSpan={8} style={{ padding: '12px 20px', backgroundColor: '#f8f9fa' }}>
+                                <td colSpan={9} style={{ padding: '12px 20px', backgroundColor: '#f8f9fa' }}>
                                   <div style={{ marginBottom: '8px' }}>
                                     <button
                                       onClick={() => selectAllDates(emp.employee_id, allDates)}
                                       className="btn btn-sm"
                                       style={{ marginRight: '8px', fontSize: '12px', padding: '4px 8px' }}
+                                      disabled={!isEmployeeSelected}
                                     >
                                       เลือกทั้งหมด
                                     </button>
@@ -1234,6 +1416,7 @@ export default function Home() {
                                       onClick={() => deselectAllDates(emp.employee_id)}
                                       className="btn btn-sm btn-secondary"
                                       style={{ fontSize: '12px', padding: '4px 8px' }}
+                                      disabled={!isEmployeeSelected}
                                     >
                                       ยกเลิกทั้งหมด
                                     </button>
@@ -1255,7 +1438,7 @@ export default function Home() {
                                             border: `1px solid ${isSelected ? '#4caf50' : '#ddd'}`,
                                             borderRadius: '4px',
                                             backgroundColor: isSelected ? '#e8f5e9' : 'white',
-                                            cursor: 'pointer',
+                                            cursor: isEmployeeSelected ? 'pointer' : 'not-allowed',
                                             fontSize: '13px'
                                           }}
                                         >
@@ -1263,6 +1446,7 @@ export default function Home() {
                                             type="checkbox"
                                             checked={isSelected}
                                             onChange={() => toggleDateSelection(emp.employee_id, detail.date)}
+                                            disabled={!isEmployeeSelected}
                                             style={{ marginRight: '8px' }}
                                           />
                                           <div style={{ flex: 1 }}>
