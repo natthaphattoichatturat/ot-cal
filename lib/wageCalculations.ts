@@ -457,7 +457,7 @@ export function applyMorningOtAllowance(
     const isSelected = selectedSet === null || selectedSet.has(att.work_date)
     return {
       morningOt,
-      eligibleOt: isSelected ? morningOt : 0,
+      eligibleOt: isSelected && !att.is_holiday ? morningOt : 0,
       isHoliday: att.is_holiday
     }
   })
@@ -470,14 +470,15 @@ export function applyMorningOtAllowance(
     const { morningOt, eligibleOt, isHoliday } = morningOtByIndex[idx]
 
     if (!morningOt) return att
+    if (isHoliday) return att
 
     const allowedForDay = eligibleOt * ratio
     const baseOtNormal = att.ot_normal_hours || 0
 
     return {
       ...att,
-      ot_normal_hours: isHoliday ? baseOtNormal : baseOtNormal + allowedForDay,
-      ot_special_hours: (att.ot_special_hours || 0) + (isHoliday ? allowedForDay : 0)
+      ot_normal_hours: baseOtNormal + allowedForDay,
+      ot_special_hours: att.ot_special_hours || 0
     }
   })
 }

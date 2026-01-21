@@ -179,16 +179,11 @@ export function calculatePeriodWageV2(
     // ตรวจสอบว่าวันนี้อยู่ใน selectedDates หรือไม่
     const isDateSelected = selectedDates === null || selectedDates.includes(att.work_date)
 
-    // นับ morning OT ที่คำนวณได้ (เฉพาะวันที่เลือก)
-    if (morningOTForDay > 0 && isDateSelected) {
+    // นับ morning OT ที่คำนวณได้ (เฉพาะวันที่เลือก และไม่ใช่วันหยุด)
+    if (morningOTForDay > 0 && isDateSelected && !att.is_holiday) {
       calculatedMorningOT += morningOTForDay
 
-      // แยก morning OT ตามประเภทวัน
-      if (att.is_holiday) {
-        calculatedMorningOTHoliday += morningOTForDay
-      } else {
-        calculatedMorningOTRegular += morningOTForDay
-      }
+      calculatedMorningOTRegular += morningOTForDay
     }
 
     // OT ปกติ = ot_normal_hours (ไม่รวม OT เช้าจากการ import)
