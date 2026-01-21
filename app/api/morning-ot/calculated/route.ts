@@ -6,6 +6,26 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+type AttendanceEmployee = {
+  name: string | null
+  department: string | null
+}
+
+type AttendanceRow = {
+  employee_id: string
+  work_date: string
+  check_in_time: string | null
+  scheduled_in_time: string | null
+  morning_ot_hours?: number | null
+  is_holiday: boolean | null
+  employees?: AttendanceEmployee | AttendanceEmployee[] | null
+}
+
+type AttendanceQueryResult = {
+  data: AttendanceRow[] | null
+  error: { code?: string } | null
+}
+
 /**
  * GET - คำนวณ OT เช้าของพนักงานทั้งหมดในงวดที่เลือก
  * (จากการเข้างานก่อนเวลา 06:00 - 08:00)
@@ -64,8 +84,8 @@ export async function GET(request: NextRequest) {
       )
     `
 
-    const buildQuery = (selectClause: string) => (
-      supabase
+    const buildQuery = async (selectClause: string): Promise<AttendanceQueryResult> => {
+      const result = await supabase
         .from('daily_attendance')
         .select(selectClause)
         .gte('work_date', startDate)
@@ -73,7 +93,8 @@ export async function GET(request: NextRequest) {
         .not('check_in_time', 'is', null)
         .order('employee_id')
         .order('work_date')
-    )
+      return result as AttendanceQueryResult
+    }
 
     // ดึง attendance ที่มี morning OT (fallback ถ้าคอลัมน์ไม่มี)
     let { data: attendances, error: attError } = await buildQuery(selectWithMorning)
