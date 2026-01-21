@@ -472,7 +472,7 @@ export function applyMorningOtAllowance(
     if (!morningOt) return att
 
     const allowedForDay = eligibleOt * ratio
-    const baseOtNormal = Math.max(0, (att.ot_normal_hours || 0) - morningOt)
+    const baseOtNormal = att.ot_normal_hours || 0
 
     return {
       ...att,
@@ -490,6 +490,7 @@ function calculateMorningOtHours(checkInTime?: string, scheduledInTime?: string)
 
   const scheduledMinutes = timeToMinutes(scheduledInTime || '08:00')
   if (scheduledMinutes === null) return 0
+  if (scheduledMinutes > 540) return 0
 
   if (checkInMinutes < scheduledMinutes && checkInMinutes >= 360) {
     const otMinutes = scheduledMinutes - checkInMinutes

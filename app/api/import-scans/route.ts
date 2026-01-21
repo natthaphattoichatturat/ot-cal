@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
           console.log(`Merged session for employee ${employeeId} on ${session.workDate}`)
         } else {
           // First session for this employee + date
-          const scheduledInTime = session.shift === 1 ? '08:00:00' : '20:00:00'
+          const scheduledInTime = session.shift === 1 ? '08:00:00' : '17:30:00'
           const scheduledOutTime = session.shift === 1 ? '17:00:00' : '05:00:00'
 
           attendanceMap.set(key, {
@@ -352,7 +352,8 @@ export async function POST(request: NextRequest) {
       for (const monthStr of months) {
         // ซิงค์ทั้ง 2 งวด
         for (const period of [1, 2]) {
-          const syncResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/wages/sync`, {
+          const syncUrl = new URL('/api/wages/sync', request.url)
+          const syncResponse = await fetch(syncUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ month: monthStr, period })

@@ -69,8 +69,8 @@ function isSpecialDay(date: Date, holidays: SpecialHoliday[]): boolean {
 
 // Determine shift based on check-in time
 function determineShift(checkInMinutes: number): 1 | 2 {
-  // Shift 1: 6:00 - 17:00 (can start OT from 6:00, regular from 8:00)
-  // Shift 2: 17:30 - 13:00 next day (can start OT from 17:30, regular from 20:00)
+  // Shift 1: 06:00 - 17:00 (regular starts at 08:00)
+  // Shift 2: 17:00 - 06:00 (regular starts at 17:30)
 
   if (checkInMinutes >= 360 && checkInMinutes < 1020) { // 6:00 - 17:00
     return 1
@@ -79,7 +79,7 @@ function determineShift(checkInMinutes: number): 1 | 2 {
   }
 }
 
-// Calculate OT for shift 1 (8:00-17:00)
+// Calculate OT for shift 1 (08:00-17:00)
 function calculateShift1OT(
   checkInMinutes: number,
   checkOutMinutes: number,
@@ -103,7 +103,6 @@ function calculateShift1OT(
 } {
   const scheduledIn = 480 // 8:00
   const scheduledOut = 1020 // 17:00
-  const otStart = 360 // 6:00
   const nightOtStart = 1050 // 17:30
 
   let actualHours = 0
@@ -116,12 +115,8 @@ function calculateShift1OT(
     lateHours = (checkInMinutes - scheduledIn) / 60
   }
 
-  // Calculate morning OT (6:00 - 8:00, max 2 hours)
-  let morningOT = 0
-  if (checkInMinutes < scheduledIn && checkInMinutes >= otStart) {
-    const otMinutes = scheduledIn - checkInMinutes
-    morningOT = roundDownToHalfHour(Math.min(otMinutes, 120)) // Max 2 hours
-  }
+  // Early OT is handled later via allowances, not during import.
+  const morningOT = 0
 
   // Calculate night OT (after 17:30)
   let nightOT = 0
@@ -261,7 +256,7 @@ function calculateShift1OT(
 
 // ============ END calculateShift1OT ============
 
-// Calculate OT for shift 2 (20:00-05:00)
+// Calculate OT for shift 2 (17:30-05:00)
 function calculateShift2OT(
   checkInMinutes: number,
   checkOutMinutes: number,
@@ -283,9 +278,7 @@ function calculateShift2OT(
   late: boolean;
   lateHours: number;
 } {
-  const scheduledIn = 1200 // 20:00
-  const scheduledOut = 300 // 5:00 next day
-  const otStart = 1050 // 17:30
+  const scheduledIn = 1050 // 17:30
   const nightOtStart = 330 // 5:30 next day
 
   let actualHours = 0
@@ -304,12 +297,8 @@ function calculateShift2OT(
     }
   }
 
-  // Calculate evening OT (17:30 - 20:00)
-  let eveningOT = 0
-  if (checkInMinutes >= otStart && checkInMinutes < scheduledIn) {
-    const otMinutes = scheduledIn - checkInMinutes
-    eveningOT = roundDownToHalfHour(otMinutes)
-  }
+  // Early OT is handled later via allowances, not during import.
+  const eveningOT = 0
 
   // Calculate morning OT (after 5:30 next day)
   let morningOT = 0

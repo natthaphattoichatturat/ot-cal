@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 
       // OT เช้า: เข้าก่อน scheduled_in_time และหลัง 06:00
       // สูงสุด 2 ชั่วโมง (120 นาที)
-      if (checkInMinutes < scheduledInMinutes && checkInMinutes >= 360) { // 360 = 06:00
+      if (scheduledInMinutes <= 540 && checkInMinutes < scheduledInMinutes && checkInMinutes >= 360) { // 360 = 06:00
         const otMinutes = scheduledInMinutes - checkInMinutes
         morningOT = roundDownToHalfHour(Math.min(otMinutes, 120)) / 60 // แปลงเป็นชั่วโมง
       }

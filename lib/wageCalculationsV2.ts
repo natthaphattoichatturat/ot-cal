@@ -168,8 +168,8 @@ export function calculatePeriodWageV2(
       const checkInMinutes = timeStringToMinutes(att.check_in_time)
       const scheduledInMinutes = timeStringToMinutes(att.scheduled_in_time)
 
-      // เข้าก่อน scheduled_in และหลัง 06:00 (360 นาที)
-      if (checkInMinutes < scheduledInMinutes && checkInMinutes >= 360) {
+      // นับเฉพาะกะเช้า (scheduled <= 09:00)
+      if (scheduledInMinutes <= 540 && checkInMinutes < scheduledInMinutes && checkInMinutes >= 360) {
         const otMinutes = scheduledInMinutes - checkInMinutes
         // ปัดลงเป็น 30 นาที และสูงสุด 120 นาที (2 ชม.)
         morningOTForDay = roundDownTo30Min(Math.min(otMinutes, 120)) / 60
@@ -191,9 +191,8 @@ export function calculatePeriodWageV2(
       }
     }
 
-    // OT ปกติ = ot_normal_hours - morning OT
-    // (เพราะ ot_normal_hours จาก database รวม morning OT ไว้แล้ว)
-    const otNormalWithoutMorning = Math.max(0, (att.ot_normal_hours || 0) - morningOTForDay)
+    // OT ปกติ = ot_normal_hours (ไม่รวม OT เช้าจากการ import)
+    const otNormalWithoutMorning = att.ot_normal_hours || 0
 
     ot1_hours_raw += otNormalWithoutMorning
     ot2_hours_raw += att.ot_special_hours || 0
@@ -503,4 +502,3 @@ export function getPeriodDates(year: number, month: number, period: 1 | 2): { st
     return { startDate, endDate }
   }
 }
-

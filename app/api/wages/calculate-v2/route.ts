@@ -477,8 +477,34 @@ export async function POST(request: NextRequest) {
       })
 
     if (upsertError) {
-      console.error('Upsert error:', upsertError)
-      throw upsertError
+      if (upsertError.code === '42P10') {
+        console.warn('Missing unique constraint on wage_details. Falling back to delete + insert.')
+        const periods = Array.from(new Set(wageDetails.map(record => record.period)))
+
+        const { error: deleteError } = await supabase
+          .from('wage_details')
+          .delete()
+          .eq('year', year)
+          .eq('month', month)
+          .in('period', periods)
+
+        if (deleteError) {
+          console.error('Delete error:', deleteError)
+          throw deleteError
+        }
+
+        const { error: insertError } = await supabase
+          .from('wage_details')
+          .insert(wageDetails)
+
+        if (insertError) {
+          console.error('Insert error:', insertError)
+          throw insertError
+        }
+      } else {
+        console.error('Upsert error:', upsertError)
+        throw upsertError
+      }
     }
 
     return NextResponse.json({

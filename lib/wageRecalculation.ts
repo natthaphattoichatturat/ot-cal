@@ -289,21 +289,61 @@ export async function recalculateEmployeePeriod({
     updated_at: nowIso
   }
 
-  const [{ error: detailError }, { error: summaryError }] = await Promise.all([
-    supabase
-      .from('wage_details')
-      .upsert(wageDetail, {
-        onConflict: 'employee_id,year,month,period'
-      }),
-    supabase
-      .from('wage_summary')
-      .upsert(wageSummary, {
-        onConflict: 'employee_id,year,month,period'
-      })
-  ])
+  const { error: detailError } = await supabase
+    .from('wage_details')
+    .upsert(wageDetail, {
+      onConflict: 'employee_id,year,month,period'
+    })
 
-  if (detailError) throw detailError
-  if (summaryError) throw summaryError
+  if (detailError) {
+    if (detailError.code === '42P10') {
+      const { error: deleteError } = await supabase
+        .from('wage_details')
+        .delete()
+        .eq('employee_id', employeeId)
+        .eq('year', year)
+        .eq('month', month)
+        .eq('period', period)
+
+      if (deleteError) throw deleteError
+
+      const { error: insertError } = await supabase
+        .from('wage_details')
+        .insert(wageDetail)
+
+      if (insertError) throw insertError
+    } else {
+      throw detailError
+    }
+  }
+
+  const { error: summaryError } = await supabase
+    .from('wage_summary')
+    .upsert(wageSummary, {
+      onConflict: 'employee_id,year,month,period'
+    })
+
+  if (summaryError) {
+    if (summaryError.code === '42P10') {
+      const { error: deleteError } = await supabase
+        .from('wage_summary')
+        .delete()
+        .eq('employee_id', employeeId)
+        .eq('year', year)
+        .eq('month', month)
+        .eq('period', period)
+
+      if (deleteError) throw deleteError
+
+      const { error: insertError } = await supabase
+        .from('wage_summary')
+        .insert(wageSummary)
+
+      if (insertError) throw insertError
+    } else {
+      throw summaryError
+    }
+  }
 
   return { periodWage }
 }

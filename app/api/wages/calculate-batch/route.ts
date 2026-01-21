@@ -307,8 +307,34 @@ export async function POST(request: NextRequest) {
       })
 
     if (upsertError) {
-      console.error('[BATCH] Upsert error:', upsertError)
-      throw upsertError
+      if (upsertError.code === '42P10') {
+        console.warn('[BATCH] Missing unique constraint on wage_summary. Falling back to delete + insert.')
+        const periods = Array.from(new Set(wageRecords.map(record => record.period)))
+
+        const { error: deleteError } = await supabase
+          .from('wage_summary')
+          .delete()
+          .eq('year', year)
+          .eq('month', month)
+          .in('period', periods)
+
+        if (deleteError) {
+          console.error('[BATCH] Delete error:', deleteError)
+          throw deleteError
+        }
+
+        const { error: insertError } = await supabase
+          .from('wage_summary')
+          .insert(wageRecords)
+
+        if (insertError) {
+          console.error('[BATCH] Insert error:', insertError)
+          throw insertError
+        }
+      } else {
+        console.error('[BATCH] Upsert error:', upsertError)
+        throw upsertError
+      }
     }
 
     const duration = Date.now() - startTime
