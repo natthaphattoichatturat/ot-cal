@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         scheduled_in_time,
         morning_ot_hours,
         is_holiday,
-        employees!daily_attendance_employee_id_fkey (
+        employees!fk_daily_employee (
           name,
           department
         )
