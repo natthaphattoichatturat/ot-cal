@@ -1,187 +1,249 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
 
-export const dynamic = 'force-dynamic'
-import { createClient } from '@supabase/supabase-js'
+export const dynamic = "force-dynamic";
+import { createClient } from "@supabase/supabase-js";
 import {
   getPeriodDates,
   calculatePeriodWageV2,
   type DailyAttendanceV2,
   type EmployeeInfoV2,
   type LeaveRecord,
-  type WageAdjustment
-} from '@/lib/wageCalculationsV2'
-import { calculateEmployeeTax } from '@/lib/taxCalculations'
-import { PND1Data, PND1Employee, DEFAULT_COMPANY_INFO } from '@/types/documents'
+  type WageAdjustment,
+} from "@/lib/wageCalculationsV2";
+import { calculateEmployeeTax } from "@/lib/taxCalculations";
+import {
+  PND1Data,
+  PND1Employee,
+  DEFAULT_COMPANY_INFO,
+} from "@/types/documents";
+
+const THAI_MONTHS = [
+  "",
+  "มกราคม",
+  "กุมภาพันธ์",
+  "มีนาคม",
+  "เมษายน",
+  "พฤษภาคม",
+  "มิถุนายน",
+  "กรกฎาคม",
+  "สิงหาคม",
+  "กันยายน",
+  "ตุลาคม",
+  "พฤศจิกายน",
+  "ธันวาคม",
+];
+
+function formatPaymentDateThai(year: number, month: number): string {
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${lastDay} ${THAI_MONTHS[month]} ${year + 543}`;
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const month = searchParams.get('month') // format: "2025-10"
+    const searchParams = request.nextUrl.searchParams;
+    const employeeIds =
+      searchParams
+        .get("employeeIds")
+        ?.split(",")
+        .filter((id) => id) || [];
+    const month = searchParams.get("month"); // format: "2025-10"
 
     if (!month) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing required parameter: month'
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing required parameter: month",
+        },
+        { status: 400 },
+      );
     }
 
-    const [year, monthNum] = month.split('-').map(Number)
+    const [year, monthNum] = month.split("-").map(Number);
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
 
-    // ดึงข้อมูลพนักงานที่ใช้งานอยู่ทั้งหมด
-    const { data: employees, error: empError } = await supabase
-      .from('employees')
-      .select('*')
-      .eq('status', 'active')
+    // ดึงข้อมูลพนักงาน - ถ้ามี employeeIds ให้ใช้ตัวกรอง ถ้าไม่มีให้ดึงทั้งหมด
+    let query = supabase.from("employees").select("*").eq("status", "active");
+
+    if (employeeIds.length > 0) {
+      query = query.in("employee_id", employeeIds);
+    }
+
+    const { data: employees, error: empError } = await query;
 
     if (empError) {
-      throw empError
+      throw empError;
     }
 
     if (!employees || employees.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'No active employees found'
-      }, { status: 404 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No active employees found",
+        },
+        { status: 404 },
+      );
     }
 
-    const pnd1Employees: PND1Employee[] = []
-    let totalIncome = 0
-    let totalTax = 0
+    const pnd1Employees: PND1Employee[] = [];
+    let totalIncome = 0;
+    let totalTax = 0;
+
+    // Format payment date for this month
+    const paymentDate = formatPaymentDateThai(year, monthNum);
 
     // คำนวณภาษีสำหรับแต่ละพนักงาน
     for (const employee of employees) {
       // ดึงข้อมูลทั้ง 2 งวดในเดือนนี้
-      const { startDate: start1, endDate: end1 } = getPeriodDates(year, monthNum, 1)
-      const { startDate: start2, endDate: end2 } = getPeriodDates(year, monthNum, 2)
+      const { startDate: start1, endDate: end1 } = getPeriodDates(
+        year,
+        monthNum,
+        1,
+      );
+      const { startDate: start2, endDate: end2 } = getPeriodDates(
+        year,
+        monthNum,
+        2,
+      );
 
-      const employmentType = (employee.employment_type || 'รายวัน') as 'รายวัน' | 'รายเดือน'
+      const employmentType = (employee.employment_type || "รายวัน") as
+        | "รายวัน"
+        | "รายเดือน";
 
       const employeeInfo: EmployeeInfoV2 = {
         employee_id: employee.employee_id,
         name: employee.name,
-        department: employee.department || 'ไม่ระบุ',
+        department: employee.department || "ไม่ระบุ",
         employment_type: employmentType,
         perhr_salary: employee.perhr_salary || 0,
         perday_salary: employee.perday_salary || 0,
-        monthly_salary: employee.monthly_salary || 0
-      }
+        monthly_salary: employee.monthly_salary || 0,
+      };
 
       // Helper functions
       const convertAttendances = (attendances: any[]): DailyAttendanceV2[] => {
-        return (attendances || []).map(att => ({
+        return (attendances || []).map((att) => ({
           work_date: att.work_date,
           actual_hours: att.actual_hours || 0,
           ot_normal_hours: att.ot_normal_hours || 0,
           ot_special_hours: att.ot_special_hours || 0,
           ot_premium_hours: att.ot_premium_hours || 0,
-          ot_normal_hours_multiplied: att.ot_normal_hours_multiplied || undefined,
-          ot_special_hours_multiplied: att.ot_special_hours_multiplied || undefined,
-          ot_premium_hours_multiplied: att.ot_premium_hours_multiplied || undefined,
+          ot_normal_hours_multiplied:
+            att.ot_normal_hours_multiplied || undefined,
+          ot_special_hours_multiplied:
+            att.ot_special_hours_multiplied || undefined,
+          ot_premium_hours_multiplied:
+            att.ot_premium_hours_multiplied || undefined,
           scheduled_in_time: att.scheduled_in_time,
           check_in_time: att.check_in_time,
           check_out_time: att.check_out_time,
           is_holiday: att.is_holiday || false,
           is_leave: att.is_leave || false,
           late: att.late || false,
-          late_hours: att.late_hours || 0
-        }))
-      }
+          late_hours: att.late_hours || 0,
+        }));
+      };
 
       const convertLeaves = (leaves: any[]): LeaveRecord[] => {
-        const paidLeaveTypes = ['ลาป่วย', 'ลาพักร้อน', 'sick_leave', 'annual_leave']
-        return (leaves || []).map(leave => ({
+        const paidLeaveTypes = [
+          "ลาป่วย",
+          "ลาพักร้อน",
+          "sick_leave",
+          "annual_leave",
+        ];
+        return (leaves || []).map((leave) => ({
           leave_date: leave.leave_date,
           leave_type: leave.leave_type,
           leave_hours: leave.leave_hours || 8,
-          is_paid: paidLeaveTypes.includes(leave.leave_type?.toLowerCase() || '')
-        }))
-      }
+          is_paid: paidLeaveTypes.includes(
+            leave.leave_type?.toLowerCase() || "",
+          ),
+        }));
+      };
 
       const convertAdjustments = (adjustments: any[]): WageAdjustment[] => {
-        return (adjustments || []).map(adj => ({
-          adjustment_type: adj.adjustment_type as 'income' | 'deduction',
+        return (adjustments || []).map((adj) => ({
+          adjustment_type: adj.adjustment_type as "income" | "deduction",
           category: adj.category,
           amount: adj.amount,
-          description: adj.description
-        }))
-      }
+          description: adj.description,
+        }));
+      };
 
       // ดึงข้อมูลงวดที่ 1
       const { data: att1 } = await supabase
-        .from('daily_attendance')
-        .select('*')
-        .eq('employee_id', employee.employee_id)
-        .gte('work_date', start1)
-        .lte('work_date', end1)
+        .from("daily_attendance")
+        .select("*")
+        .eq("employee_id", employee.employee_id)
+        .gte("work_date", start1)
+        .lte("work_date", end1);
 
       const { data: leave1 } = await supabase
-        .from('leave_records')
-        .select('*')
-        .eq('employee_id', employee.employee_id)
-        .gte('leave_date', start1)
-        .lte('leave_date', end1)
-        .or('status.eq.approved,leave_able.eq.true')
+        .from("leave_records")
+        .select("*")
+        .eq("employee_id", employee.employee_id)
+        .gte("leave_date", start1)
+        .lte("leave_date", end1)
+        .or("status.eq.approved,leave_able.eq.true");
 
       const { data: adj1 } = await supabase
-        .from('wage_adjustments')
-        .select('*')
-        .eq('employee_id', employee.employee_id)
-        .eq('year', year)
-        .eq('month', monthNum)
-        .eq('period', 1)
+        .from("wage_adjustments")
+        .select("*")
+        .eq("employee_id", employee.employee_id)
+        .eq("year", year)
+        .eq("month", monthNum)
+        .eq("period", 1);
 
       // ดึงข้อมูลงวดที่ 2
       const { data: att2 } = await supabase
-        .from('daily_attendance')
-        .select('*')
-        .eq('employee_id', employee.employee_id)
-        .gte('work_date', start2)
-        .lte('work_date', end2)
+        .from("daily_attendance")
+        .select("*")
+        .eq("employee_id", employee.employee_id)
+        .gte("work_date", start2)
+        .lte("work_date", end2);
 
       const { data: leave2 } = await supabase
-        .from('leave_records')
-        .select('*')
-        .eq('employee_id', employee.employee_id)
-        .gte('leave_date', start2)
-        .lte('leave_date', end2)
-        .or('status.eq.approved,leave_able.eq.true')
+        .from("leave_records")
+        .select("*")
+        .eq("employee_id", employee.employee_id)
+        .gte("leave_date", start2)
+        .lte("leave_date", end2)
+        .or("status.eq.approved,leave_able.eq.true");
 
       const { data: adj2 } = await supabase
-        .from('wage_adjustments')
-        .select('*')
-        .eq('employee_id', employee.employee_id)
-        .eq('year', year)
-        .eq('month', monthNum)
-        .eq('period', 2)
+        .from("wage_adjustments")
+        .select("*")
+        .eq("employee_id", employee.employee_id)
+        .eq("year", year)
+        .eq("month", monthNum)
+        .eq("period", 2);
 
       // ดึง Morning OT Allowance ที่ user กำหนดสำหรับทั้ง 2 งวด
       const { data: morningOT1 } = await supabase
-        .from('morning_ot_allowances')
-        .select('allowed_hours, selected_dates')
-        .eq('employee_id', employee.employee_id)
-        .eq('year', year)
-        .eq('month', monthNum)
-        .eq('period', 1)
-        .single()
+        .from("morning_ot_allowances")
+        .select("allowed_hours, selected_dates")
+        .eq("employee_id", employee.employee_id)
+        .eq("year", year)
+        .eq("month", monthNum)
+        .eq("period", 1)
+        .single();
 
       const { data: morningOT2 } = await supabase
-        .from('morning_ot_allowances')
-        .select('allowed_hours, selected_dates')
-        .eq('employee_id', employee.employee_id)
-        .eq('year', year)
-        .eq('month', monthNum)
-        .eq('period', 2)
-        .single()
+        .from("morning_ot_allowances")
+        .select("allowed_hours, selected_dates")
+        .eq("employee_id", employee.employee_id)
+        .eq("year", year)
+        .eq("month", monthNum)
+        .eq("period", 2)
+        .single();
 
-      const morningOTAllowance1 = morningOT1?.allowed_hours || 0
-      const morningOTAllowance2 = morningOT2?.allowed_hours || 0
-      const selectedDates1 = morningOT1?.selected_dates || null
-      const selectedDates2 = morningOT2?.selected_dates || null
+      const morningOTAllowance1 = morningOT1?.allowed_hours || 0;
+      const morningOTAllowance2 = morningOT2?.allowed_hours || 0;
+      const selectedDates1 = morningOT1?.selected_dates || null;
+      const selectedDates2 = morningOT2?.selected_dates || null;
 
       // คำนวณค่าจ้างทั้ง 2 งวด
       const wage1 = calculatePeriodWageV2(
@@ -191,8 +253,8 @@ export async function GET(request: NextRequest) {
         convertAdjustments(adj1 || []),
         { startDate: start1, endDate: end1 },
         morningOTAllowance1,
-        selectedDates1
-      )
+        selectedDates1,
+      );
 
       const wage2 = calculatePeriodWageV2(
         employeeInfo,
@@ -201,33 +263,33 @@ export async function GET(request: NextRequest) {
         convertAdjustments(adj2 || []),
         { startDate: start2, endDate: end2 },
         morningOTAllowance2,
-        selectedDates2
-      )
+        selectedDates2,
+      );
 
       // รายได้รวมทั้งเดือน
-      const monthlyIncome = wage1.total_income + wage2.total_income
+      const monthlyIncome = wage1.total_income + wage2.total_income;
 
       // ข้ามพนักงานที่ไม่มีรายได้
-      if (monthlyIncome <= 0) continue
+      if (monthlyIncome <= 0) continue;
 
       // ดึงข้อมูล YTD (ก่อนเดือนนี้)
       const { data: ytdRecords } = await supabase
-        .from('wage_summary')
-        .select('*')
-        .eq('employee_id', employee.employee_id)
-        .eq('year', year)
-        .lt('month', monthNum)
+        .from("wage_summary")
+        .select("*")
+        .eq("employee_id", employee.employee_id)
+        .eq("year", year)
+        .lt("month", monthNum);
 
-      let ytdIncome = 0
-      let ytdTax = 0
-      let ytdSSO = 0
+      let ytdIncome = 0;
+      let ytdTax = 0;
+      let ytdSSO = 0;
 
       if (ytdRecords && ytdRecords.length > 0) {
         ytdRecords.forEach((record: any) => {
-          ytdIncome += (record.base_wage || 0) + (record.ot_wage || 0)
-          ytdTax += record.tax || 0
-          ytdSSO += record.sso || 0
-        })
+          ytdIncome += (record.base_wage || 0) + (record.ot_wage || 0);
+          ytdTax += record.tax || 0;
+          ytdSSO += record.sso || 0;
+        });
       }
 
       // คำนวณภาษี Cumulative YTD
@@ -237,8 +299,8 @@ export async function GET(request: NextRequest) {
         ytdTax,
         monthNum,
         1,
-        ytdSSO
-      )
+        ytdSSO,
+      );
 
       const taxCalc2 = calculateEmployeeTax(
         wage2.total_income,
@@ -246,29 +308,30 @@ export async function GET(request: NextRequest) {
         ytdTax + taxCalc1.currentPeriodTax,
         monthNum,
         2,
-        ytdSSO + Math.min(wage1.total_income * 0.05, 750)
-      )
+        ytdSSO + Math.min(wage1.total_income * 0.05, 750),
+      );
 
-      const monthlyTax = taxCalc1.currentPeriodTax + taxCalc2.currentPeriodTax
+      const monthlyTax = taxCalc1.currentPeriodTax + taxCalc2.currentPeriodTax;
 
       // แยกชื่อและนามสกุล
-      const nameParts = employee.name?.split(' ') || ['', '']
-      const firstName = nameParts[0] || ''
-      const lastName = nameParts.slice(1).join(' ') || ''
+      const nameParts = employee.name?.split(" ") || ["", ""];
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
 
       pnd1Employees.push({
         sequence: pnd1Employees.length + 1,
-        idNumber: employee.id_card_number || '',
-        titleName: employee.title_name || '',
+        idNumber: employee.id_card_number || "",
+        titleName: employee.title_name || "",
         firstName,
         lastName,
+        paymentDate, // เพิ่ม payment date
         incomeAmount: Math.round(monthlyIncome * 100) / 100,
         taxAmount: Math.round(monthlyTax * 100) / 100,
-        incomeType: '40(1)' as const
-      })
+        incomeType: "40(1)" as const,
+      });
 
-      totalIncome += monthlyIncome
-      totalTax += monthlyTax
+      totalIncome += monthlyIncome;
+      totalTax += monthlyTax;
     }
 
     const pnd1Data: PND1Data = {
@@ -280,25 +343,27 @@ export async function GET(request: NextRequest) {
       phone: DEFAULT_COMPANY_INFO.phone,
       taxMonth: monthNum,
       taxYear: year + 543, // แปลงเป็น พ.ศ.
-      submissionType: 'normal',
+      submissionType: "normal",
       summary: {
         employeeCount: pnd1Employees.length,
         totalIncome: Math.round(totalIncome * 100) / 100,
-        totalTax: Math.round(totalTax * 100) / 100
+        totalTax: Math.round(totalTax * 100) / 100,
       },
-      employees: pnd1Employees
-    }
+      employees: pnd1Employees,
+    };
 
     return NextResponse.json({
       success: true,
-      data: pnd1Data
-    })
-
+      data: pnd1Data,
+    });
   } catch (error: any) {
-    console.error('Error generating PND1 data:', error)
-    return NextResponse.json({
-      success: false,
-      error: error.message
-    }, { status: 500 })
+    console.error("Error generating PND1 data:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      { status: 500 },
+    );
   }
 }
