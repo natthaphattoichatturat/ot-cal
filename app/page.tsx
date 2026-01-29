@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { format, getDaysInMonth, getDay } from 'date-fns'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -8,9 +8,19 @@ interface AttendanceData {
   employeeId: string
   name: string
   department: string
+  perhr_salary?: number
   position?: string
   department_code?: string
   section?: string
+  totalWorkDays?: number
+  personalLeaveDays?: number
+  sickLeaveDays?: number
+  absentDays?: number
+  lateDays?: number
+  lateMinutes?: number
+  nightShiftDays?: number
+  nightShiftAllowance?: number
+  specialIncome?: number
   attendance: {
     [date: string]: {
       otHours: number
@@ -67,7 +77,39 @@ export default function Home() {
   const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(new Set())
   const [selectedDates, setSelectedDates] = useState<Map<string, string[]>>(new Map())
   const [morningOTSelectedEmployees, setMorningOTSelectedEmployees] = useState<Set<string>>(new Set())
-  const [useSelectedForMorningOT, setUseSelectedForMorningOT] = useState(false)
+
+  // Special income modal state
+  const [showSpecialIncomeModal, setShowSpecialIncomeModal] = useState(false)
+  const [specialIncomePeriod, setSpecialIncomePeriod] = useState<1 | 2>(1)
+  const [specialIncomeAmount, setSpecialIncomeAmount] = useState('')
+  const [specialIncomeDescription, setSpecialIncomeDescription] = useState('')
+  const [savingSpecialIncome, setSavingSpecialIncome] = useState(false)
+  const [specialIncomeMessage, setSpecialIncomeMessage] = useState('')
+  const [specialIncomeEmployeeSearch, setSpecialIncomeEmployeeSearch] = useState('')
+  const [specialIncomeSelectedEmployees, setSpecialIncomeSelectedEmployees] = useState<Set<string>>(new Set())
+
+  // Leave modal state
+  const [showLeaveModal, setShowLeaveModal] = useState(false)
+  const [leaveType, setLeaveType] = useState('ลากิจ')
+  const [leaveEntries, setLeaveEntries] = useState<Array<{ leaveDate: string; leaveHours: number }>>([
+    { leaveDate: '', leaveHours: 8 }
+  ])
+  const [leaveReason, setLeaveReason] = useState('')
+  const [leaveDeductWage, setLeaveDeductWage] = useState(false)
+  const [leaveDeductDiligence, setLeaveDeductDiligence] = useState(false)
+  const [savingLeave, setSavingLeave] = useState(false)
+  const [leaveMessage, setLeaveMessage] = useState('')
+  const [leaveEmployeeSearch, setLeaveEmployeeSearch] = useState('')
+  const [leaveSelectedEmployees, setLeaveSelectedEmployees] = useState<Set<string>>(new Set())
+
+  // Lunch OT modal state
+  const [showLunchOTModal, setShowLunchOTModal] = useState(false)
+  const [lunchOTPeriod, setLunchOTPeriod] = useState<1 | 2>(1)
+  const [lunchOTHours, setLunchOTHours] = useState('1')
+  const [savingLunchOT, setSavingLunchOT] = useState(false)
+  const [lunchOTMessage, setLunchOTMessage] = useState('')
+  const [lunchOTEmployeeSearch, setLunchOTEmployeeSearch] = useState('')
+  const [lunchOTSelectedEmployees, setLunchOTSelectedEmployees] = useState<Set<string>>(new Set())
 
   // Thai day names
   const thaiDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
@@ -144,6 +186,36 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const getEmployeeHourlyRate = (employeeId: string): number => {
+    const emp = period1Data.find(e => e.employeeId === employeeId) ||
+      period2Data.find(e => e.employeeId === employeeId)
+    return emp?.perhr_salary || 0
+  }
+
+  const employeeOptions = useMemo(() => {
+    const map = new Map<string, { employeeId: string; name: string; department: string }>()
+    ;[...period1Data, ...period2Data].forEach(emp => {
+      if (!map.has(emp.employeeId)) {
+        map.set(emp.employeeId, {
+          employeeId: emp.employeeId,
+          name: emp.name,
+          department: emp.department
+        })
+      }
+    })
+    return Array.from(map.values())
+  }, [period1Data, period2Data])
+
+  const filterEmployees = (query: string) => {
+    const q = query.trim().toLowerCase()
+    if (!q) return employeeOptions
+    return employeeOptions.filter(emp =>
+      emp.employeeId.toLowerCase().includes(q) ||
+      emp.name.toLowerCase().includes(q) ||
+      emp.department.toLowerCase().includes(q)
+    )
   }
 
   const filterData = () => {
@@ -329,23 +401,17 @@ export default function Home() {
       const data = await res.json()
 
       if (data.success) {
-        const hasExistingAllowance = data.data.some((emp: any) => (emp.allowed_hours || 0) > 0)
-        const useMainSelection = useSelectedForMorningOT && selectedEmployees.size > 0 && !hasExistingAllowance
         const initialSelected = new Set<string>()
         const dataWithInput = data.data.map((emp: any) => {
           const allowedHours = emp.allowed_hours || 0
           const calculatedHours = emp.total_morning_ot || 0
-          const selectedByMain = useMainSelection && selectedEmployees.has(emp.employee_id)
-          const shouldSelect = allowedHours > 0 || selectedByMain
+          const shouldSelect = allowedHours > 0
 
           if (shouldSelect) {
             initialSelected.add(emp.employee_id)
           }
 
           let inputValue = allowedHours > 0 ? String(allowedHours) : ''
-          if (!inputValue && selectedByMain && calculatedHours > 0) {
-            inputValue = String(calculatedHours)
-          }
 
           return {
             ...emp,
@@ -436,21 +502,6 @@ export default function Home() {
     setMorningOTData(prevData => prevData.map(emp => ({ ...emp, input_hours: '' })))
   }
 
-  const applyMainSelectionToMorningOT = () => {
-    if (selectedEmployees.size === 0) return
-    const selectedSet = new Set<string>()
-    setMorningOTData(prevData => prevData.map(emp => {
-      if (selectedEmployees.has(emp.employee_id)) {
-        selectedSet.add(emp.employee_id)
-        const currentInput = emp.input_hours
-        const hasInput = currentInput !== '' && parseFloat(currentInput) > 0
-        const nextInput = hasInput ? currentInput : String(emp.total_morning_ot || 0)
-        return { ...emp, input_hours: nextInput }
-      }
-      return { ...emp, input_hours: '' }
-    }))
-    setMorningOTSelectedEmployees(selectedSet)
-  }
 
   const toggleEmployeeExpanded = (employeeId: string) => {
     setExpandedEmployees(prev => {
@@ -593,6 +644,243 @@ export default function Home() {
       setMorningOTMessage('เกิดข้อผิดพลาดในการบันทึก')
     } finally {
       setSavingMorningOT(false)
+    }
+  }
+
+  // ========== Special Income Functions ==========
+  const openSpecialIncomeModal = (period: 1 | 2) => {
+    setSpecialIncomePeriod(period)
+    setSpecialIncomeAmount('')
+    setSpecialIncomeDescription('')
+    setSpecialIncomeMessage('')
+    setSpecialIncomeEmployeeSearch('')
+    setSpecialIncomeSelectedEmployees(new Set())
+    setShowSpecialIncomeModal(true)
+  }
+
+  const saveSpecialIncome = async () => {
+    setSavingSpecialIncome(true)
+    setSpecialIncomeMessage('')
+
+    try {
+      if (specialIncomeSelectedEmployees.size === 0) {
+        setSpecialIncomeMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+        setSavingSpecialIncome(false)
+        return
+      }
+
+      const amount = parseFloat(specialIncomeAmount)
+      if (!Number.isFinite(amount) || amount <= 0) {
+        setSpecialIncomeMessage('กรุณากรอกจำนวนเงินที่ถูกต้อง')
+        setSavingSpecialIncome(false)
+        return
+      }
+
+      const year = parseInt(selectedYear)
+      const month = parseInt(selectedMonth)
+      const employeeIds = Array.from(specialIncomeSelectedEmployees)
+
+      const results = await Promise.allSettled(
+        employeeIds.map(empId =>
+          fetch('/api/wages/adjustments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employee_id: empId,
+              year,
+              month,
+              period: specialIncomePeriod,
+              adjustment_type: 'income',
+              category: 'เงินพิเศษอื่นๆ',
+              amount,
+              description: specialIncomeDescription || null,
+              created_by: 'admin'
+            })
+          }).then(r => r.json())
+        )
+      )
+
+      const failed = results.filter(r => r.status === 'rejected').length +
+        results.filter(r => r.status === 'fulfilled' && !(r.value as any)?.success).length
+
+      if (failed > 0) {
+        setSpecialIncomeMessage(`บันทึกสำเร็จบางส่วน (ล้มเหลว ${failed} รายการ)`)
+      } else {
+        setSpecialIncomeMessage('บันทึกสำเร็จ')
+        setShowSpecialIncomeModal(false)
+      }
+
+      await fetchAttendanceData()
+    } catch (error) {
+      console.error('Error saving special income:', error)
+      setSpecialIncomeMessage('เกิดข้อผิดพลาดในการบันทึก')
+    } finally {
+      setSavingSpecialIncome(false)
+    }
+  }
+
+  // ========== Leave Functions ==========
+  const openLeaveModal = () => {
+    setLeaveType('ลากิจ')
+    setLeaveEntries([{ leaveDate: '', leaveHours: 8 }])
+    setLeaveReason('')
+    setLeaveDeductWage(false)
+    setLeaveDeductDiligence(false)
+    setLeaveMessage('')
+    setLeaveEmployeeSearch('')
+    setLeaveSelectedEmployees(new Set())
+    setShowLeaveModal(true)
+  }
+
+  const updateLeaveEntry = (index: number, field: 'leaveDate' | 'leaveHours', value: string) => {
+    setLeaveEntries(prev => prev.map((entry, i) => {
+      if (i !== index) return entry
+      if (field === 'leaveHours') {
+        return { ...entry, leaveHours: Number(value) }
+      }
+      return { ...entry, leaveDate: value }
+    }))
+  }
+
+  const addLeaveEntry = () => {
+    setLeaveEntries(prev => [...prev, { leaveDate: '', leaveHours: 8 }])
+  }
+
+  const removeLeaveEntry = (index: number) => {
+    setLeaveEntries(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const saveLeave = async () => {
+    setSavingLeave(true)
+    setLeaveMessage('')
+
+    try {
+      if (leaveSelectedEmployees.size === 0) {
+        setLeaveMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+        setSavingLeave(false)
+        return
+      }
+
+      const leaves = leaveEntries
+        .filter(l => l.leaveDate)
+        .map(l => ({ leaveDate: l.leaveDate, leaveHours: Number(l.leaveHours) }))
+
+      if (leaves.length === 0) {
+        setLeaveMessage('กรุณาเลือกวันที่ลาอย่างน้อย 1 วัน')
+        setSavingLeave(false)
+        return
+      }
+
+      if (leaves.some(l => !Number.isFinite(l.leaveHours) || l.leaveHours < 1 || l.leaveHours > 24)) {
+        setLeaveMessage('ชั่วโมงการลาต้องอยู่ระหว่าง 1 ถึง 24')
+        setSavingLeave(false)
+        return
+      }
+
+      const response = await fetch('/api/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leaveType,
+          reason: leaveReason || null,
+          createdBy: 'admin',
+          employeeIds: Array.from(leaveSelectedEmployees),
+          leaves,
+          deductWage: leaveDeductWage,
+          deductDiligence: leaveDeductDiligence,
+          status: 'approved',
+          leaveAble: true
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setLeaveMessage('บันทึกการลาสำเร็จ')
+        setShowLeaveModal(false)
+        await fetchAttendanceData()
+      } else {
+        setLeaveMessage(`ผิดพลาด: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error saving leave:', error)
+      setLeaveMessage('เกิดข้อผิดพลาดในการบันทึก')
+    } finally {
+      setSavingLeave(false)
+    }
+  }
+
+  // ========== Lunch OT Functions ==========
+  const openLunchOTModal = (period: 1 | 2) => {
+    setLunchOTPeriod(period)
+    setLunchOTHours('1')
+    setLunchOTMessage('')
+    setLunchOTEmployeeSearch('')
+    setLunchOTSelectedEmployees(new Set())
+    setShowLunchOTModal(true)
+  }
+
+  const saveLunchOT = async () => {
+    setSavingLunchOT(true)
+    setLunchOTMessage('')
+
+    try {
+      if (lunchOTSelectedEmployees.size === 0) {
+        setLunchOTMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+        setSavingLunchOT(false)
+        return
+      }
+
+      const hours = parseFloat(lunchOTHours)
+      if (!Number.isFinite(hours) || hours <= 0) {
+        setLunchOTMessage('กรุณากรอกจำนวนชั่วโมงที่ถูกต้อง')
+        setSavingLunchOT(false)
+        return
+      }
+
+      const year = parseInt(selectedYear)
+      const month = parseInt(selectedMonth)
+      const employeeIds = Array.from(lunchOTSelectedEmployees)
+
+      const results = await Promise.allSettled(
+        employeeIds.map(empId => {
+          const hourlyRate = getEmployeeHourlyRate(empId)
+          const amount = hourlyRate * hours * 1.5
+
+          return fetch('/api/wages/adjustments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employee_id: empId,
+              year,
+              month,
+              period: lunchOTPeriod,
+              adjustment_type: 'income',
+              category: 'OT พักเที่ยง',
+              amount,
+              description: `OT พักเที่ยง ${hours} ชม. (×1.5)`,
+              created_by: 'admin'
+            })
+          }).then(r => r.json())
+        })
+      )
+
+      const failed = results.filter(r => r.status === 'rejected').length +
+        results.filter(r => r.status === 'fulfilled' && !(r.value as any)?.success).length
+
+      if (failed > 0) {
+        setLunchOTMessage(`บันทึกสำเร็จบางส่วน (ล้มเหลว ${failed} รายการ)`)
+      } else {
+        setLunchOTMessage('บันทึกสำเร็จ')
+        setShowLunchOTModal(false)
+      }
+
+      await fetchAttendanceData()
+    } catch (error) {
+      console.error('Error saving lunch OT:', error)
+      setLunchOTMessage('เกิดข้อผิดพลาดในการบันทึก')
+    } finally {
+      setSavingLunchOT(false)
     }
   }
 
@@ -756,6 +1044,15 @@ export default function Home() {
                 <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT 2 (×2)</th>
                 <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT 3 (×3)</th>
 
+                {/* สรุปการทำงาน/การลา */}
+                <th className="text-center" style={{ minWidth: '90px', background: '#e8f5e9', fontWeight: '700' }}>รวมวันทำงาน</th>
+                <th className="text-center" style={{ minWidth: '70px', background: '#e8f5e9' }}>ลากิจ</th>
+                <th className="text-center" style={{ minWidth: '70px', background: '#e8f5e9' }}>ลาป่วย</th>
+                <th className="text-center" style={{ minWidth: '70px', background: '#e8f5e9' }}>ขาดงาน</th>
+                <th className="text-center" style={{ minWidth: '70px', background: '#e8f5e9' }}>มาสาย</th>
+                <th className="text-center" style={{ minWidth: '90px', background: '#f3e5f5' }}>ค่ากะ</th>
+                <th className="text-center" style={{ minWidth: '100px', background: '#f3e5f5' }}>ค่าอื่นๆ</th>
+
                 {/* คอลัมน์วัน */}
                 {dates.map(date => {
                   const day = parseInt(date.split('-')[2])
@@ -773,7 +1070,7 @@ export default function Home() {
             <tbody>
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={dates.length + 11} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={dates.length + 18} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     {searchQuery ? t('home.noData') : t('home.noData')}
                   </td>
                 </tr>
@@ -821,6 +1118,37 @@ export default function Home() {
                         </td>
                         <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
                           {totalPremiumOTMultiplied.toFixed(2)}
+                        </td>
+
+                        {/* สรุปการทำงาน/การลา */}
+                        <td className="text-center" style={{ fontWeight: '600', background: '#e8f5e9' }}>
+                          {(employee.totalWorkDays || 0).toString()}
+                        </td>
+                        <td className="text-center" style={{ background: '#e8f5e9' }}>
+                          {(employee.personalLeaveDays || 0).toString()}
+                        </td>
+                        <td className="text-center" style={{ background: '#e8f5e9' }}>
+                          {(employee.sickLeaveDays || 0).toString()}
+                        </td>
+                        <td className="text-center" style={{ background: '#e8f5e9' }}>
+                          {(employee.absentDays || 0).toString()}
+                        </td>
+                        <td
+                          className="text-center"
+                          style={{ background: '#e8f5e9' }}
+                          title={employee.lateMinutes && employee.lateMinutes > 0 ? `รวม ${employee.lateMinutes} นาที` : ''}
+                        >
+                          {(employee.lateDays || 0).toString()}
+                        </td>
+                        <td
+                          className="text-center"
+                          style={{ background: '#f3e5f5' }}
+                          title={employee.nightShiftDays && employee.nightShiftDays > 0 ? `${employee.nightShiftDays} วัน` : ''}
+                        >
+                          {(employee.nightShiftAllowance || 0).toFixed(2)}
+                        </td>
+                        <td className="text-center" style={{ background: '#f3e5f5' }}>
+                          {(employee.specialIncome || 0).toFixed(2)}
                         </td>
 
                         {/* คอลัมน์วัน */}
@@ -1206,25 +1534,53 @@ export default function Home() {
               OT เช้า งวดที่ 2
             </button>
           </div>
-          <div style={{ marginTop: '8px' }}>
-            {selectedEmployees.size > 0 ? (
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                <input
-                  type="checkbox"
-                  checked={useSelectedForMorningOT}
-                  onChange={(e) => setUseSelectedForMorningOT(e.target.checked)}
-                />
-                ใช้พนักงานที่เลือกในตาราง ({selectedEmployees.size} คน) เมื่อเปิดรายการ OT เช้า
-              </label>
-            ) : (
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-                * ถ้าต้องการเลือกเฉพาะบางคน ให้ติ๊กพนักงานในตารางด้านล่างก่อน
-              </p>
-            )}
-          </div>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
             * เลือกพนักงานที่จะได้รับ OT เช้า และกำหนดจำนวนชั่วโมง (ไม่เกินที่ระบบคำนวณได้)
           </p>
+        </div>
+
+        {/* Additional Adjustments */}
+        <div style={{ paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+            เพิ่มรายการพิเศษ (ค่าอื่นๆ / การลา / OT พักเที่ยง)
+          </label>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => openSpecialIncomeModal(1)}
+              className="btn btn-secondary"
+              disabled={!selectedMonth || !selectedYear}
+            >
+              เพิ่มค่าอื่นๆ (งวด 1)
+            </button>
+            <button
+              onClick={() => openSpecialIncomeModal(2)}
+              className="btn btn-secondary"
+              disabled={!selectedMonth || !selectedYear}
+            >
+              เพิ่มค่าอื่นๆ (งวด 2)
+            </button>
+            <button
+              onClick={openLeaveModal}
+              className="btn btn-secondary"
+              disabled={!selectedMonth || !selectedYear}
+            >
+              เพิ่มการลา
+            </button>
+            <button
+              onClick={() => openLunchOTModal(1)}
+              className="btn btn-secondary"
+              disabled={!selectedMonth || !selectedYear}
+            >
+              OT พักเที่ยง (งวด 1)
+            </button>
+            <button
+              onClick={() => openLunchOTModal(2)}
+              className="btn btn-secondary"
+              disabled={!selectedMonth || !selectedYear}
+            >
+              OT พักเที่ยง (งวด 2)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1295,15 +1651,6 @@ export default function Home() {
                     >
                       ยกเลิกทั้งหมด
                     </button>
-                    {selectedEmployees.size > 0 && (
-                      <button
-                        onClick={applyMainSelectionToMorningOT}
-                        className="btn btn-sm btn-secondary"
-                        style={{ fontSize: '12px', padding: '4px 8px' }}
-                      >
-                        ใช้พนักงานที่เลือกในตาราง ({selectedEmployees.size})
-                      </button>
-                    )}
                   </div>
                 </div>
 
@@ -1498,6 +1845,390 @@ export default function Home() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Special Income Modal */}
+      {showSpecialIncomeModal && (
+        <div className="modal-overlay" onClick={() => setShowSpecialIncomeModal(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '600px', maxHeight: '80vh', overflow: 'auto' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>เพิ่มเงินพิเศษอื่นๆ</h2>
+              <button
+                onClick={() => setShowSpecialIncomeModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              เลือกพนักงานแล้ว {specialIncomeSelectedEmployees.size} คน
+            </div>
+
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>ค้นหา/เลือกพนักงาน</label>
+              <input
+                type="text"
+                value={specialIncomeEmployeeSearch}
+                onChange={(e) => setSpecialIncomeEmployeeSearch(e.target.value)}
+                placeholder="พิมพ์รหัสพนักงาน, ชื่อ หรือแผนก"
+              />
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => {
+                    const list = filterEmployees(specialIncomeEmployeeSearch)
+                    setSpecialIncomeSelectedEmployees(new Set(list.map(e => e.employeeId)))
+                  }}
+                  className="btn btn-sm"
+                >
+                  เลือกทั้งหมด
+                </button>
+                <button
+                  onClick={() => setSpecialIncomeSelectedEmployees(new Set())}
+                  className="btn btn-sm btn-secondary"
+                >
+                  ล้างทั้งหมด
+                </button>
+              </div>
+              <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid var(--border-light)', borderRadius: '6px', padding: '8px' }}>
+                {filterEmployees(specialIncomeEmployeeSearch).map(emp => {
+                  const isChecked = specialIncomeSelectedEmployees.has(emp.employeeId)
+                  return (
+                    <label key={emp.employeeId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px' }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setSpecialIncomeSelectedEmployees(prev => {
+                            const next = new Set(prev)
+                            if (next.has(emp.employeeId)) next.delete(emp.employeeId)
+                            else next.add(emp.employeeId)
+                            return next
+                          })
+                        }}
+                      />
+                      <span style={{ minWidth: '90px' }}>{emp.employeeId}</span>
+                      <span style={{ flex: 1 }}>{emp.name}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{emp.department}</span>
+                    </label>
+                  )
+                })}
+              </div>
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>งวด</label>
+              <select value={specialIncomePeriod} onChange={(e) => setSpecialIncomePeriod(Number(e.target.value) as 1 | 2)}>
+                <option value={1}>งวดที่ 1</option>
+                <option value={2}>งวดที่ 2</option>
+              </select>
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>จำนวนเงิน (บาท)</label>
+              <input
+                type="number"
+                value={specialIncomeAmount}
+                onChange={(e) => setSpecialIncomeAmount(e.target.value)}
+                placeholder="เช่น 200"
+              />
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>หมายเหตุ (ถ้ามี)</label>
+              <input
+                type="text"
+                value={specialIncomeDescription}
+                onChange={(e) => setSpecialIncomeDescription(e.target.value)}
+                placeholder="เช่น เงินพิเศษอื่นๆ"
+              />
+            </div>
+
+            {specialIncomeMessage && (
+              <div
+                className={specialIncomeMessage.includes('สำเร็จ') ? 'message message-success' : 'message message-error'}
+                style={{ marginTop: '16px' }}
+              >
+                {specialIncomeMessage}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+              <button onClick={() => setShowSpecialIncomeModal(false)} className="btn btn-secondary">
+                ปิด
+              </button>
+              <button onClick={saveSpecialIncome} disabled={savingSpecialIncome} className="btn btn-primary">
+                {savingSpecialIncome ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leave Modal */}
+      {showLeaveModal && (
+        <div className="modal-overlay" onClick={() => setShowLeaveModal(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '700px', maxHeight: '80vh', overflow: 'auto' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>เพิ่มการลา</h2>
+              <button
+                onClick={() => setShowLeaveModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              เลือกพนักงานแล้ว {leaveSelectedEmployees.size} คน
+            </div>
+
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>ค้นหา/เลือกพนักงาน</label>
+              <input
+                type="text"
+                value={leaveEmployeeSearch}
+                onChange={(e) => setLeaveEmployeeSearch(e.target.value)}
+                placeholder="พิมพ์รหัสพนักงาน, ชื่อ หรือแผนก"
+              />
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => {
+                    const list = filterEmployees(leaveEmployeeSearch)
+                    setLeaveSelectedEmployees(new Set(list.map(e => e.employeeId)))
+                  }}
+                  className="btn btn-sm"
+                >
+                  เลือกทั้งหมด
+                </button>
+                <button
+                  onClick={() => setLeaveSelectedEmployees(new Set())}
+                  className="btn btn-sm btn-secondary"
+                >
+                  ล้างทั้งหมด
+                </button>
+              </div>
+              <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid var(--border-light)', borderRadius: '6px', padding: '8px' }}>
+                {filterEmployees(leaveEmployeeSearch).map(emp => {
+                  const isChecked = leaveSelectedEmployees.has(emp.employeeId)
+                  return (
+                    <label key={emp.employeeId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px' }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setLeaveSelectedEmployees(prev => {
+                            const next = new Set(prev)
+                            if (next.has(emp.employeeId)) next.delete(emp.employeeId)
+                            else next.add(emp.employeeId)
+                            return next
+                          })
+                        }}
+                      />
+                      <span style={{ minWidth: '90px' }}>{emp.employeeId}</span>
+                      <span style={{ flex: 1 }}>{emp.name}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{emp.department}</span>
+                    </label>
+                  )
+                })}
+              </div>
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>ประเภทการลา</label>
+              <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)}>
+                <option value="ลากิจ">ลากิจ</option>
+                <option value="ลาป่วย">ลาป่วย</option>
+                <option value="ลาพักร้อน">ลาพักร้อน</option>
+                <option value="ลากิจพิเศษ">ลากิจพิเศษ</option>
+              </select>
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>วันที่ลา</label>
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {leaveEntries.map((entry, index) => (
+                  <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="date"
+                      value={entry.leaveDate}
+                      onChange={(e) => updateLeaveEntry(index, 'leaveDate', e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={24}
+                      value={entry.leaveHours}
+                      onChange={(e) => updateLeaveEntry(index, 'leaveHours', e.target.value)}
+                      style={{ width: '100px' }}
+                    />
+                    <button
+                      onClick={() => removeLeaveEntry(index)}
+                      className="btn btn-secondary"
+                      style={{ padding: '4px 8px' }}
+                      disabled={leaveEntries.length === 1}
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                ))}
+                <button onClick={addLeaveEntry} className="btn btn-sm" style={{ width: 'fit-content' }}>
+                  + เพิ่มวันที่ลา
+                </button>
+              </div>
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>หมายเหตุ (ถ้ามี)</label>
+              <input
+                type="text"
+                value={leaveReason}
+                onChange={(e) => setLeaveReason(e.target.value)}
+                placeholder="เช่น ลาป่วย"
+              />
+
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <label style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <input type="checkbox" checked={leaveDeductWage} onChange={(e) => setLeaveDeductWage(e.target.checked)} />
+                  หักค่าแรง
+                </label>
+                <label style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <input type="checkbox" checked={leaveDeductDiligence} onChange={(e) => setLeaveDeductDiligence(e.target.checked)} />
+                  หักเบี้ยขยัน
+                </label>
+              </div>
+            </div>
+
+            {leaveMessage && (
+              <div
+                className={leaveMessage.includes('สำเร็จ') ? 'message message-success' : 'message message-error'}
+                style={{ marginTop: '16px' }}
+              >
+                {leaveMessage}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+              <button onClick={() => setShowLeaveModal(false)} className="btn btn-secondary">
+                ปิด
+              </button>
+              <button onClick={saveLeave} disabled={savingLeave} className="btn btn-primary">
+                {savingLeave ? 'กำลังบันทึก...' : 'บันทึกการลา'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lunch OT Modal */}
+      {showLunchOTModal && (
+        <div className="modal-overlay" onClick={() => setShowLunchOTModal(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '600px', maxHeight: '80vh', overflow: 'auto' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>เพิ่ม OT พักเที่ยง</h2>
+              <button
+                onClick={() => setShowLunchOTModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              เลือกพนักงานแล้ว {lunchOTSelectedEmployees.size} คน
+            </div>
+
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>ค้นหา/เลือกพนักงาน</label>
+              <input
+                type="text"
+                value={lunchOTEmployeeSearch}
+                onChange={(e) => setLunchOTEmployeeSearch(e.target.value)}
+                placeholder="พิมพ์รหัสพนักงาน, ชื่อ หรือแผนก"
+              />
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => {
+                    const list = filterEmployees(lunchOTEmployeeSearch)
+                    setLunchOTSelectedEmployees(new Set(list.map(e => e.employeeId)))
+                  }}
+                  className="btn btn-sm"
+                >
+                  เลือกทั้งหมด
+                </button>
+                <button
+                  onClick={() => setLunchOTSelectedEmployees(new Set())}
+                  className="btn btn-sm btn-secondary"
+                >
+                  ล้างทั้งหมด
+                </button>
+              </div>
+              <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid var(--border-light)', borderRadius: '6px', padding: '8px' }}>
+                {filterEmployees(lunchOTEmployeeSearch).map(emp => {
+                  const isChecked = lunchOTSelectedEmployees.has(emp.employeeId)
+                  return (
+                    <label key={emp.employeeId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px' }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setLunchOTSelectedEmployees(prev => {
+                            const next = new Set(prev)
+                            if (next.has(emp.employeeId)) next.delete(emp.employeeId)
+                            else next.add(emp.employeeId)
+                            return next
+                          })
+                        }}
+                      />
+                      <span style={{ minWidth: '90px' }}>{emp.employeeId}</span>
+                      <span style={{ flex: 1 }}>{emp.name}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{emp.department}</span>
+                    </label>
+                  )
+                })}
+              </div>
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>งวด</label>
+              <select value={lunchOTPeriod} onChange={(e) => setLunchOTPeriod(Number(e.target.value) as 1 | 2)}>
+                <option value={1}>งวดที่ 1</option>
+                <option value={2}>งวดที่ 2</option>
+              </select>
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>จำนวนชั่วโมง OT ที่เพิ่ม (ต่อคน)</label>
+              <input
+                type="number"
+                step="0.5"
+                min={0.5}
+                value={lunchOTHours}
+                onChange={(e) => setLunchOTHours(e.target.value)}
+                placeholder="1"
+              />
+
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                * ระบบจะคำนวณเป็นเงิน OT อัตรา 1.5 เท่าของค่าแรงต่อชั่วโมง
+              </div>
+            </div>
+
+            {lunchOTMessage && (
+              <div
+                className={lunchOTMessage.includes('สำเร็จ') ? 'message message-success' : 'message message-error'}
+                style={{ marginTop: '16px' }}
+              >
+                {lunchOTMessage}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+              <button onClick={() => setShowLunchOTModal(false)} className="btn btn-secondary">
+                ปิด
+              </button>
+              <button onClick={saveLunchOT} disabled={savingLunchOT} className="btn btn-primary">
+                {savingLunchOT ? 'กำลังบันทึก...' : 'บันทึก OT พักเที่ยง'}
+              </button>
+            </div>
           </div>
         </div>
       )}
