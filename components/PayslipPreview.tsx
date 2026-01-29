@@ -32,11 +32,11 @@ const PayslipPreview = forwardRef<HTMLDivElement, PayslipPreviewProps>(({ data }
       ref={ref}
       id="payslip-content"
       style={{
-        width: '1100px',
-        minHeight: '400px',
+        width: '277mm',
+        minHeight: '190mm',
         backgroundColor: '#ffffff',
         color: '#000000',
-        padding: '24px 32px',
+        padding: '8mm 10mm',
         fontFamily: '"Sarabun", "Noto Sans Thai", sans-serif',
         fontSize: '11px',
         lineHeight: '1.5',
