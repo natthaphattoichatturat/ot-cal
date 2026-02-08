@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
           console.log(`Merged session for employee ${employeeId} on ${session.workDate}`)
         } else {
           // First session for this employee + date
-          const scheduledInTime = session.shift === 1 ? '08:00:00' : '17:30:00'
+          const scheduledInTime = session.shift === 1 ? '08:00:00' : '20:00:00'
           const scheduledOutTime = session.shift === 1 ? '17:00:00' : '05:00:00'
 
           attendanceMap.set(key, {

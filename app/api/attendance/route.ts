@@ -210,7 +210,7 @@ export async function GET(request: NextRequest) {
 
       const workedDates = new Set<string>()
       Object.entries(entry.attendance).forEach(([date, att]: any) => {
-        if (att.actualHours && att.actualHours > 0) {
+        if (att.checkInTime || att.checkOutTime) {
           workedDates.add(date)
         }
       })
@@ -273,7 +273,7 @@ export async function GET(request: NextRequest) {
         checkOutTime: record.check_out_time
       }
 
-      if (record.actual_hours && record.actual_hours > 0) {
+      if (record.check_in_time || record.check_out_time) {
         if (record.is_holiday) {
           entry.holidayWorkDays += 1
         } else {

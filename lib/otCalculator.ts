@@ -32,8 +32,8 @@ interface WorkSession {
 
 // Convert time string to minutes from midnight
 function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(':').map(Number)
-  return hours * 60 + minutes
+  const [hours = 0, minutes = 0, seconds = 0] = time.split(':').map(Number)
+  return (hours * 60) + minutes + (seconds / 60)
 }
 
 function isBreakScanTime(time: string): boolean {
@@ -53,6 +53,12 @@ function roundDownToHalfHour(minutes: number): number {
   return Math.floor(minutes / 30) * 30
 }
 
+function calculateOverlapMinutes(start: number, end: number, overlapStart: number, overlapEnd: number): number {
+  if (end <= start) return 0
+  const overlap = Math.min(end, overlapEnd) - Math.max(start, overlapStart)
+  return Math.max(0, overlap)
+}
+
 // Round down hours to nearest 0.5 (ปัดลงเป็น .0 หรือ .5 เท่านั้น)
 // เช่น 3.12 → 3.0, 3.68 → 3.5, 4.99 → 4.5
 function roundDownToHalfHourInHours(hours: number): number {
@@ -69,10 +75,9 @@ function isSpecialDay(date: Date, holidays: SpecialHoliday[]): boolean {
 
 // Determine shift based on check-in time
 function determineShift(checkInMinutes: number): 1 | 2 {
-  // Shift 1: 06:00 - 17:00 (regular starts at 08:00)
-  // Shift 2: 17:00 - 06:00 (regular starts at 17:30)
-
-  if (checkInMinutes >= 360 && checkInMinutes < 1020) { // 6:00 - 17:00
+  // Shift 1: 06:00 - 17:30 (regular starts at 08:00)
+  // Shift 2: 17:30 - 06:00 (regular starts at 20:00)
+  if (checkInMinutes >= 360 && checkInMinutes < 1050) {
     return 1
   } else {
     return 2
@@ -154,31 +159,26 @@ function calculateShift1OT(
   let workMinutes = 0
   
   if (isHoliday) {
-    // วันหยุด: นับทุกชั่วโมงที่ทำงาน รวมเวลาปกติ 8:00-17:00 ด้วย
-    // คำนวณจากเวลาเข้าถึงเวลาออก หักเวลาพัก
-    const sameDay = checkInDate.toDateString() === checkOutDate.toDateString()
-    const holidayCheckInMinutes = checkInMinutes < scheduledIn ? scheduledIn : checkInMinutes
-    
-    if (sameDay) {
-      // ทำงานไม่ข้ามวัน
-      workMinutes = Math.max(0, checkOutMinutes - holidayCheckInMinutes)
-    } else {
-      // ทำงานข้ามวัน
-      const minutesUntilMidnight = 1440 - holidayCheckInMinutes
-      const minutesAfterMidnight = checkOutMinutes
-      workMinutes = minutesUntilMidnight + minutesAfterMidnight
+    // วันอาทิตย์/วันหยุด:
+    // 1) เวลาเริ่มฐานคำนวณยึดเวลาเข้าเวรปกติ 08:00 (ไม่หักชั่วโมงเพราะมาสาย)
+    // 2) นับ OT หลังเลิกงานจาก 17:30 เป็นต้นไป
+    // 3) ถ้าทำเกิน 17:00 แต่ยังไม่ถึง 17:30 ให้ 0.5 ชม. (ตามกติกาหน้างาน)
+    const checkOutAbsolute = sameDay ? checkOutMinutes : (1440 + checkOutMinutes)
+    const regularStart = scheduledIn
+    const regularEnd = Math.min(checkOutAbsolute, scheduledOut)
+
+    let regularMinutes = Math.max(0, regularEnd - regularStart)
+    regularMinutes -= calculateOverlapMinutes(regularStart, regularEnd, 720, 780) // พักเที่ยง 12:00-13:00
+    regularMinutes = Math.max(0, regularMinutes)
+
+    let afterShiftMinutes = 0
+    if (checkOutAbsolute > scheduledOut && checkOutAbsolute <= nightOtStart) {
+      afterShiftMinutes = 30
+    } else if (checkOutAbsolute > nightOtStart) {
+      afterShiftMinutes = roundDownToHalfHour(checkOutAbsolute - nightOtStart)
     }
-    
-    // หักเวลาพักกลางวัน 1 ชม. (12:00-13:00 หรือ 720-780 นาที)
-    if (holidayCheckInMinutes < 780 && checkOutMinutes > 720) {
-      workMinutes -= 60
-    }
-    
-    // หักเวลาพักเย็น 30 นาที (17:00-17:30 หรือ 1020-1050 นาที)
-    if (holidayCheckInMinutes < 1050 && checkOutMinutes > 1020) {
-      workMinutes -= 30
-    }
-    
+
+    workMinutes = regularMinutes + afterShiftMinutes
     actualHours = workMinutes / 60
   } else {
     // วันธรรมดา: นับเฉพาะ OT นอกเวลา
@@ -257,7 +257,7 @@ function calculateShift1OT(
 
 // ============ END calculateShift1OT ============
 
-// Calculate OT for shift 2 (17:30-05:00)
+// Calculate OT for shift 2 (20:00-05:00)
 function calculateShift2OT(
   checkInMinutes: number,
   checkOutMinutes: number,
@@ -279,22 +279,21 @@ function calculateShift2OT(
   late: boolean;
   lateHours: number;
 } {
-  const scheduledIn = 1050 // 17:30
-  const nightOtStart = 330 // 5:30 next day
+  const scheduledIn = 1200 // 20:00
+  const scheduledOutAbsolute = 1440 + 300 // 05:00 next day
+  const nightOtStartAbsolute = 1440 + 330 // 05:30 next day
 
   let actualHours = 0
   let late = false
   let lateHours = 0
 
   // Check if late (after 20:00)
-  if (checkInMinutes > scheduledIn) {
+  if (checkInMinutes > scheduledIn || checkInMinutes < 360) {
     late = true
-    const lateMinutes = checkInMinutes - scheduledIn
-    // If check-in is after midnight (next day), it's very late
-    if (checkInMinutes < scheduledIn) { // This means it wrapped around midnight
+    if (checkInMinutes < 360) {
       lateHours = (1440 - scheduledIn + checkInMinutes) / 60
     } else {
-      lateHours = lateMinutes / 60
+      lateHours = (checkInMinutes - scheduledIn) / 60
     }
   }
 
@@ -305,9 +304,11 @@ function calculateShift2OT(
   let morningOT = 0
   let allowLateNextDay = false
 
-  // Shift 2 always crosses to next day
-  if (checkOutMinutes > nightOtStart) {
-    const otMinutes = checkOutMinutes - nightOtStart
+  const sameDay = checkInDate.toDateString() === checkOutDate.toDateString()
+  const checkOutAbsolute = sameDay ? checkOutMinutes : (1440 + checkOutMinutes)
+
+  if (checkOutAbsolute > nightOtStartAbsolute) {
+    const otMinutes = checkOutAbsolute - nightOtStartAbsolute
     morningOT = roundDownToHalfHour(otMinutes)
   }
 
@@ -315,23 +316,22 @@ function calculateShift2OT(
   let workMinutes = 0
   
   if (isHoliday) {
-    // วันหยุด: นับทุกชั่วโมงที่ทำงาน (กะดึกข้ามวันเสมอ)
-    // คำนวณจาก check-in ถึง midnight + midnight ถึง check-out
-    const holidayCheckInMinutes = (checkInMinutes < scheduledIn && checkInMinutes >= 360) ? scheduledIn : checkInMinutes
-    const minutesUntilMidnight = 1440 - holidayCheckInMinutes // จาก check-in ถึง 24:00
-    const minutesAfterMidnight = checkOutMinutes // จาก 00:00 ถึง check-out
-    workMinutes = minutesUntilMidnight + minutesAfterMidnight
-    
-    // หักเวลาพักกลางคืน 1 ชม. (00:00-01:00)
-    if (checkOutMinutes > 60) {
-      workMinutes -= 60
+    // วันอาทิตย์/วันหยุดกะเย็น:
+    // 1) ฐานคำนวณยึดเข้าเวร 20:00-05:00 (ไม่หักชั่วโมงเพราะมาสาย)
+    // 2) เริ่มนับ OT หลังเลิกงานตั้งแต่ 05:30 เท่านั้น
+    const regularStart = scheduledIn
+    const regularEnd = Math.min(checkOutAbsolute, scheduledOutAbsolute)
+
+    let regularMinutes = Math.max(0, regularEnd - regularStart)
+    regularMinutes -= calculateOverlapMinutes(regularStart, regularEnd, 1440, 1500) // พัก 00:00-01:00
+    regularMinutes = Math.max(0, regularMinutes)
+
+    let afterShiftMinutes = 0
+    if (checkOutAbsolute > nightOtStartAbsolute) {
+      afterShiftMinutes = roundDownToHalfHour(checkOutAbsolute - nightOtStartAbsolute)
     }
-    
-    // หักเวลาพักเช้า 30 นาที (05:00-05:30)
-    if (checkOutMinutes > 330) {
-      workMinutes -= 30
-    }
-    
+
+    workMinutes = regularMinutes + afterShiftMinutes
     actualHours = workMinutes / 60
   } else {
     // วันธรรมดา: นับเฉพาะ OT นอกเวลา

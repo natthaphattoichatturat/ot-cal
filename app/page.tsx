@@ -111,6 +111,16 @@ export default function Home() {
   const [lunchOTEmployeeSearch, setLunchOTEmployeeSearch] = useState('')
   const [lunchOTSelectedEmployees, setLunchOTSelectedEmployees] = useState<Set<string>>(new Set())
 
+  // Custom OT modal state
+  const [showCustomOTModal, setShowCustomOTModal] = useState(false)
+  const [customOTPeriod, setCustomOTPeriod] = useState<1 | 2>(1)
+  const [customOTHours, setCustomOTHours] = useState('1')
+  const [customOTRate, setCustomOTRate] = useState<'1.5' | '2' | '3'>('1.5')
+  const [customOTMessage, setCustomOTMessage] = useState('')
+  const [savingCustomOT, setSavingCustomOT] = useState(false)
+  const [customOTEmployeeSearch, setCustomOTEmployeeSearch] = useState('')
+  const [customOTSelectedEmployees, setCustomOTSelectedEmployees] = useState<Set<string>>(new Set())
+
   // Thai day names
   const thaiDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
 
@@ -884,6 +894,83 @@ export default function Home() {
     }
   }
 
+  // ========== Custom OT Functions ==========
+  const openCustomOTModal = (period: 1 | 2) => {
+    setCustomOTPeriod(period)
+    setCustomOTHours('1')
+    setCustomOTRate('1.5')
+    setCustomOTMessage('')
+    setCustomOTEmployeeSearch('')
+    setCustomOTSelectedEmployees(new Set())
+    setShowCustomOTModal(true)
+  }
+
+  const saveCustomOT = async () => {
+    setSavingCustomOT(true)
+    setCustomOTMessage('')
+
+    try {
+      if (customOTSelectedEmployees.size === 0) {
+        setCustomOTMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+        setSavingCustomOT(false)
+        return
+      }
+
+      const hours = parseFloat(customOTHours)
+      const multiplier = parseFloat(customOTRate)
+      if (!Number.isFinite(hours) || hours <= 0 || !Number.isFinite(multiplier)) {
+        setCustomOTMessage('กรุณากรอกข้อมูล OT ให้ถูกต้อง')
+        setSavingCustomOT(false)
+        return
+      }
+
+      const year = parseInt(selectedYear)
+      const month = parseInt(selectedMonth)
+      const employeeIds = Array.from(customOTSelectedEmployees)
+      const category = `OT ปรับพิเศษ x${customOTRate}`
+
+      const results = await Promise.allSettled(
+        employeeIds.map(empId => {
+          const hourlyRate = getEmployeeHourlyRate(empId)
+          const amount = hourlyRate * hours * multiplier
+
+          return fetch('/api/wages/adjustments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employee_id: empId,
+              year,
+              month,
+              period: customOTPeriod,
+              adjustment_type: 'income',
+              category,
+              amount,
+              description: `เพิ่ม OT พิเศษ ${hours} ชม. (x${customOTRate})`,
+              created_by: 'admin'
+            })
+          }).then(r => r.json())
+        })
+      )
+
+      const failed = results.filter(r => r.status === 'rejected').length +
+        results.filter(r => r.status === 'fulfilled' && !(r.value as any)?.success).length
+
+      if (failed > 0) {
+        setCustomOTMessage(`บันทึกสำเร็จบางส่วน (ล้มเหลว ${failed} รายการ)`)
+      } else {
+        setCustomOTMessage('บันทึกสำเร็จ')
+        setShowCustomOTModal(false)
+      }
+
+      await fetchAttendanceData()
+    } catch (error) {
+      console.error('Error saving custom OT:', error)
+      setCustomOTMessage('เกิดข้อผิดพลาดในการบันทึก')
+    } finally {
+      setSavingCustomOT(false)
+    }
+  }
+
   const getDayColor = (dateStr: string): string => {
     const date = new Date(dateStr)
     const day = getDay(date)
@@ -1163,7 +1250,11 @@ export default function Home() {
                               title={att ? `เข้า: ${att.checkInTime} / ออก: ${att.checkOutTime}\nชั่วโมงจริง: ${att.actualHours}` : ''}
                             >
                               {att ? (
-                                <span className="ot-value">
+                                <span
+                                  className="ot-value"
+                                  style={att.late ? { color: '#d32f2f', fontWeight: 700 } : undefined}
+                                  title={att.late ? 'เข้างานสาย' : undefined}
+                                >
                                   {att.otHours.toFixed(2)}
                                 </span>
                               ) : ''}
@@ -1542,7 +1633,7 @@ export default function Home() {
         {/* Additional Adjustments */}
         <div style={{ paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-            เพิ่มรายการพิเศษ (ค่าอื่นๆ / การลา / OT พักเที่ยง)
+            เพิ่มรายการพิเศษ (ค่าอื่นๆ / การลา / OT พักเที่ยง / OT ปรับพิเศษ)
           </label>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <button
@@ -1579,6 +1670,20 @@ export default function Home() {
               disabled={!selectedMonth || !selectedYear}
             >
               OT พักเที่ยง (งวด 2)
+            </button>
+            <button
+              onClick={() => openCustomOTModal(1)}
+              className="btn btn-secondary"
+              disabled={!selectedMonth || !selectedYear}
+            >
+              OT ปรับพิเศษ (งวด 1)
+            </button>
+            <button
+              onClick={() => openCustomOTModal(2)}
+              className="btn btn-secondary"
+              disabled={!selectedMonth || !selectedYear}
+            >
+              OT ปรับพิเศษ (งวด 2)
             </button>
           </div>
         </div>
@@ -2227,6 +2332,127 @@ export default function Home() {
               </button>
               <button onClick={saveLunchOT} disabled={savingLunchOT} className="btn btn-primary">
                 {savingLunchOT ? 'กำลังบันทึก...' : 'บันทึก OT พักเที่ยง'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom OT Modal */}
+      {showCustomOTModal && (
+        <div className="modal-overlay" onClick={() => setShowCustomOTModal(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '600px', maxHeight: '80vh', overflow: 'auto' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>เพิ่ม OT ปรับพิเศษ</h2>
+              <button
+                onClick={() => setShowCustomOTModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              เลือกพนักงานแล้ว {customOTSelectedEmployees.size} คน
+            </div>
+
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>ค้นหา/เลือกพนักงาน</label>
+              <input
+                type="text"
+                value={customOTEmployeeSearch}
+                onChange={(e) => setCustomOTEmployeeSearch(e.target.value)}
+                placeholder="พิมพ์รหัสพนักงาน, ชื่อ หรือแผนก"
+              />
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => {
+                    const list = filterEmployees(customOTEmployeeSearch)
+                    setCustomOTSelectedEmployees(new Set(list.map(e => e.employeeId)))
+                  }}
+                  className="btn btn-sm"
+                >
+                  เลือกทั้งหมด
+                </button>
+                <button
+                  onClick={() => setCustomOTSelectedEmployees(new Set())}
+                  className="btn btn-sm btn-secondary"
+                >
+                  ล้างทั้งหมด
+                </button>
+              </div>
+              <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid var(--border-light)', borderRadius: '6px', padding: '8px' }}>
+                {filterEmployees(customOTEmployeeSearch).map(emp => {
+                  const isChecked = customOTSelectedEmployees.has(emp.employeeId)
+                  return (
+                    <label key={emp.employeeId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px' }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setCustomOTSelectedEmployees(prev => {
+                            const next = new Set(prev)
+                            if (next.has(emp.employeeId)) next.delete(emp.employeeId)
+                            else next.add(emp.employeeId)
+                            return next
+                          })
+                        }}
+                      />
+                      <span style={{ minWidth: '90px' }}>{emp.employeeId}</span>
+                      <span style={{ flex: 1 }}>{emp.name}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{emp.department}</span>
+                    </label>
+                  )
+                })}
+              </div>
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>งวด</label>
+              <select value={customOTPeriod} onChange={(e) => setCustomOTPeriod(Number(e.target.value) as 1 | 2)}>
+                <option value={1}>งวดที่ 1</option>
+                <option value={2}>งวดที่ 2</option>
+              </select>
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>ประเภท OT ที่ต้องการเพิ่ม</label>
+              <select value={customOTRate} onChange={(e) => setCustomOTRate(e.target.value as '1.5' | '2' | '3')}>
+                <option value="1.5">OT ปกติ (x1.5)</option>
+                <option value="2">OT วันหยุด (x2)</option>
+                <option value="3">OT วันหยุดเกิน 8 ชม. (x3)</option>
+              </select>
+
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>จำนวนชั่วโมง OT ที่เพิ่ม (ต่อคน)</label>
+              <input
+                type="number"
+                step="0.5"
+                min={0.5}
+                value={customOTHours}
+                onChange={(e) => setCustomOTHours(e.target.value)}
+                placeholder="1"
+              />
+
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                * ระบบจะคำนวณเป็นเงินตามค่าแรงต่อชั่วโมงของแต่ละคน และบันทึกเป็นรายการ OT ปรับพิเศษ
+              </div>
+            </div>
+
+            {customOTMessage && (
+              <div
+                className={customOTMessage.includes('สำเร็จ') ? 'message message-success' : 'message message-error'}
+                style={{ marginTop: '16px' }}
+              >
+                {customOTMessage}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+              <button onClick={() => setShowCustomOTModal(false)} className="btn btn-secondary">
+                ปิด
+              </button>
+              <button onClick={saveCustomOT} disabled={savingCustomOT} className="btn btn-primary">
+                {savingCustomOT ? 'กำลังบันทึก...' : 'บันทึก OT ปรับพิเศษ'}
               </button>
             </div>
           </div>
