@@ -988,26 +988,14 @@ export default function Home() {
     return colors[day]
   }
 
-  const downloadCsv = (content: string, filename: string) => {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    link.click()
-    URL.revokeObjectURL(url)
+  const toArgb = (hex: string) => {
+    const clean = hex.replace('#', '').toUpperCase()
+    return `FF${clean}`
   }
 
-  const escapeCsvValue = (value: string | number) => {
-    const text = String(value ?? '')
-    if (/[",\n]/.test(text)) {
-      return `"${text.replace(/"/g, '""')}"`
-    }
-    return text
-  }
-
-  const exportTableCsv = (data: AttendanceData[], period: number, dates: string[]) => {
+  const exportTableXlsx = async (data: AttendanceData[], period: number, dates: string[]) => {
     if (!selectedYear || !selectedMonth) return
+    const XLSX = await import('xlsx-js-style')
 
     const headers = [
       'รหัสพนักงาน',
@@ -1038,24 +1026,106 @@ export default function Home() {
       return [
         employee.employeeId,
         employee.name,
-        totalOT.toFixed(2),
-        totalNormalOT.toFixed(2),
-        totalSpecialOT.toFixed(2),
-        totalPremiumOT.toFixed(2),
+        totalOT,
+        totalNormalOT,
+        totalSpecialOT,
+        totalPremiumOT,
         ...dates.map(date => {
           const att = employee.attendance[date]
-          return (att?.otHours || 0).toFixed(2)
+          return att?.otHours || 0
         })
       ]
     })
 
-    const csvContent = [
-      headers.map(escapeCsvValue).join(','),
-      ...rows.map(row => row.map(escapeCsvValue).join(','))
-    ].join('\n')
+    const wsData = [headers, ...rows]
+    const ws = XLSX.utils.aoa_to_sheet(wsData)
 
-    const filename = `ot_${selectedYear}-${selectedMonth}_period${period}.csv`
-    downloadCsv(csvContent, filename)
+    const dayColors: Record<number, string> = {
+      0: '#FFFAFA',
+      1: '#FFFEF5',
+      2: '#F8FCFF',
+      3: '#FFF8FC',
+      4: '#F9F9FF',
+      5: '#FFFFF8',
+      6: '#FFF9F5'
+    }
+    const otFill = '#E3F2FD'
+
+    const headerStyle = {
+      font: { bold: true },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+    }
+
+    const applyStyle = (r: number, c: number, style: any) => {
+      const cellRef = XLSX.utils.encode_cell({ r, c })
+      if (!ws[cellRef]) return
+      ws[cellRef].s = { ...(ws[cellRef].s || {}), ...style }
+    }
+
+    const headerRow = 0
+    for (let c = 0; c < headers.length; c++) {
+      let fill: string | null = null
+      if (c >= 2 && c <= 5) fill = otFill
+      if (c >= 6) {
+        const dateStr = dates[c - 6]
+        const day = new Date(dateStr).getDay()
+        fill = dayColors[day]
+      }
+      applyStyle(headerRow, c, {
+        ...headerStyle,
+        ...(fill ? { fill: { patternType: 'solid', fgColor: { rgb: toArgb(fill) } } } : {})
+      })
+    }
+
+    const numberCols = new Set<number>([2, 3, 4, 5, ...dates.map((_, idx) => idx + 6)])
+
+    for (let r = 1; r < wsData.length; r++) {
+      for (let c = 0; c < headers.length; c++) {
+        let fill: string | null = null
+        if (c >= 2 && c <= 5) fill = otFill
+        if (c >= 6) {
+          const dateStr = dates[c - 6]
+          const day = new Date(dateStr).getDay()
+          fill = dayColors[day]
+        }
+
+        const style: any = {}
+        if (fill) {
+          style.fill = { patternType: 'solid', fgColor: { rgb: toArgb(fill) } }
+        }
+        if (numberCols.has(c)) {
+          style.numFmt = '0.00'
+          style.alignment = { horizontal: 'center' }
+        }
+
+        if (c >= 6) {
+          const employee = data[r - 1]
+          const dateStr = dates[c - 6]
+          const att = employee?.attendance?.[dateStr]
+          if (att?.late) {
+            style.font = { ...(style.font || {}), color: { rgb: 'FFD32F2F' } }
+          }
+        }
+
+        applyStyle(r, c, style)
+      }
+    }
+
+    ws['!cols'] = [
+      { wch: 12 },
+      { wch: 22 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 10 },
+      ...dates.map(() => ({ wch: 10 }))
+    ]
+
+    const wb = XLSX.utils.book_new()
+    const sheetName = period === 1 ? 'งวด 1' : 'งวด 2'
+    XLSX.utils.book_append_sheet(wb, ws, sheetName)
+    const filename = `ot_${selectedYear}-${selectedMonth}_period${period}.xlsx`
+    XLSX.writeFile(wb, filename)
   }
 
   const renderTable = (data: AttendanceData[], period: number) => {
@@ -1173,11 +1243,11 @@ export default function Home() {
             {period === 1 ? t('home.period1') : t('home.period2')}
           </h3>
           <button
-            onClick={() => exportTableCsv(data, period, dates)}
+            onClick={() => { void exportTableXlsx(data, period, dates) }}
             className="btn btn-secondary"
             disabled={data.length === 0}
           >
-            Export CSV
+            Export XLSX
           </button>
         </div>
         <div className="table-wrapper">
@@ -1185,7 +1255,7 @@ export default function Home() {
             <thead>
               <tr>
                 {/* Checkbox column */}
-                <th style={{ minWidth: '50px', textAlign: 'center' }}>
+                <th style={{ minWidth: '50px', width: '50px', textAlign: 'center', position: 'sticky', left: 0, zIndex: 4, background: '#fff' }}>
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -1194,8 +1264,8 @@ export default function Home() {
                     style={{ cursor: 'pointer', width: '18px', height: '18px' }}
                   />
                 </th>
-                <th style={{ minWidth: '120px' }}>{t('home.employeeId')}</th>
-                <th style={{ minWidth: '180px' }}>{t('home.employeeName')}</th>
+                <th style={{ minWidth: '120px', width: '120px', position: 'sticky', left: 50, zIndex: 4, background: '#fff' }}>{t('home.employeeId')}</th>
+                <th style={{ minWidth: '180px', width: '180px', position: 'sticky', left: 170, zIndex: 4, background: '#fff', boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }}>{t('home.employeeName')}</th>
 
                 {/* 8 คอลัมน์สรุป - เปลี่ยนชื่อ */}
                 <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd', fontWeight: '700' }}>รวม OT</th>
@@ -1246,7 +1316,7 @@ export default function Home() {
                     return (
                       <tr key={employee.employeeId}>
                         {/* Checkbox */}
-                        <td className="text-center">
+                        <td className="text-center" style={{ position: 'sticky', left: 0, zIndex: 2, background: '#fff' }}>
                           <input
                             type="checkbox"
                             checked={isChecked}
@@ -1254,8 +1324,8 @@ export default function Home() {
                             style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                           />
                         </td>
-                        <td>{employee.employeeId}</td>
-                        <td className="employee-name">{employee.name}</td>
+                        <td style={{ position: 'sticky', left: 50, zIndex: 2, background: '#fff' }}>{employee.employeeId}</td>
+                        <td className="employee-name" style={{ position: 'sticky', left: 170, zIndex: 2, background: '#fff', boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }}>{employee.name}</td>
 
                         {/* 8 คอลัมน์สรุป */}
                         <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
