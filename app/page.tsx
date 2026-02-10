@@ -988,6 +988,76 @@ export default function Home() {
     return colors[day]
   }
 
+  const downloadCsv = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const escapeCsvValue = (value: string | number) => {
+    const text = String(value ?? '')
+    if (/[",\n]/.test(text)) {
+      return `"${text.replace(/"/g, '""')}"`
+    }
+    return text
+  }
+
+  const exportTableCsv = (data: AttendanceData[], period: number, dates: string[]) => {
+    if (!selectedYear || !selectedMonth) return
+
+    const headers = [
+      'รหัสพนักงาน',
+      'ชื่อ-นามสกุล',
+      'รวม OT',
+      'OT 1.5',
+      'OT 2',
+      'OT 3',
+      ...dates
+    ]
+
+    const rows = data.map(employee => {
+      let totalOT = 0
+      let totalNormalOT = 0
+      let totalSpecialOT = 0
+      let totalPremiumOT = 0
+
+      dates.forEach(date => {
+        const att = employee.attendance[date]
+        if (att) {
+          totalOT += att.otHours || 0
+          totalNormalOT += att.otNormalHours || 0
+          totalSpecialOT += att.otSpecialHours || 0
+          totalPremiumOT += att.otPremiumHours || 0
+        }
+      })
+
+      return [
+        employee.employeeId,
+        employee.name,
+        totalOT.toFixed(2),
+        totalNormalOT.toFixed(2),
+        totalSpecialOT.toFixed(2),
+        totalPremiumOT.toFixed(2),
+        ...dates.map(date => {
+          const att = employee.attendance[date]
+          return (att?.otHours || 0).toFixed(2)
+        })
+      ]
+    })
+
+    const csvContent = [
+      headers.map(escapeCsvValue).join(','),
+      ...rows.map(row => row.map(escapeCsvValue).join(','))
+    ].join('\n')
+
+    const filename = `ot_${selectedYear}-${selectedMonth}_period${period}.csv`
+    downloadCsv(csvContent, filename)
+  }
+
   const renderTable = (data: AttendanceData[], period: number) => {
     const year = parseInt(selectedYear)
     const month = parseInt(selectedMonth)
@@ -1098,10 +1168,17 @@ export default function Home() {
 
     return (
       <div className="table-container" style={{ marginBottom: '24px' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
             {period === 1 ? t('home.period1') : t('home.period2')}
           </h3>
+          <button
+            onClick={() => exportTableCsv(data, period, dates)}
+            className="btn btn-secondary"
+            disabled={data.length === 0}
+          >
+            Export CSV
+          </button>
         </div>
         <div className="table-wrapper">
           <table className="data-table">
