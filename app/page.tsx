@@ -1242,18 +1242,20 @@ export default function Home() {
                         {dates.map(date => {
                           const att = employee.attendance[date]
                           const dayColor = getDayColor(date)
+                          const cellTitle = att
+                            ? `เข้า: ${att.checkInTime} / ออก: ${att.checkOutTime}\nชั่วโมงจริง: ${att.actualHours}${att.late ? '\nสถานะ: เข้างานสาย' : ''}`
+                            : ''
 
                           return (
                             <td
                               key={date}
                               className={`text-center ${dayColor}`}
-                              title={att ? `เข้า: ${att.checkInTime} / ออก: ${att.checkOutTime}\nชั่วโมงจริง: ${att.actualHours}` : ''}
+                              title={cellTitle}
                             >
                               {att ? (
                                 <span
                                   className="ot-value"
                                   style={att.late ? { color: '#d32f2f', fontWeight: 700 } : undefined}
-                                  title={att.late ? 'เข้างานสาย' : undefined}
                                 >
                                   {att.otHours.toFixed(2)}
                                 </span>

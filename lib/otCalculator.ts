@@ -161,8 +161,7 @@ function calculateShift1OT(
   if (isHoliday) {
     // วันอาทิตย์/วันหยุด:
     // 1) เวลาเริ่มฐานคำนวณยึดเวลาเข้าเวรปกติ 08:00 (ไม่หักชั่วโมงเพราะมาสาย)
-    // 2) นับ OT หลังเลิกงานจาก 17:30 เป็นต้นไป
-    // 3) ถ้าทำเกิน 17:00 แต่ยังไม่ถึง 17:30 ให้ 0.5 ชม. (ตามกติกาหน้างาน)
+    // 2) นับ OT หลังเลิกงานจาก 17:30 เป็นต้นไปเท่านั้น
     const checkOutAbsolute = sameDay ? checkOutMinutes : (1440 + checkOutMinutes)
     const regularStart = scheduledIn
     const regularEnd = Math.min(checkOutAbsolute, scheduledOut)
@@ -172,9 +171,7 @@ function calculateShift1OT(
     regularMinutes = Math.max(0, regularMinutes)
 
     let afterShiftMinutes = 0
-    if (checkOutAbsolute > scheduledOut && checkOutAbsolute <= nightOtStart) {
-      afterShiftMinutes = 30
-    } else if (checkOutAbsolute > nightOtStart) {
+    if (checkOutAbsolute > nightOtStart) {
       afterShiftMinutes = roundDownToHalfHour(checkOutAbsolute - nightOtStart)
     }
 
