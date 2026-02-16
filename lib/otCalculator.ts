@@ -75,9 +75,9 @@ function isSpecialDay(date: Date, holidays: SpecialHoliday[]): boolean {
 
 // Determine shift based on check-in time
 function determineShift(checkInMinutes: number): 1 | 2 {
-  // Shift 1: 06:00 - 17:30 (regular starts at 08:00)
-  // Shift 2: 17:30 - 06:00 (regular starts at 20:00)
-  if (checkInMinutes >= 360 && checkInMinutes < 1050) {
+  // Shift 1: 06:00 - 17:00 (regular starts at 08:00)
+  // Shift 2: 17:00 - 06:00 (regular starts at 20:00)
+  if (checkInMinutes >= 360 && checkInMinutes < 1020) {
     return 1
   } else {
     return 2
@@ -277,6 +277,7 @@ function calculateShift2OT(
   lateHours: number;
 } {
   const scheduledIn = 1200 // 20:00
+  const earlyOtStart = 1050 // 17:30
   const scheduledOutAbsolute = 1440 + 300 // 05:00 next day
   const nightOtStartAbsolute = 1440 + 330 // 05:30 next day
 
@@ -294,8 +295,14 @@ function calculateShift2OT(
     }
   }
 
-  // Early OT is handled later via allowances, not during import.
-  const eveningOT = 0
+  // Early OT for night shift: from 17:30 up to 20:00 (round down to 30 min)
+  let eveningOT = 0
+  if (checkInMinutes >= 1020 && checkInMinutes < scheduledIn) {
+    const otStart = Math.max(checkInMinutes, earlyOtStart)
+    if (otStart < scheduledIn) {
+      eveningOT = roundDownToHalfHour(scheduledIn - otStart)
+    }
+  }
 
   // Calculate morning OT (after 5:30 next day)
   let morningOT = 0
