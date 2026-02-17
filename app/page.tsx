@@ -85,8 +85,6 @@ export default function Home() {
   const [specialIncomeDescription, setSpecialIncomeDescription] = useState('')
   const [savingSpecialIncome, setSavingSpecialIncome] = useState(false)
   const [specialIncomeMessage, setSpecialIncomeMessage] = useState('')
-  const [specialIncomeEmployeeSearch, setSpecialIncomeEmployeeSearch] = useState('')
-  const [specialIncomeSelectedEmployees, setSpecialIncomeSelectedEmployees] = useState<Set<string>>(new Set())
 
   // Leave modal state
   const [showLeaveModal, setShowLeaveModal] = useState(false)
@@ -99,8 +97,6 @@ export default function Home() {
   const [leaveDeductDiligence, setLeaveDeductDiligence] = useState(false)
   const [savingLeave, setSavingLeave] = useState(false)
   const [leaveMessage, setLeaveMessage] = useState('')
-  const [leaveEmployeeSearch, setLeaveEmployeeSearch] = useState('')
-  const [leaveSelectedEmployees, setLeaveSelectedEmployees] = useState<Set<string>>(new Set())
 
   // Lunch OT modal state
   const [showLunchOTModal, setShowLunchOTModal] = useState(false)
@@ -108,8 +104,6 @@ export default function Home() {
   const [lunchOTHours, setLunchOTHours] = useState('1')
   const [savingLunchOT, setSavingLunchOT] = useState(false)
   const [lunchOTMessage, setLunchOTMessage] = useState('')
-  const [lunchOTEmployeeSearch, setLunchOTEmployeeSearch] = useState('')
-  const [lunchOTSelectedEmployees, setLunchOTSelectedEmployees] = useState<Set<string>>(new Set())
 
   // Custom OT modal state
   const [showCustomOTModal, setShowCustomOTModal] = useState(false)
@@ -118,8 +112,6 @@ export default function Home() {
   const [customOTRate, setCustomOTRate] = useState<'1.5' | '2' | '3'>('1.5')
   const [customOTMessage, setCustomOTMessage] = useState('')
   const [savingCustomOT, setSavingCustomOT] = useState(false)
-  const [customOTEmployeeSearch, setCustomOTEmployeeSearch] = useState('')
-  const [customOTSelectedEmployees, setCustomOTSelectedEmployees] = useState<Set<string>>(new Set())
 
   // Thai day names
   const thaiDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
@@ -218,15 +210,17 @@ export default function Home() {
     return Array.from(map.values())
   }, [period1Data, period2Data])
 
-  const filterEmployees = (query: string) => {
-    const q = query.trim().toLowerCase()
-    if (!q) return employeeOptions
-    return employeeOptions.filter(emp =>
-      emp.employeeId.toLowerCase().includes(q) ||
-      emp.name.toLowerCase().includes(q) ||
-      emp.department.toLowerCase().includes(q)
-    )
-  }
+  const selectedEmployeeList = useMemo(() => {
+    const employeeMap = new Map(employeeOptions.map(emp => [emp.employeeId, emp]))
+    return Array.from(selectedEmployees).map(employeeId => {
+      const employee = employeeMap.get(employeeId)
+      return {
+        employeeId,
+        name: employee?.name || employeeId,
+        department: employee?.department || '-'
+      }
+    })
+  }, [employeeOptions, selectedEmployees])
 
   const filterData = () => {
     const query = searchQuery.toLowerCase().trim()
@@ -247,12 +241,6 @@ export default function Home() {
       setShowAutocomplete(true)
     } else {
       setShowAutocomplete(false)
-    }
-
-    // Filter by selected employees (multi-select)
-    if (selectedEmployees.size > 0) {
-      filtered1 = filtered1.filter(emp => selectedEmployees.has(emp.employeeId))
-      filtered2 = filtered2.filter(emp => selectedEmployees.has(emp.employeeId))
     }
 
     // Filter by group
@@ -663,8 +651,6 @@ export default function Home() {
     setSpecialIncomeAmount('')
     setSpecialIncomeDescription('')
     setSpecialIncomeMessage('')
-    setSpecialIncomeEmployeeSearch('')
-    setSpecialIncomeSelectedEmployees(new Set())
     setShowSpecialIncomeModal(true)
   }
 
@@ -673,8 +659,8 @@ export default function Home() {
     setSpecialIncomeMessage('')
 
     try {
-      if (specialIncomeSelectedEmployees.size === 0) {
-        setSpecialIncomeMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+      if (selectedEmployees.size === 0) {
+        setSpecialIncomeMessage('กรุณาเลือกพนักงานจากตารางหลักก่อน')
         setSavingSpecialIncome(false)
         return
       }
@@ -688,7 +674,7 @@ export default function Home() {
 
       const year = parseInt(selectedYear)
       const month = parseInt(selectedMonth)
-      const employeeIds = Array.from(specialIncomeSelectedEmployees)
+      const employeeIds = Array.from(selectedEmployees)
 
       const results = await Promise.allSettled(
         employeeIds.map(empId =>
@@ -737,8 +723,6 @@ export default function Home() {
     setLeaveDeductWage(false)
     setLeaveDeductDiligence(false)
     setLeaveMessage('')
-    setLeaveEmployeeSearch('')
-    setLeaveSelectedEmployees(new Set())
     setShowLeaveModal(true)
   }
 
@@ -765,8 +749,8 @@ export default function Home() {
     setLeaveMessage('')
 
     try {
-      if (leaveSelectedEmployees.size === 0) {
-        setLeaveMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+      if (selectedEmployees.size === 0) {
+        setLeaveMessage('กรุณาเลือกพนักงานจากตารางหลักก่อน')
         setSavingLeave(false)
         return
       }
@@ -794,7 +778,7 @@ export default function Home() {
           leaveType,
           reason: leaveReason || null,
           createdBy: 'admin',
-          employeeIds: Array.from(leaveSelectedEmployees),
+          employeeIds: Array.from(selectedEmployees),
           leaves,
           deductWage: leaveDeductWage,
           deductDiligence: leaveDeductDiligence,
@@ -825,8 +809,6 @@ export default function Home() {
     setLunchOTPeriod(period)
     setLunchOTHours('1')
     setLunchOTMessage('')
-    setLunchOTEmployeeSearch('')
-    setLunchOTSelectedEmployees(new Set())
     setShowLunchOTModal(true)
   }
 
@@ -835,8 +817,8 @@ export default function Home() {
     setLunchOTMessage('')
 
     try {
-      if (lunchOTSelectedEmployees.size === 0) {
-        setLunchOTMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+      if (selectedEmployees.size === 0) {
+        setLunchOTMessage('กรุณาเลือกพนักงานจากตารางหลักก่อน')
         setSavingLunchOT(false)
         return
       }
@@ -850,7 +832,7 @@ export default function Home() {
 
       const year = parseInt(selectedYear)
       const month = parseInt(selectedMonth)
-      const employeeIds = Array.from(lunchOTSelectedEmployees)
+      const employeeIds = Array.from(selectedEmployees)
 
       const results = await Promise.allSettled(
         employeeIds.map(empId => {
@@ -900,8 +882,6 @@ export default function Home() {
     setCustomOTHours('1')
     setCustomOTRate('1.5')
     setCustomOTMessage('')
-    setCustomOTEmployeeSearch('')
-    setCustomOTSelectedEmployees(new Set())
     setShowCustomOTModal(true)
   }
 
@@ -910,8 +890,8 @@ export default function Home() {
     setCustomOTMessage('')
 
     try {
-      if (customOTSelectedEmployees.size === 0) {
-        setCustomOTMessage('กรุณาเลือกพนักงานอย่างน้อย 1 คน')
+      if (selectedEmployees.size === 0) {
+        setCustomOTMessage('กรุณาเลือกพนักงานจากตารางหลักก่อน')
         setSavingCustomOT(false)
         return
       }
@@ -926,7 +906,7 @@ export default function Home() {
 
       const year = parseInt(selectedYear)
       const month = parseInt(selectedMonth)
-      const employeeIds = Array.from(customOTSelectedEmployees)
+      const employeeIds = Array.from(selectedEmployees)
       const category = `OT ปรับพิเศษ x${customOTRate}`
 
       const results = await Promise.allSettled(
@@ -987,6 +967,32 @@ export default function Home() {
 
     return colors[day]
   }
+
+  const renderSelectedEmployeePanel = () => (
+    <div className="selected-employee-panel">
+      <div className="selected-employee-count">
+        พนักงานที่เลือกจากตารางหลัก {selectedEmployeeList.length} คน
+      </div>
+      {selectedEmployeeList.length === 0 ? (
+        <div className="selected-employee-empty">
+          กรุณาเลือกพนักงานจากตารางหลักก่อนทำรายการนี้
+        </div>
+      ) : (
+        <div className="selected-employee-chips">
+          {selectedEmployeeList.slice(0, 12).map(emp => (
+            <span key={emp.employeeId} className="selected-employee-chip">
+              {emp.employeeId} {emp.name}
+            </span>
+          ))}
+          {selectedEmployeeList.length > 12 && (
+            <span className="selected-employee-chip selected-employee-chip-muted">
+              +{selectedEmployeeList.length - 12} คน
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
 
   const toArgb = (hex: string) => {
     const clean = hex.replace('#', '').toUpperCase()
@@ -1238,8 +1244,8 @@ export default function Home() {
 
     return (
       <div className="table-container" style={{ marginBottom: '24px' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+        <div className="sheet-header">
+          <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
             {period === 1 ? t('home.period1') : t('home.period2')}
           </h3>
           <button
@@ -1251,7 +1257,7 @@ export default function Home() {
           </button>
         </div>
         <div className="table-wrapper">
-          <table className="data-table">
+          <table className="data-table excel-table">
             <thead>
               <tr>
                 {/* Checkbox column */}
@@ -1268,24 +1274,24 @@ export default function Home() {
                 <th style={{ minWidth: '180px', width: '180px', position: 'sticky', left: 170, zIndex: 4, background: '#fff', boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }}>{t('home.employeeName')}</th>
 
                 {/* 8 คอลัมน์สรุป - เปลี่ยนชื่อ */}
-                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd', fontWeight: '700' }}>รวม OT</th>
-                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT 1.5</th>
-                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT 2</th>
-                <th className="text-center" style={{ minWidth: '90px', background: '#e3f2fd' }}>OT 3</th>
+                <th className="text-center ot-group-head" style={{ minWidth: '90px', fontWeight: '700' }}>รวม OT</th>
+                <th className="text-center ot-group-head" style={{ minWidth: '90px' }}>OT 1.5</th>
+                <th className="text-center ot-group-head" style={{ minWidth: '90px' }}>OT 2</th>
+                <th className="text-center ot-group-head" style={{ minWidth: '90px' }}>OT 3</th>
 
-                <th className="text-center" style={{ minWidth: '100px', background: '#fff3e0', fontWeight: '700' }}>รวม OT (คำนวณ)</th>
-                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT 1.5 (×1.5)</th>
-                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT 2 (×2)</th>
-                <th className="text-center" style={{ minWidth: '110px', background: '#fff3e0' }}>OT 3 (×3)</th>
+                <th className="text-center ot-multiplied-head" style={{ minWidth: '100px', fontWeight: '700' }}>รวม OT (คำนวณ)</th>
+                <th className="text-center ot-multiplied-head" style={{ minWidth: '110px' }}>OT 1.5 (×1.5)</th>
+                <th className="text-center ot-multiplied-head" style={{ minWidth: '110px' }}>OT 2 (×2)</th>
+                <th className="text-center ot-multiplied-head" style={{ minWidth: '110px' }}>OT 3 (×3)</th>
 
                 {/* สรุปการทำงาน/การลา */}
-                <th className="text-center" style={{ minWidth: '90px', background: '#e8f5e9', fontWeight: '700' }}>รวมวันทำงาน</th>
-                <th className="text-center" style={{ minWidth: '70px', background: '#e8f5e9' }}>ลากิจ</th>
-                <th className="text-center" style={{ minWidth: '70px', background: '#e8f5e9' }}>ลาป่วย</th>
-                <th className="text-center" style={{ minWidth: '70px', background: '#e8f5e9' }}>ขาดงาน</th>
-                <th className="text-center" style={{ minWidth: '70px', background: '#e8f5e9' }}>มาสาย</th>
-                <th className="text-center" style={{ minWidth: '90px', background: '#f3e5f5' }}>ค่ากะ</th>
-                <th className="text-center" style={{ minWidth: '100px', background: '#f3e5f5' }}>ค่าอื่นๆ</th>
+                <th className="text-center work-group-head" style={{ minWidth: '90px', fontWeight: '700' }}>รวมวันทำงาน</th>
+                <th className="text-center work-group-head" style={{ minWidth: '70px' }}>ลากิจ</th>
+                <th className="text-center work-group-head" style={{ minWidth: '70px' }}>ลาป่วย</th>
+                <th className="text-center work-group-head" style={{ minWidth: '70px' }}>ขาดงาน</th>
+                <th className="text-center work-group-head" style={{ minWidth: '70px' }}>มาสาย</th>
+                <th className="text-center allowance-group-head" style={{ minWidth: '90px' }}>ค่ากะ</th>
+                <th className="text-center allowance-group-head" style={{ minWidth: '100px' }}>ค่าอื่นๆ</th>
 
                 {/* คอลัมน์วัน */}
                 {dates.map(date => {
@@ -1328,60 +1334,60 @@ export default function Home() {
                         <td className="employee-name" style={{ position: 'sticky', left: 170, zIndex: 2, background: '#fff', boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }}>{employee.name}</td>
 
                         {/* 8 คอลัมน์สรุป */}
-                        <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                        <td className="text-center ot-group-cell" style={{ fontWeight: '700' }}>
                           {totalOT.toFixed(2)}
                         </td>
-                        <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                        <td className="text-center ot-group-cell">
                           {totalNormalOT.toFixed(2)}
                         </td>
-                        <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                        <td className="text-center ot-group-cell">
                           {totalSpecialOT.toFixed(2)}
                         </td>
-                        <td className="text-center" style={{ fontSize: '14px', background: '#e3f2fd', color: 'var(--text-primary)' }}>
+                        <td className="text-center ot-group-cell">
                           {totalPremiumOT.toFixed(2)}
                         </td>
 
-                        <td className="text-center" style={{ fontWeight: '700', fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                        <td className="text-center ot-multiplied-cell" style={{ fontWeight: '700' }}>
                           {totalOTMultiplied.toFixed(2)}
                         </td>
-                        <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                        <td className="text-center ot-multiplied-cell">
                           {totalNormalOTMultiplied.toFixed(2)}
                         </td>
-                        <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                        <td className="text-center ot-multiplied-cell">
                           {totalSpecialOTMultiplied.toFixed(2)}
                         </td>
-                        <td className="text-center" style={{ fontSize: '14px', background: '#fff3e0', color: '#e65100' }}>
+                        <td className="text-center ot-multiplied-cell">
                           {totalPremiumOTMultiplied.toFixed(2)}
                         </td>
 
                         {/* สรุปการทำงาน/การลา */}
-                        <td className="text-center" style={{ fontWeight: '600', background: '#e8f5e9' }}>
+                        <td className="text-center work-group-cell" style={{ fontWeight: '600' }}>
                           {(employee.totalWorkDays || 0).toString()}
                         </td>
-                        <td className="text-center" style={{ background: '#e8f5e9' }}>
+                        <td className="text-center work-group-cell">
                           {(employee.personalLeaveDays || 0).toString()}
                         </td>
-                        <td className="text-center" style={{ background: '#e8f5e9' }}>
+                        <td className="text-center work-group-cell">
                           {(employee.sickLeaveDays || 0).toString()}
                         </td>
-                        <td className="text-center" style={{ background: '#e8f5e9' }}>
+                        <td className="text-center work-group-cell">
                           {(employee.absentDays || 0).toString()}
                         </td>
                         <td
                           className="text-center"
-                          style={{ background: '#e8f5e9' }}
+                          style={{ background: '#f6f8fc' }}
                           title={employee.lateMinutes && employee.lateMinutes > 0 ? `รวม ${employee.lateMinutes} นาที` : ''}
                         >
                           {(employee.lateDays || 0).toString()}
                         </td>
                         <td
                           className="text-center"
-                          style={{ background: '#f3e5f5' }}
+                          style={{ background: '#eef2f8' }}
                           title={employee.nightShiftDays && employee.nightShiftDays > 0 ? `${employee.nightShiftDays} วัน` : ''}
                         >
                           {(employee.nightShiftAllowance || 0).toFixed(2)}
                         </td>
-                        <td className="text-center" style={{ background: '#f3e5f5' }}>
+                        <td className="text-center" style={{ background: '#eef2f8' }}>
                           {(employee.specialIncome || 0).toFixed(2)}
                         </td>
 
@@ -1422,86 +1428,62 @@ export default function Home() {
 
         {/* แถวสรุปรวม - แยกออกมาจากตาราง (Fixed Position) */}
         {data.length > 0 && (
-          <div style={{
-            background: '#f5f5f5',
-            padding: '12px 16px',
-            borderRadius: '0 0 8px 8px',
-            boxShadow: '0 -2px 8px rgba(0,0,0,0.08)',
-            position: 'sticky',
-            bottom: 0,
-            zIndex: 10,
-            borderTop: '2px solid #e0e0e0'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              color: '#333',
-              overflowX: 'auto',
-              paddingBottom: '4px'
-            }}>
-              <div style={{ fontWeight: '700', fontSize: '14px', minWidth: '120px', flexShrink: 0 }}>
+          <div className="table-summary-bar">
+            <div className="table-summary-scroll">
+              <div className="table-summary-title">
                 สรุปรวม ({data.length} คน)
               </div>
 
               {/* กลุ่ม OT ดิบ */}
-              <div style={{ display: 'flex', gap: '12px', background: '#e3f2fd', padding: '8px 12px', borderRadius: '6px', flexShrink: 0 }}>
+              <div className="summary-box summary-box-ot">
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#666' }}>รวม OT</div>
-                  <div style={{ fontWeight: '700', fontSize: '18px', color: '#1976d2' }}>{grandTotalOT.toFixed(2)}</div>
+                  <div className="summary-label">รวม OT</div>
+                  <div className="summary-value summary-value-primary">{grandTotalOT.toFixed(2)}</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#666' }}>OT 1.5</div>
-                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalNormalOT.toFixed(2)}</div>
+                  <div className="summary-label">OT 1.5</div>
+                  <div className="summary-value">{grandTotalNormalOT.toFixed(2)}</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#666' }}>OT 2</div>
-                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalSpecialOT.toFixed(2)}</div>
+                  <div className="summary-label">OT 2</div>
+                  <div className="summary-value">{grandTotalSpecialOT.toFixed(2)}</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#666' }}>OT 3</div>
-                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalPremiumOT.toFixed(2)}</div>
+                  <div className="summary-label">OT 3</div>
+                  <div className="summary-value">{grandTotalPremiumOT.toFixed(2)}</div>
                 </div>
               </div>
 
               {/* กลุ่ม OT คำนวณแล้ว */}
-              <div style={{ display: 'flex', gap: '12px', background: '#fff3e0', padding: '8px 12px', borderRadius: '6px', flexShrink: 0 }}>
+              <div className="summary-box summary-box-multiplied">
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#666' }}>รวม (คำนวณ)</div>
-                  <div style={{ fontWeight: '700', fontSize: '18px', color: '#e65100' }}>{grandTotalOTMultiplied.toFixed(2)}</div>
+                  <div className="summary-label">รวม (คำนวณ)</div>
+                  <div className="summary-value summary-value-primary">{grandTotalOTMultiplied.toFixed(2)}</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#666' }}>×1.5</div>
-                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalNormalOTMultiplied.toFixed(2)}</div>
+                  <div className="summary-label">×1.5</div>
+                  <div className="summary-value">{grandTotalNormalOTMultiplied.toFixed(2)}</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#666' }}>×2</div>
-                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalSpecialOTMultiplied.toFixed(2)}</div>
+                  <div className="summary-label">×2</div>
+                  <div className="summary-value">{grandTotalSpecialOTMultiplied.toFixed(2)}</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#666' }}>×3</div>
-                  <div style={{ fontWeight: '600', fontSize: '16px', color: '#333' }}>{grandTotalPremiumOTMultiplied.toFixed(2)}</div>
+                  <div className="summary-label">×3</div>
+                  <div className="summary-value">{grandTotalPremiumOTMultiplied.toFixed(2)}</div>
                 </div>
               </div>
 
               {/* สรุปรายวัน - แสดงทุกวัน scroll ได้ */}
-              <div style={{
-                display: 'flex',
-                gap: '6px',
-                background: '#fafafa',
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: '1px solid #e0e0e0',
-                flexShrink: 0
-              }}>
+              <div className="summary-box summary-box-daily">
                 {dates.map(date => {
                   const day = parseInt(date.split('-')[2])
                   const dateObj = new Date(date)
                   const isSunday = dateObj.getDay() === 0
                   return (
-                    <div key={date} style={{ textAlign: 'center', minWidth: '45px' }}>
-                      <div style={{ fontSize: '10px', color: isSunday ? '#e53935' : '#666' }}>{day}</div>
-                      <div style={{ fontWeight: '600', fontSize: '14px', color: '#333' }}>{dailyTotals[date].toFixed(2)}</div>
+                    <div key={date} style={{ textAlign: 'center', minWidth: '42px' }}>
+                      <div style={{ fontSize: '10px', color: isSunday ? '#c62828' : '#6b7280' }}>{day}</div>
+                      <div style={{ fontWeight: '600', fontSize: '12px', color: '#111827' }}>{dailyTotals[date].toFixed(2)}</div>
                     </div>
                   )
                 })}
@@ -1514,6 +1496,7 @@ export default function Home() {
   }
 
   const autocompleteOptions = getAutocompleteOptions()
+  const selectionRequiredDisabled = !selectedMonth || !selectedYear || selectedEmployees.size === 0
 
   return (
     <div className="app-container">
@@ -1692,7 +1675,7 @@ export default function Home() {
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {Array.from(selectedEmployees).slice(0, 10).map(empId => {
-                const emp = period1Data.find(e => e.employeeId === empId)
+                const emp = selectedEmployeeList.find(e => e.employeeId === empId)
                 return (
                   <span
                     key={empId}
@@ -1706,7 +1689,7 @@ export default function Home() {
                       gap: '4px'
                     }}
                   >
-                    {emp?.name || empId}
+                    {emp ? `${emp.employeeId} ${emp.name}` : empId}
                     <button
                       onClick={() => toggleEmployeeSelection(empId)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', fontSize: '14px' }}
@@ -1788,53 +1771,56 @@ export default function Home() {
             <button
               onClick={() => openSpecialIncomeModal(1)}
               className="btn btn-secondary"
-              disabled={!selectedMonth || !selectedYear}
+              disabled={selectionRequiredDisabled}
             >
               เพิ่มค่าอื่นๆ (งวด 1)
             </button>
             <button
               onClick={() => openSpecialIncomeModal(2)}
               className="btn btn-secondary"
-              disabled={!selectedMonth || !selectedYear}
+              disabled={selectionRequiredDisabled}
             >
               เพิ่มค่าอื่นๆ (งวด 2)
             </button>
             <button
               onClick={openLeaveModal}
               className="btn btn-secondary"
-              disabled={!selectedMonth || !selectedYear}
+              disabled={selectionRequiredDisabled}
             >
               เพิ่มการลา
             </button>
             <button
               onClick={() => openLunchOTModal(1)}
               className="btn btn-secondary"
-              disabled={!selectedMonth || !selectedYear}
+              disabled={selectionRequiredDisabled}
             >
               OT พักเที่ยง (งวด 1)
             </button>
             <button
               onClick={() => openLunchOTModal(2)}
               className="btn btn-secondary"
-              disabled={!selectedMonth || !selectedYear}
+              disabled={selectionRequiredDisabled}
             >
               OT พักเที่ยง (งวด 2)
             </button>
             <button
               onClick={() => openCustomOTModal(1)}
               className="btn btn-secondary"
-              disabled={!selectedMonth || !selectedYear}
+              disabled={selectionRequiredDisabled}
             >
               OT ปรับพิเศษ (งวด 1)
             </button>
             <button
               onClick={() => openCustomOTModal(2)}
               className="btn btn-secondary"
-              disabled={!selectedMonth || !selectedYear}
+              disabled={selectionRequiredDisabled}
             >
               OT ปรับพิเศษ (งวด 2)
             </button>
           </div>
+          <p style={{ fontSize: '12px', color: selectedEmployees.size === 0 ? '#1e3a8a' : 'var(--text-muted)', marginTop: '8px' }}>
+            * เลือกพนักงานจากตารางหลักก่อน แล้วค่อยกดปุ่มเพิ่มรายการพิเศษ
+          </p>
         </div>
       </div>
 
@@ -2121,60 +2107,9 @@ export default function Home() {
               </button>
             </div>
 
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-              เลือกพนักงานแล้ว {specialIncomeSelectedEmployees.size} คน
-            </div>
+            {renderSelectedEmployeePanel()}
 
-            <div style={{ display: 'grid', gap: '12px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600' }}>ค้นหา/เลือกพนักงาน</label>
-              <input
-                type="text"
-                value={specialIncomeEmployeeSearch}
-                onChange={(e) => setSpecialIncomeEmployeeSearch(e.target.value)}
-                placeholder="พิมพ์รหัสพนักงาน, ชื่อ หรือแผนก"
-              />
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => {
-                    const list = filterEmployees(specialIncomeEmployeeSearch)
-                    setSpecialIncomeSelectedEmployees(new Set(list.map(e => e.employeeId)))
-                  }}
-                  className="btn btn-sm"
-                >
-                  เลือกทั้งหมด
-                </button>
-                <button
-                  onClick={() => setSpecialIncomeSelectedEmployees(new Set())}
-                  className="btn btn-sm btn-secondary"
-                >
-                  ล้างทั้งหมด
-                </button>
-              </div>
-              <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid var(--border-light)', borderRadius: '6px', padding: '8px' }}>
-                {filterEmployees(specialIncomeEmployeeSearch).map(emp => {
-                  const isChecked = specialIncomeSelectedEmployees.has(emp.employeeId)
-                  return (
-                    <label key={emp.employeeId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px' }}>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {
-                          setSpecialIncomeSelectedEmployees(prev => {
-                            const next = new Set(prev)
-                            if (next.has(emp.employeeId)) next.delete(emp.employeeId)
-                            else next.add(emp.employeeId)
-                            return next
-                          })
-                        }}
-                      />
-                      <span style={{ minWidth: '90px' }}>{emp.employeeId}</span>
-                      <span style={{ flex: 1 }}>{emp.name}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{emp.department}</span>
-                    </label>
-                  )
-                })}
-              </div>
-
+            <div style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
               <label style={{ fontSize: '13px', fontWeight: '600' }}>งวด</label>
               <select value={specialIncomePeriod} onChange={(e) => setSpecialIncomePeriod(Number(e.target.value) as 1 | 2)}>
                 <option value={1}>งวดที่ 1</option>
@@ -2211,7 +2146,7 @@ export default function Home() {
               <button onClick={() => setShowSpecialIncomeModal(false)} className="btn btn-secondary">
                 ปิด
               </button>
-              <button onClick={saveSpecialIncome} disabled={savingSpecialIncome} className="btn btn-primary">
+              <button onClick={saveSpecialIncome} disabled={savingSpecialIncome || selectedEmployees.size === 0} className="btn btn-primary">
                 {savingSpecialIncome ? 'กำลังบันทึก...' : 'บันทึก'}
               </button>
             </div>
@@ -2237,60 +2172,9 @@ export default function Home() {
               </button>
             </div>
 
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-              เลือกพนักงานแล้ว {leaveSelectedEmployees.size} คน
-            </div>
+            {renderSelectedEmployeePanel()}
 
-            <div style={{ display: 'grid', gap: '12px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600' }}>ค้นหา/เลือกพนักงาน</label>
-              <input
-                type="text"
-                value={leaveEmployeeSearch}
-                onChange={(e) => setLeaveEmployeeSearch(e.target.value)}
-                placeholder="พิมพ์รหัสพนักงาน, ชื่อ หรือแผนก"
-              />
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => {
-                    const list = filterEmployees(leaveEmployeeSearch)
-                    setLeaveSelectedEmployees(new Set(list.map(e => e.employeeId)))
-                  }}
-                  className="btn btn-sm"
-                >
-                  เลือกทั้งหมด
-                </button>
-                <button
-                  onClick={() => setLeaveSelectedEmployees(new Set())}
-                  className="btn btn-sm btn-secondary"
-                >
-                  ล้างทั้งหมด
-                </button>
-              </div>
-              <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid var(--border-light)', borderRadius: '6px', padding: '8px' }}>
-                {filterEmployees(leaveEmployeeSearch).map(emp => {
-                  const isChecked = leaveSelectedEmployees.has(emp.employeeId)
-                  return (
-                    <label key={emp.employeeId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px' }}>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {
-                          setLeaveSelectedEmployees(prev => {
-                            const next = new Set(prev)
-                            if (next.has(emp.employeeId)) next.delete(emp.employeeId)
-                            else next.add(emp.employeeId)
-                            return next
-                          })
-                        }}
-                      />
-                      <span style={{ minWidth: '90px' }}>{emp.employeeId}</span>
-                      <span style={{ flex: 1 }}>{emp.name}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{emp.department}</span>
-                    </label>
-                  )
-                })}
-              </div>
-
+            <div style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
               <label style={{ fontSize: '13px', fontWeight: '600' }}>ประเภทการลา</label>
               <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)}>
                 <option value="ลากิจ">ลากิจ</option>
@@ -2365,7 +2249,7 @@ export default function Home() {
               <button onClick={() => setShowLeaveModal(false)} className="btn btn-secondary">
                 ปิด
               </button>
-              <button onClick={saveLeave} disabled={savingLeave} className="btn btn-primary">
+              <button onClick={saveLeave} disabled={savingLeave || selectedEmployees.size === 0} className="btn btn-primary">
                 {savingLeave ? 'กำลังบันทึก...' : 'บันทึกการลา'}
               </button>
             </div>
@@ -2391,60 +2275,9 @@ export default function Home() {
               </button>
             </div>
 
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-              เลือกพนักงานแล้ว {lunchOTSelectedEmployees.size} คน
-            </div>
+            {renderSelectedEmployeePanel()}
 
-            <div style={{ display: 'grid', gap: '12px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600' }}>ค้นหา/เลือกพนักงาน</label>
-              <input
-                type="text"
-                value={lunchOTEmployeeSearch}
-                onChange={(e) => setLunchOTEmployeeSearch(e.target.value)}
-                placeholder="พิมพ์รหัสพนักงาน, ชื่อ หรือแผนก"
-              />
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => {
-                    const list = filterEmployees(lunchOTEmployeeSearch)
-                    setLunchOTSelectedEmployees(new Set(list.map(e => e.employeeId)))
-                  }}
-                  className="btn btn-sm"
-                >
-                  เลือกทั้งหมด
-                </button>
-                <button
-                  onClick={() => setLunchOTSelectedEmployees(new Set())}
-                  className="btn btn-sm btn-secondary"
-                >
-                  ล้างทั้งหมด
-                </button>
-              </div>
-              <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid var(--border-light)', borderRadius: '6px', padding: '8px' }}>
-                {filterEmployees(lunchOTEmployeeSearch).map(emp => {
-                  const isChecked = lunchOTSelectedEmployees.has(emp.employeeId)
-                  return (
-                    <label key={emp.employeeId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px' }}>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {
-                          setLunchOTSelectedEmployees(prev => {
-                            const next = new Set(prev)
-                            if (next.has(emp.employeeId)) next.delete(emp.employeeId)
-                            else next.add(emp.employeeId)
-                            return next
-                          })
-                        }}
-                      />
-                      <span style={{ minWidth: '90px' }}>{emp.employeeId}</span>
-                      <span style={{ flex: 1 }}>{emp.name}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{emp.department}</span>
-                    </label>
-                  )
-                })}
-              </div>
-
+            <div style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
               <label style={{ fontSize: '13px', fontWeight: '600' }}>งวด</label>
               <select value={lunchOTPeriod} onChange={(e) => setLunchOTPeriod(Number(e.target.value) as 1 | 2)}>
                 <option value={1}>งวดที่ 1</option>
@@ -2479,7 +2312,7 @@ export default function Home() {
               <button onClick={() => setShowLunchOTModal(false)} className="btn btn-secondary">
                 ปิด
               </button>
-              <button onClick={saveLunchOT} disabled={savingLunchOT} className="btn btn-primary">
+              <button onClick={saveLunchOT} disabled={savingLunchOT || selectedEmployees.size === 0} className="btn btn-primary">
                 {savingLunchOT ? 'กำลังบันทึก...' : 'บันทึก OT พักเที่ยง'}
               </button>
             </div>
@@ -2505,60 +2338,9 @@ export default function Home() {
               </button>
             </div>
 
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-              เลือกพนักงานแล้ว {customOTSelectedEmployees.size} คน
-            </div>
+            {renderSelectedEmployeePanel()}
 
-            <div style={{ display: 'grid', gap: '12px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600' }}>ค้นหา/เลือกพนักงาน</label>
-              <input
-                type="text"
-                value={customOTEmployeeSearch}
-                onChange={(e) => setCustomOTEmployeeSearch(e.target.value)}
-                placeholder="พิมพ์รหัสพนักงาน, ชื่อ หรือแผนก"
-              />
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => {
-                    const list = filterEmployees(customOTEmployeeSearch)
-                    setCustomOTSelectedEmployees(new Set(list.map(e => e.employeeId)))
-                  }}
-                  className="btn btn-sm"
-                >
-                  เลือกทั้งหมด
-                </button>
-                <button
-                  onClick={() => setCustomOTSelectedEmployees(new Set())}
-                  className="btn btn-sm btn-secondary"
-                >
-                  ล้างทั้งหมด
-                </button>
-              </div>
-              <div style={{ maxHeight: '200px', overflow: 'auto', border: '1px solid var(--border-light)', borderRadius: '6px', padding: '8px' }}>
-                {filterEmployees(customOTEmployeeSearch).map(emp => {
-                  const isChecked = customOTSelectedEmployees.has(emp.employeeId)
-                  return (
-                    <label key={emp.employeeId} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '13px' }}>
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {
-                          setCustomOTSelectedEmployees(prev => {
-                            const next = new Set(prev)
-                            if (next.has(emp.employeeId)) next.delete(emp.employeeId)
-                            else next.add(emp.employeeId)
-                            return next
-                          })
-                        }}
-                      />
-                      <span style={{ minWidth: '90px' }}>{emp.employeeId}</span>
-                      <span style={{ flex: 1 }}>{emp.name}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{emp.department}</span>
-                    </label>
-                  )
-                })}
-              </div>
-
+            <div style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
               <label style={{ fontSize: '13px', fontWeight: '600' }}>งวด</label>
               <select value={customOTPeriod} onChange={(e) => setCustomOTPeriod(Number(e.target.value) as 1 | 2)}>
                 <option value={1}>งวดที่ 1</option>
@@ -2600,7 +2382,7 @@ export default function Home() {
               <button onClick={() => setShowCustomOTModal(false)} className="btn btn-secondary">
                 ปิด
               </button>
-              <button onClick={saveCustomOT} disabled={savingCustomOT} className="btn btn-primary">
+              <button onClick={saveCustomOT} disabled={savingCustomOT || selectedEmployees.size === 0} className="btn btn-primary">
                 {savingCustomOT ? 'กำลังบันทึก...' : 'บันทึก OT ปรับพิเศษ'}
               </button>
             </div>

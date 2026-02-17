@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OT Visualization</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --line: #d7dde8;
+      --text: #111827;
+      --muted: #6b7280;
+      --accent: #0f766e;
+      --ot15: #93c5fd;
+      --ot2: #7dd3fc;
+      --ot3: #fdba74;
+      --work: #c7d2fe;
+      --break: #e5e7eb;
+      --excel-yellow: #fff2cc;
+      --excel-gray: #f3f4f6;
+      --excel-red: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 22px;
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; display: grid; gap: 16px; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    h1 { margin: 0; font-size: 20px; letter-spacing: 0.2px; }
+    .sub { color: var(--muted); font-size: 12px; }
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+    }
+    .card h2 { margin: 0 0 6px; font-size: 13px; }
+    .timeline {
+      display: flex;
+      width: 100%;
+      min-height: 42px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+    .seg {
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      text-align: center;
+      line-height: 1.1;
+      border-right: 1px solid rgba(17, 24, 39, 0.08);
+      padding: 2px;
+    }
+    .seg:last-child { border-right: none; }
+    .work { background: var(--work); }
+    .break { background: var(--break); color: #6b7280; }
+    .ot15 { background: var(--ot15); color: #1e3a8a; }
+    .ot2 { background: var(--ot2); color: #155e75; }
+    .ot3 { background: var(--ot3); color: #9a3412; }
+    .neutral { background: #f9fafb; color: #6b7280; }
+
+    .excel {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .excel th, .excel td {
+      border: 1px solid var(--line);
+      padding: 6px 8px;
+      vertical-align: top;
+    }
+    .excel thead th {
+      background: var(--excel-gray);
+      text-align: left;
+      font-weight: 700;
+    }
+    .excel .header {
+      background: var(--excel-yellow);
+      text-align: center;
+      font-weight: 700;
+    }
+    .excel .section {
+      background: #f9fafb;
+      font-weight: 700;
+    }
+    .excel .red { color: var(--excel-red); font-weight: 700; }
+    .note { color: var(--muted); font-size: 11px; }
+
+    @media (max-width: 960px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>OT Visualization</h1>
+        <div class="sub">สรุป logic OT ทั้งระบบแบบภาพ + ตาราง Excel</div>
+      </div>
+      <a class="btn" href="/ot-visualization.xlsx" download>Export Excel</a>
+    </header>
+
+    <section class="panel">
+      <div class="legend">
+        <span><span class="dot" style="background: var(--work);"></span>เวลางาน</span>
+        <span><span class="dot" style="background: var(--break);"></span>พัก / ไม่คิด</span>
+        <span><span class="dot" style="background: var(--ot15);"></span>OT 1.5</span>
+        <span><span class="dot" style="background: var(--ot2);"></span>OT 2</span>
+        <span><span class="dot" style="background: var(--ot3);"></span>OT 3</span>
+      </div>
+      <div class="grid-2" style="margin-top: 10px;">
+        <div class="card">
+          <h2>กะเช้า | วันปกติ (08:00–17:00)</h2>
+          <div class="timeline">
+            <div class="seg neutral" style="width: 10%;">ก่อน 08:00</div>
+            <div class="seg work" style="width: 25%;">08–12</div>
+            <div class="seg break" style="width: 5%;">12–13</div>
+            <div class="seg work" style="width: 25%;">13–17</div>
+            <div class="seg neutral" style="width: 5%;">17–17:30</div>
+            <div class="seg ot15" style="width: 30%;">17:30–24</div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>กะดึก | วันปกติ (20:00–05:00)</h2>
+          <div class="timeline">
+            <div class="seg ot15" style="width: 20%;">17:30–20</div>
+            <div class="seg work" style="width: 25%;">20–24</div>
+            <div class="seg break" style="width: 5%;">00–01</div>
+            <div class="seg work" style="width: 20%;">01–05</div>
+            <div class="seg neutral" style="width: 5%;">05–05:30</div>
+            <div class="seg ot15" style="width: 25%;">05:30–08</div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>กะเช้า | อาทิตย์/วันหยุด</h2>
+          <div class="timeline">
+            <div class="seg ot2" style="width: 25%;">08–12</div>
+            <div class="seg break" style="width: 5%;">12–13</div>
+            <div class="seg ot2" style="width: 25%;">13–17</div>
+            <div class="seg neutral" style="width: 5%;">17–17:30</div>
+            <div class="seg ot3" style="width: 40%;">17:30–22+</div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>กะดึก | อาทิตย์/วันหยุด</h2>
+          <div class="timeline">
+            <div class="seg ot2" style="width: 30%;">20–24</div>
+            <div class="seg break" style="width: 8%;">00–01</div>
+            <div class="seg ot2" style="width: 25%;">01–05</div>
+            <div class="seg neutral" style="width: 7%;">05–05:30</div>
+            <div class="seg ot3" style="width: 30%;">05:30–08+</div>
+          </div>
+        </div>
+      </div>
+      <div class="note" style="margin-top: 8px;">ปัดลงทุก 30 นาที, วันหยุดคิด OT2 8 ชม.แรกและ OT3 หลังจากนั้น</div>
+    </section>
+
+    <section class="panel">
+      <div style="display:flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+        <h2 style="margin:0; font-size:14px;">ตาราง Excel (โครงเดียวกับระบบ)</h2>
+        <span class="note">ดาวน์โหลดได้ด้วยปุ่ม Export Excel ด้านบน</span>
+      </div>
+      <div style="margin-top: 10px; overflow-x: auto;">
+        <table class="excel">
+          <thead>
+            <tr>
+              <th>หัวข้อ</th>
+              <th class="header">เวลา</th>
+              <th class="header">จ่ายโอที</th>
+              <th>หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="section">
+              <td colspan="4">การคิดโอทีเข้างานก่อนเวลา (กะดึก 20:00–05:00)</td>
+            </tr>
+            <tr>
+              <td>เข้า 17:20</td>
+              <td>17:30–20:00</td>
+              <td>2.5 ชม.</td>
+              <td class="note">เริ่มนับจาก 17:30 เท่านั้น</td>
+            </tr>
+            <tr>
+              <td>เข้า 17:40</td>
+              <td class="red">17:40–20:00</td>
+              <td class="red">2.0 ชม.</td>
+              <td class="note">ปัดลงทุกครึ่งชม.</td>
+            </tr>
+            <tr class="section">
+              <td colspan="4">การคิดโอทีหลังเลิกงาน (กะดึก)</td>
+            </tr>
+            <tr>
+              <td>หลังเลิกงาน</td>
+              <td>05:30–08:00</td>
+              <td>2.5 ชม.</td>
+              <td class="note">เริ่มนับหลัง 05:30 เท่านั้น</td>
+            </tr>
+            <tr class="section">
+              <td colspan="4">การคิดโอทีเช้า (กะเช้า 08:00–17:00)</td>
+            </tr>
+            <tr>
+              <td>OT เช้า</td>
+              <td>06:00–08:00</td>
+              <td>2.0 ชม.</td>
+              <td class="note">คิดเฉพาะเมื่ออนุมัติจากผู้ใช้</td>
+            </tr>
+            <tr class="section">
+              <td colspan="4">การคิดโอทีหลังเลิกงาน (กะเช้า วันปกติ)</td>
+            </tr>
+            <tr>
+              <td>OT หลังเลิกงาน</td>
+              <td>17:30–20:00</td>
+              <td>2.5 ชม.</td>
+              <td class="note">OT ปกติ (×1.5)</td>
+            </tr>
+            <tr>
+              <td>OT ต่อเนื่อง</td>
+              <td>17:30–24:00</td>
+              <td>6.5 ชม.</td>
+              <td class="note">ปัดลงทุกครึ่งชม.</td>
+            </tr>
+            <tr>
+              <td>Cross-day</td>
+              <td>17:30–02:00</td>
+              <td>8.0 ชม.</td>
+              <td class="note">ถ้าเลิกงานช่วง 02:00–03:00 มีเพดาน 8 ชม.</td>
+            </tr>
+            <tr class="section">
+              <td colspan="4">วันอาทิตย์/วันหยุด (กะเช้า)</td>
+            </tr>
+            <tr>
+              <td>ฐาน OT2</td>
+              <td>08:00–17:00</td>
+              <td>8.0 ชม.</td>
+              <td class="note">หักพักเที่ยง 12:00–13:00</td>
+            </tr>
+            <tr>
+              <td>หลัง 17:30</td>
+              <td>17:30–22:00</td>
+              <td>4.5 ชม.</td>
+              <td class="note">OT3 (×3)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
